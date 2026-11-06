@@ -9,7 +9,10 @@ import {
   requireReadScopes,
   CALENDAR_SCOPES,
 } from "@/lib/integrations/google-oauth";
-import { collectWindowEvents } from "@/lib/integrations/google-server";
+import {
+  collectWindowEvents,
+  exchangeGoogleCode,
+} from "@/lib/integrations/google-server";
 import {
   eventOnDate,
   type CalendarEvent,
@@ -68,6 +71,42 @@ async function finish(lease: string, events: unknown[]) {
   ]);
 }
 describe("read-only Google connection security", () => {
+  it("reports rejected OAuth client credentials without exposing the provider body", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_ID", " synthetic.apps.googleusercontent.com ");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", " synthetic-secret ");
+    vi.stubEnv("LIFE_OS_APP_ORIGIN", "https://example.invalid");
+    vi.stubEnv(
+      "LIFE_OS_CREDENTIAL_KEY",
+      Buffer.alloc(32, 3).toString("base64"),
+    );
+    vi.stubEnv("SUPABASE_SECRET_KEY", "synthetic-server-key");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    const fake = vi.fn(async (_url: unknown, options?: RequestInit) => {
+      const body = options?.body as URLSearchParams;
+      expect(body.get("client_id")).toBe(
+        "synthetic.apps.googleusercontent.com",
+      );
+      expect(body.get("client_secret")).toBe("synthetic-secret");
+      return Response.json(
+        {
+          error: "invalid_client",
+          error_description:
+            "Do not display provider details or synthetic-secret",
+        },
+        { status: 401 },
+      );
+    });
+    vi.stubGlobal("fetch", fake);
+    try {
+      await expect(
+        exchangeGoogleCode("synthetic-code", "synthetic-verifier"),
+      ).rejects.toMatchObject({ code: "GOOGLE_INVALID_CLIENT", status: 502 });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("binds OAuth state to the user, expiry and encrypted cookie; requests no writes", () => {
     const key = Buffer.alloc(32, 3);
     const attempt = createOAuthAttempt(a, key, 1000);

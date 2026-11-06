@@ -138,7 +138,17 @@ export function GoogleCalendarPanel({
               ? "Google permission was declined. Connect again when ready."
               : callbackStatus === "list_error"
                 ? "Google account connected, but the calendar list could not load. Tap Refresh calendar list."
-                : "Google connection could not finish. Try connecting again and grant both read-only calendar permissions. If it fails again, review the OAuth client settings."}
+                : callbackStatus === "client_error"
+                  ? "Google rejected the app credentials. Update GOOGLE_CLIENT_SECRET in Vercel with the secret from the same Life OS Web client as GOOGLE_CLIENT_ID, then redeploy."
+                  : callbackStatus === "state_error"
+                    ? "This connection attempt expired or could not be verified. Start again here in the same browser tab."
+                    : callbackStatus === "session_error"
+                      ? "Your Life OS session could not be verified. Sign in again, then reconnect Google."
+                      : callbackStatus === "storage_error"
+                        ? "Google authorization finished, but Life OS could not securely save the connection. The server database setting needs checking."
+                        : callbackStatus === "account_error"
+                          ? "Google granted access, but account verification could not finish. Try reconnecting; the server logs identify the failed step."
+                          : "Google connection could not finish. Start a fresh connection attempt and grant both read-only calendar permissions."}
         </p>
       )}
       <p>

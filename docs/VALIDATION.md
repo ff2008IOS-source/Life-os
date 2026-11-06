@@ -67,3 +67,13 @@ After adding export-recovery regression coverage: `npm run typecheck`, `npm run 
 ## Manual hosted-recovery tooling validation — 2026-11-06
 
 All 51 tests across seven files, strict type checking, lint and formatting checks passed after adding the manual recovery safety/encryption coverage. The pinned Supabase CLI 3.0.0 role/schema/data dry-run scripts were exercised with synthetic connection details. The live project's aggregate manifest and foreign-key verification SQL passed read-only checks. The GitHub workflow itself has not been installed/run, and a real SQL backup/hosted restoration/browser login rehearsal remains unverified. No live settings or data were changed.
+
+## Read-only Google Calendar — 2026-11-06
+
+- Strict TypeScript, ESLint, Prettier, production build: passed.
+- 59 unit/integration/database tests across eight files: passed.
+- Five browser tests, including read-only calendar selection/sync/agenda controls and core-screen automated WCAG A/AA dark/light checks: passed. The new Calendar UI test uses synthetic intercepted HTTP state; existing browser persistence uses the PGlite protocol fixture. These are not live Google consent tests.
+- Applied the additive `calendar_read_integration` migration to the existing Supabase project. Verified all eight integration RPCs deny anon/authenticated execution and grant only service_role execution. No personal calendar records were imported by this migration.
+- Post-migration security advisor findings remain the existing intentional private RLS/no-policy tables, the reviewed authenticated boolean approval lookup, and disabled paid-plan leaked-password detection. No new browser-callable privileged integration function was introduced.
+- Production-only sensitive Google client, Supabase server key and credential encryption variable presence verified without decrypting their values.
+- Owner consent, selected-calendar list and live Google event sync remain to be verified after deployment. Full hosted recovery remains deferred by the owner.

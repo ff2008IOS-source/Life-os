@@ -21,14 +21,27 @@ export function googleConfig() {
       "Google Calendar setup is incomplete. Ask the owner to finish the server settings.",
       "GOOGLE_SETUP_REQUIRED",
     );
-  const key = Buffer.from(secret, "base64");
+  if (!clientId.trim().endsWith(".apps.googleusercontent.com"))
+    throw new ApiError(
+      503,
+      "The Google Client ID setting is invalid.",
+      "GOOGLE_SETUP_REQUIRED",
+    );
+  const key = Buffer.from(secret.trim(), "base64");
   if (key.length !== 32)
     throw new ApiError(
       503,
       "The credential encryption setting is invalid.",
       "GOOGLE_SETUP_REQUIRED",
     );
-  return { clientId, clientSecret, origin, key, dbKey, dbUrl };
+  return {
+    clientId: clientId.trim(),
+    clientSecret: clientSecret.trim(),
+    origin: origin.trim(),
+    key,
+    dbKey: dbKey.trim(),
+    dbUrl: dbUrl.trim(),
+  };
 }
 function admin() {
   const c = googleConfig();
@@ -69,12 +82,26 @@ async function tokenRequest(values: Record<string, string>) {
     cache: "no-store",
     signal: deadline(),
   });
-  if (!response.ok)
+  if (!response.ok) {
+    let reason: unknown;
+    try {
+      const value = (await response.json()) as { error?: unknown };
+      reason = value.error;
+    } catch {
+      /* Never log the provider body. */
+    }
+    if (reason === "invalid_client" || reason === "unauthorized_client")
+      throw new ApiError(
+        502,
+        "Google rejected the app credentials. Verify that GOOGLE_CLIENT_SECRET belongs to the configured Client ID.",
+        "GOOGLE_INVALID_CLIENT",
+      );
     throw new ApiError(
       502,
       "Google authorization expired or could not be refreshed. Reconnect Google Calendar.",
       "GOOGLE_RECONNECT",
     );
+  }
   const token = tokenSchema.parse(await response.json());
   requireReadScopes(token.scope);
   return token;
