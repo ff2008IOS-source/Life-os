@@ -5,11 +5,13 @@ test("read-only calendar controls select, sync and show a cached recurring insta
   const id = "44444444-4444-4444-8444-444444444444",
     connection = "55555555-5555-4555-8555-555555555555";
   let selected = false,
-    synced = false;
+    synced = false,
+    daily = false;
   await page.route("**/api/v1/calendar/connections", async (route) => {
     if (route.request().method() === "POST") {
       const body = route.request().postDataJSON();
       if (body.action === "select") selected = body.enabled;
+      if (body.action === "daily") daily = body.enabled;
       return route.fulfill({ json: { saved: true } });
     }
     return route.fulfill({
@@ -19,6 +21,7 @@ test("read-only calendar controls select, sync and show a cached recurring insta
           {
             id: connection,
             status: "connected",
+            daily_sync_enabled: daily,
             last_sync_at: synced ? "2026-11-06T16:00:00Z" : null,
           },
         ],
@@ -82,19 +85,36 @@ test("read-only calendar controls select, sync and show a cached recurring insta
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  await page.goto("/settings");
+  await page.goto("/settings?section=integrations");
   await page.getByRole("checkbox", { name: "[TEST] Study Not synced" }).check();
   await expect(
     page.getByRole("button", { name: "Sync selected calendars" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Sync selected calendars" }).click();
   await expect(page.getByText("Selected calendars synced.")).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: /Refresh automatically each day/ })
+    .click();
+  await expect(
+    page.getByRole("checkbox", { name: /Refresh automatically each day/ }),
+  ).toBeChecked();
+  await page
+    .getByRole("checkbox", { name: /Refresh automatically each day/ })
+    .click();
+  await expect(
+    page.getByRole("checkbox", { name: /Refresh automatically each day/ }),
+  ).not.toBeChecked();
   await page.goto("/planner");
   await expect(
     page.getByText("[TEST] Study session", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("All day · [TEST] Study · Busy")).toBeVisible();
-  await expect(page.getByText("Read-only", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /\[TEST\] Study session/ }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByText("Read-only Google event", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("All day", { exact: true }).last()).toBeVisible();
+
   await expect(
     page.getByRole("button", { name: /Create Google event|Move Google event/ }),
   ).toHaveCount(0);

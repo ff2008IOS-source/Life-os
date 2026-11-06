@@ -77,3 +77,12 @@ All 51 tests across seven files, strict type checking, lint and formatting check
 - Post-migration security advisor findings remain the existing intentional private RLS/no-policy tables, the reviewed authenticated boolean approval lookup, and disabled paid-plan leaked-password detection. No new browser-callable privileged integration function was introduced.
 - Production-only sensitive Google client, Supabase server key and credential encryption variable presence verified without decrypting their values.
 - Owner consent, selected-calendar list and live Google event sync remain to be verified after deployment. Full hosted recovery remains deferred by the owner.
+
+## Compact UI and daily read-only Calendar worker — local checks
+
+- 65 unit/integration/database tests across nine files passed, including display grouping with retained sources, overlap layout, overnight clipping, cron bearer authentication and worker time-budget/failure accounting.
+- Six browser tests passed: existing persisted task/review/goal workflows, source selection/sync and daily-toggle controls, dense schedule week/month/detail rendering, bounded iPad layout, one-column iPhone week navigation without horizontal overflow, and core/dense automated accessibility checks in the existing dark/light coverage.
+- Reviewed rendered synthetic iPad Planner, iPad Settings and iPhone Planner screenshots. A dense-week grid was reduced to a bounded calendar instead of a document-length agenda; source checkbox rows measure below 65px spacing in the browser test. No screenshots of real personal data were created by automated tests.
+- TypeScript, ESLint, formatting and production build passed.
+- Applied the additive daily-refresh preference migration. Existing authorized owner connection opted in; new connections default off. Created the production-sensitive cron bearer setting without printing its value. No Google write scope or event-write transport was added.
+- Daily schedule and first deployed worker invocation require hosted verification; a future scheduled trigger must be distinguished from a manual worker test.

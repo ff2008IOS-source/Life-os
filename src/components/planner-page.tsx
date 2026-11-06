@@ -9,13 +9,7 @@ import {
   eachDayOfInterval,
   format,
 } from "date-fns";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Inbox,
-  Plus,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Inbox, Plus } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
 import { TaskList, EmptyState, QuickCapture } from "./task-list";
@@ -24,7 +18,7 @@ import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
 import { OccurrencesPanel } from "./occurrences-panel";
 import { SchedulingPanel } from "./scheduling-panel";
-import { GoogleCalendarPanel } from "./google-calendar-panel";
+import { PlannerCalendar } from "./planner-calendar";
 export function PlannerPage() {
   const { data } = useWorkspace();
   const [tab, setTab] = useState("calendar");
@@ -47,12 +41,6 @@ export function PlannerPage() {
           ? true
           : t.status === status),
   );
-  const dayKey = (d: Date) => format(d, "yyyy-MM-dd");
-  const dueOn = (d: Date) =>
-    all.filter(
-      (t) =>
-        (t.due_date ?? (t.due_at ? localDate(t.due_at) : null)) === dayKey(d),
-    );
   const days =
     view === "month"
       ? eachDayOfInterval({
@@ -112,52 +100,43 @@ export function PlannerPage() {
         <OccurrencesPanel />
       ) : (
         <>
-          <div className="filter-row">
-            <input
-              aria-label="Filter tasks by title"
-              placeholder="Search tasks…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select
-              aria-label="Filter life area"
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-            >
-              <option value="">All life areas</option>
-              {data.areas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filter task status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="active">Active tasks</option>
-              <option value="all">All tasks</option>
-              <option value="planned">Planned</option>
-              <option value="in_progress">In progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="deleted">Recently deleted</option>
-            </select>
-          </div>
+          {tab !== "calendar" && (
+            <div className="filter-row">
+              <input
+                aria-label="Filter tasks by title"
+                placeholder="Search tasks…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select
+                aria-label="Filter life area"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+              >
+                <option value="">All life areas</option>
+                {data.areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter task status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="active">Active tasks</option>
+                <option value="all">All tasks</option>
+                <option value="planned">Planned</option>
+                <option value="in_progress">In progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="deleted">Recently deleted</option>
+              </select>
+            </div>
+          )}
           {tab === "calendar" ? (
             <>
-              <div className="notice">
-                <CalendarDays />
-                <div>
-                  <strong>Task deadlines · Vancouver time</strong>
-                  <p>
-                    These markers show when tasks are due, not reserved work
-                    time. Google events appear separately below with their own
-                    sync status.
-                  </p>
-                </div>
-              </div>
               <div className="calendar-toolbar">
                 <div className="inline">
                   <Button
@@ -200,107 +179,14 @@ export function PlannerPage() {
                   ))}
                 </div>
               </div>
-              <GoogleCalendarPanel
-                start={dayKey(view === "agenda" ? anchor : days[0])}
-                end={dayKey(
-                  addDays(
-                    view === "agenda" ? anchor : days[days.length - 1],
-                    view === "agenda" ? 30 : 1,
-                  ),
-                )}
+              <PlannerCalendar
+                days={days}
+                view={view}
+                anchor={anchor}
+                tasks={all}
+                onTask={(task) => setEditor({ task })}
+                onDay={setAnchor}
               />
-              {view === "month" ? (
-                <div className="calendar-grid">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                    (d) => (
-                      <div className="calendar-label" key={d}>
-                        {d}
-                      </div>
-                    ),
-                  )}
-                  {days.map((d) => (
-                    <div
-                      className={`calendar-day ${d.getMonth() !== anchor.getMonth() ? "outside" : ""} ${dayKey(d) === localDate() ? "today" : ""}`}
-                      key={dayKey(d)}
-                    >
-                      <span className="day-number">{d.getDate()}</span>
-                      {dueOn(d).map((t) => (
-                        <button
-                          className="calendar-task"
-                          key={t.id}
-                          onClick={() => setEditor({ task: t })}
-                          title={`Deadline: ${t.title}`}
-                        >
-                          {t.title}
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : view === "week" ? (
-                <div className="weekly-grid">
-                  {days.map((d) => (
-                    <section className="weekly-day" key={dayKey(d)}>
-                      <h3>
-                        {format(d, "EEE")}
-                        <span>{format(d, "d")}</span>
-                      </h3>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {dueOn(d).map((t) => (
-                          <button
-                            key={t.id}
-                            className="calendar-task"
-                            onClick={() => setEditor({ task: t })}
-                          >
-                            {t.title}
-                          </button>
-                        ))}
-                        {!dueOn(d).length && (
-                          <span className="form-hint">No deadlines</span>
-                        )}
-                      </div>
-                    </section>
-                  ))}
-                </div>
-              ) : (
-                <section className="day-agenda">
-                  <div className="day-agenda-heading">
-                    {view === "day"
-                      ? format(anchor, "EEEE, MMMM d")
-                      : "Dated task deadlines"}
-                  </div>
-                  {(view === "day"
-                    ? dueOn(anchor)
-                    : all
-                        .filter((t) => t.due_date || t.due_at)
-                        .sort((a, b) =>
-                          (a.due_date ?? a.due_at!).localeCompare(
-                            b.due_date ?? b.due_at!,
-                          ),
-                        )
-                  ).length ? (
-                    <TaskList
-                      tasks={
-                        view === "day"
-                          ? dueOn(anchor)
-                          : all
-                              .filter((t) => t.due_date || t.due_at)
-                              .sort((a, b) =>
-                                (a.due_date ?? a.due_at!).localeCompare(
-                                  b.due_date ?? b.due_at!,
-                                ),
-                              )
-                      }
-                    />
-                  ) : (
-                    <EmptyState
-                      icon={CalendarDays}
-                      title="Nothing due in this view"
-                      description="Add deadlines to tasks when you know them."
-                    />
-                  )}
-                </section>
-              )}
             </>
           ) : (
             <section className="panel">

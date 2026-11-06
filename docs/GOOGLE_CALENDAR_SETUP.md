@@ -26,14 +26,14 @@ Google External apps in Testing can issue short-lived refresh grants (typically 
 1. Sign in to Life OS and open Settings.
 2. Connect Google Calendar and grant both requested calendar read permissions.
 3. Explicitly select the approved calendars. Nothing is selected automatically, and calendar colors/names are not modified in Google.
-4. Sync selected calendars. Each calendar is processed separately, sequentially, with visible success/failure status.
+4. Sync selected calendars. Each calendar is processed separately, sequentially, with visible success/failure status. The owner has also approved daily read-only refresh for the existing connected account.
 5. Open Planner to view cached Google events alongside task deadlines. Home shows today's cached events and a cached upcoming count when coverage exists.
 
 ## Actual sync behavior and limits
 
-Synchronization is on demand, not continuous. Each successful calendar sync atomically replaces the expanded event snapshot for the past 30 days through the next 90 days. Recurring instances are expanded by Google and retain provider instance IDs and original-start metadata. All-day end dates remain exclusive. Original Google colors are stored locally. Events outside the current window are retained as historical cache, not marked deleted merely for falling outside coverage.
+Synchronization supports manual refresh and an owner-approved once-daily read-only cron; it is not continuous. Each successful calendar sync atomically replaces the expanded event snapshot for the past 30 days through the next 90 days. Recurring instances are expanded by Google and retain provider instance IDs and original-start metadata. All-day end dates remain exclusive. Original Google colors are stored locally. Events outside the current window are retained as historical cache, not marked deleted merely for falling outside coverage.
 
-This first live adapter uses bounded full-window refreshes rather than incremental cursors: rolling recurrence expansion and an explicit coverage window are preferred to presenting unexpanded series as real agenda instances. The existing offline incremental adapter remains tested but is not wired to live persistence. Historical all-time calendar migration, arbitrary-range live fetches, timed background sync, push delivery, and automatic availability-based scheduling are not implemented.
+This first live adapter uses bounded full-window refreshes rather than incremental cursors: rolling recurrence expansion and an explicit coverage window are preferred to presenting unexpanded series as real agenda instances. The existing offline incremental adapter remains tested but is not wired to live persistence. Historical all-time calendar migration, arbitrary-range live fetches, push delivery, and automatic availability-based scheduling are not implemented.
 
 Each sync has a 10,000-instance cap and a bounded provider request deadline. The prior cache survives provider/page/validation failures. A 90-second database lease prevents concurrent sync commits; abandoned leases expire. The entire event/cursor-free snapshot and coverage update commits in one SQL transaction. Retries use unique provider IDs and update external changes without provider writes. Missing instances within the successfully fetched window are cancelled locally. Inaccessible calendars are disabled when the calendar list is refreshed.
 
@@ -51,3 +51,17 @@ Official references:
 - https://developers.google.com/identity/protocols/oauth2#expiration
 - https://developers.google.com/workspace/calendar/api/guides/sync
 - https://developers.google.com/workspace/calendar/api/v3/reference/events/list
+
+## Daily read-only refresh and compact calendar UI
+
+The owner explicitly requested automatic daily Calendar refresh. `vercel.json` configures one Hobby-compatible cron at `0 13 * * *` UTC, currently 6–7 AM America/Vancouver because Hobby may invoke anywhere within that hour. The worker authenticates an exact 32+-character `CRON_SECRET` bearer value, validates the approved owner through Auth and the private credential RPC, and reads only selected calendars on connections with `daily_sync_enabled=true`. The existing connected owner account was opted in under this request; future connections default to off. Settings → Connections exposes the on/off control. Task scheduling automation and Google writes remain disabled.
+
+The worker writes durable `integration_jobs` rows with unique user/calendar/local-day keys, optimistic claims, expiring leases and completion/failure status. Repeated invocation skips completed jobs. Manual refresh remains independent. Failed/abandoned jobs can be retried by a manual authenticated worker invocation; Vercel does not automatically retry failed cron runs. The sequential work budget stops starting additional calendars after three minutes and reports deferred work rather than silently claiming success. Each calendar still uses its transactional sync lease and bounded snapshot fetch. Function maximum duration is 300 seconds under Fluid Compute. Paused or inaccessible services and expired Google grants can prevent refresh; the UI shows sync errors/job status, and reconnection may be needed while Google remains in Testing.
+
+The Planner now displays provider events and task-deadline chips in a single bounded day/week grid, compact month, or single-day agenda. The iPhone week view uses a day picker and one visible day column. Source filters affect only display. Grouping matching titles plus identical exact times/date boundaries is a reversible display convenience: all original events, IDs, source calendars and busy/free flags remain in storage and event details. Differently timed entries are never grouped, and this does not modify Google or resolve a real scheduling conflict. Home displays up to five upcoming entries; shared task lists initially show eight with explicit expansion. Settings is divided into Preferences, Connections, Privacy/account and Advanced, with per-source troubleshooting collapsed.
+
+Official free-tier evidence checked during implementation:
+
+- https://vercel.com/docs/cron-jobs/usage-and-pricing
+- https://vercel.com/docs/cron-jobs/manage-cron-jobs
+- https://vercel.com/docs/functions/configuring-functions/duration

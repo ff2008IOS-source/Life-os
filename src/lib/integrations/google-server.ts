@@ -43,7 +43,7 @@ export function googleConfig() {
     dbUrl: dbUrl.trim(),
   };
 }
-function admin() {
+export function integrationAdmin() {
   const c = googleConfig();
   return createClient(c.dbUrl, c.dbKey, {
     auth: {
@@ -57,7 +57,7 @@ export async function integrationRpc<T>(
   name: string,
   args: Record<string, unknown>,
 ): Promise<T> {
-  const { data, error } = await admin().rpc(name, args);
+  const { data, error } = await integrationAdmin().rpc(name, args);
   dbError(error);
   return data as T;
 }
@@ -180,7 +180,17 @@ export async function saveGoogleToken(
   });
 }
 export async function connectionAccess(connectionId: string) {
-  const { db, user } = await authorized();
+  const { user } = await authorized();
+  return connectionAccessForUser(user.id, connectionId);
+}
+/** Server-only worker path. Caller must authenticate either the user session or the cron secret.
+ * google_get_credential additionally checks the private approved-user registry. */
+export async function connectionAccessForUser(
+  userId: string,
+  connectionId: string,
+) {
+  const db = integrationAdmin();
+  const user = { id: userId };
   const { data: connection, error } = await db
     .from("calendar_connections")
     .select("id,provider_account_id,status")

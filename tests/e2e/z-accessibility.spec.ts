@@ -27,6 +27,8 @@ test("core screens and task form have no automated WCAG A/AA violations", async 
     "/reviews",
     "/insights",
     "/settings",
+    "/settings?section=integrations",
+    "/settings?section=privacy",
   ]) {
     await page.goto(path);
     await expect(page.getByRole("main")).toBeVisible();

@@ -26,8 +26,19 @@ export type CalendarEvent = {
   raw_metadata: Record<string, unknown>;
 };
 export type ConnectionState = {
+  daily_sync_configured?: boolean;
+  daily_runs?: {
+    status: string;
+    last_error: string | null;
+    updated_at: string;
+  }[];
   configured: boolean;
-  connections: { id: string; status: string; last_sync_at: string | null }[];
+  connections: {
+    id: string;
+    status: string;
+    last_sync_at: string | null;
+    daily_sync_enabled?: boolean;
+  }[];
   calendars: CalendarRecord[];
 };
 export function eventOnDate(event: CalendarEvent, date: string) {

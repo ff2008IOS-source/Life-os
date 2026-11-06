@@ -124,3 +124,9 @@ The recovery setup does not change deployed application behavior. MFA/password r
 ## 2026-11-06 — Owner-authorized Stage B Calendar work
 
 The owner explicitly deferred hosted backup/restore testing and authorized read-only Calendar, then career spreadsheet, then confirmed records/goals/projects. No Stage C/D or paid-service activation was authorized. The first live Calendar adapter, server-only encrypted token RPCs, OAuth/PKCE/state flow, explicit calendar selection, manual rolling-window sync, disconnect/revocation and cached Home/Planner agenda have been implemented locally. See GOOGLE_CALENDAR_SETUP.md for the exact limits. Verification/deployment evidence is recorded separately; a real Google consent/import is not claimed by code completion.
+
+## Compact workspace and daily read-only refresh — in progress
+
+Owner confirmed six Calendar connections/sync works, requested a cleaner, shorter interface throughout the app and explicitly requested automatic daily synchronization. Implementing a calendar-first bounded week/day grid, compact month and daily agenda, safe display-only grouping of matching entries, source filters, event details, small Home agenda, tabbed Settings, corrected horizontal checkbox rows, non-stretched Settings cards, shared spacing reductions and progressively expanded task lists. Daily read-only sync is separate from task scheduling automation and does not authorize Google event writes.
+
+Official Vercel docs checked: Hobby supports once-daily cron, execution within the configured hour, no automatic failed-run retry; Fluid Functions support up to 300 seconds. A single daily invocation at 13:00 UTC is approximately 6–7 AM Vancouver under current timezone rules. Durable per-calendar/day job identities, optimistic claims, leases, bounded sequential work, owner authentication, secret-protected worker access, visible failures and per-connection opt-out are being implemented. Hosted scheduled execution is not yet verified.

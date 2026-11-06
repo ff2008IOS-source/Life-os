@@ -85,6 +85,7 @@ export function TaskList({
   reorder?: boolean;
 }) {
   const { data, mutate, notify, pending, request, refresh } = useWorkspace();
+  const [visible, setVisible] = useState(8);
   const [editing, setEditing] = useState<Task | null>(null);
   const [error, setError] = useState("");
   async function complete(task: Task) {
@@ -140,7 +141,7 @@ export function TaskList({
 
   return (
     <>
-      {tasks.map((task, i) => {
+      {tasks.slice(0, visible).map((task, i) => {
         const area = data.areas.find((a) => a.id === task.area_id);
         return (
           <div
@@ -212,6 +213,26 @@ export function TaskList({
           </div>
         );
       })}
+      {tasks.length > 8 && (
+        <div className="list-pagination">
+          <span>
+            {Math.min(visible, tasks.length)} of {tasks.length} tasks
+          </span>
+          {visible < tasks.length ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setVisible((n) => n + 8)}
+            >
+              Show more tasks
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setVisible(8)}>
+              Show fewer tasks
+            </Button>
+          )}
+        </div>
+      )}
       {error && (
         <p className="error-message" role="alert">
           {error}

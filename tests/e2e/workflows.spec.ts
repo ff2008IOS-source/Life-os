@@ -21,11 +21,15 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     .fill("[TEST] Persistent browser task");
   await page.getByRole("button", { name: "Capture task", exact: true }).click();
   await expect(
-    page.getByText("[TEST] Persistent browser task", { exact: true }),
+    page
+      .getByText("[TEST] Persistent browser task", { exact: true })
+      .filter({ visible: true }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByText("[TEST] Persistent browser task", { exact: true }),
+    page
+      .getByText("[TEST] Persistent browser task", { exact: true })
+      .filter({ visible: true }),
   ).toBeVisible();
   await page
     .getByRole("button", {
@@ -56,7 +60,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     .click();
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await expect(page.getByText("Task restored", { exact: true })).toBeVisible();
-  await page.goto("/settings");
+  await page.goto("/settings?section=advanced");
   await page
     .getByRole("button", { name: "Add [TEST] examples", exact: true })
     .click();
@@ -111,7 +115,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
       (t: { title: string }) => t.title === "[TEST] Persistent browser task",
     ),
   ).toBe(true);
-  await page.goto("/settings");
+  await page.goto("/settings?section=privacy");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/login/);
   await page.goto("/");

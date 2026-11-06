@@ -14,10 +14,13 @@ import { SettingsPage } from "@/components/settings-page";
 export const dynamic = "force-dynamic";
 export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ path?: string[] }>;
+  searchParams: Promise<{ section?: string; google?: string }>;
 }) {
   const { path = [] } = await params;
+  const query = await searchParams;
   const page = path[0] ?? "home";
   if (
     ![
@@ -59,7 +62,11 @@ export default async function Page({
         ) : page === "insights" ? (
           <InsightsPage />
         ) : page === "settings" ? (
-          <SettingsPage />
+          <SettingsPage
+            initialSection={
+              query.google ? "integrations" : (query.section ?? "profile")
+            }
+          />
         ) : (
           <MorePage />
         )}

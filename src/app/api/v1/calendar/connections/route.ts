@@ -7,6 +7,7 @@ import {
   integrationRpc,
   refreshGoogleCalendars,
   disconnectGoogle,
+  integrationAdmin,
 } from "@/lib/integrations/google-server";
 export async function GET() {
   try {
@@ -17,10 +18,10 @@ export async function GET() {
     } catch {
       configured = false;
     }
-    const [connections, calendars] = await Promise.all([
+    const [connections, calendars, runs] = await Promise.all([
       db
         .from("calendar_connections")
-        .select("id,status,last_sync_at")
+        .select("id,status,last_sync_at,daily_sync_enabled")
         .eq("user_id", user.id)
         .order("created_at"),
       db
@@ -30,13 +31,23 @@ export async function GET() {
         )
         .eq("user_id", user.id)
         .order("name"),
+      db
+        .from("integration_jobs")
+        .select("status,last_error,updated_at")
+        .eq("user_id", user.id)
+        .eq("job_type", "google_calendar_daily")
+        .order("updated_at", { ascending: false })
+        .limit(6),
     ]);
     dbError(connections.error);
     dbError(calendars.error);
+    dbError(runs.error);
     return NextResponse.json({
       configured,
       connections: connections.data,
       calendars: calendars.data,
+      daily_runs: runs.data,
+      daily_sync_configured: !!process.env.CRON_SECRET,
     });
   } catch (e) {
     return failure(e);
@@ -56,10 +67,30 @@ export async function POST(request: Request) {
           })
           .strict(),
         z
+          .object({
+            action: z.literal("daily"),
+            connection_id: z.uuid(),
+            enabled: z.boolean(),
+          })
+          .strict(),
+        z
           .object({ action: z.literal("refresh"), connection_id: z.uuid() })
           .strict(),
       ])
       .parse(await readJson(request));
+    if (input.action === "daily") {
+      const { data, error } = await integrationAdmin()
+        .from("calendar_connections")
+        .update({ daily_sync_enabled: input.enabled })
+        .eq("user_id", user.id)
+        .eq("id", input.connection_id)
+        .eq("status", "connected")
+        .select("id")
+        .single();
+      dbError(error);
+      if (!data) throw Error("Connection missing");
+      return NextResponse.json({ saved: true });
+    }
     if (input.action === "select") {
       const { data, error } = await db
         .from("calendars")

@@ -1,26 +1,28 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { CalendarDays, RefreshCw, Link2, Unplug } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { CalendarDays, RefreshCw, Link2, ChevronRight } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { Button } from "./ui/button";
+import { useCalendar, calendarRequest } from "./use-calendar";
 import { localDate } from "@/lib/dates";
-import {
-  eventTimeLabel,
-  eventOnDate,
-  type CalendarEvent,
-  type ConnectionState,
-} from "@/lib/integrations/calendar-view";
-async function call<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...options,
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await response.json();
-  if (!response.ok)
-    throw Error(body.error?.message ?? "Calendar request failed.");
-  return body as T;
-}
+import { groupCalendarEvents } from "@/lib/integrations/calendar-layout";
+const callbackMessages: Record<string, string> = {
+  connected: "Google account connected. Choose calendars, then sync.",
+  denied: "Google permission was declined. Reconnect when ready.",
+  list_error:
+    "Connected, but the calendar list could not load. Refresh the list.",
+  client_error:
+    "Google rejected the app credentials. Check the Client ID and matching secret in Vercel.",
+  state_error:
+    "The connection attempt expired. Start again in this browser tab.",
+  session_error: "Sign in to Life OS again, then reconnect Google.",
+  storage_error:
+    "Google granted access, but secure storage failed. Check the server database setting.",
+  account_error: "Google account verification failed. Try reconnecting.",
+  token_error:
+    "Google authorization could not finish. Start a fresh connection attempt.",
+};
 export function GoogleCalendarPanel({
   start,
   end,
@@ -30,164 +32,345 @@ export function GoogleCalendarPanel({
   end?: string;
   settings?: boolean;
 }) {
-  const [data, setData] = useState<ConnectionState | null>(null);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [callbackStatus, setCallbackStatus] = useState<string | null>(null);
   const today = localDate();
-  const from = start ?? today;
   const until =
     end ??
-    new Date(new Date(today + "T12:00Z").getTime() + 7 * 86400000)
+    new Date(new Date(today + "T12:00Z").getTime() + 86400000)
       .toISOString()
       .slice(0, 10);
-  const load = useCallback(async () => {
-    const state = await call<ConnectionState>("/api/v1/calendar/connections");
-    setData(state);
-    if (!settings) {
-      const result = await call<{ events: CalendarEvent[] }>(
-        `/api/v1/calendar/events?start=${from}&end=${until}`,
-      );
-      setEvents(result.events);
-    }
-  }, [settings, from, until]);
+  const { data, setData, events, error, busy, message, setMessage, act, sync } =
+    useCalendar(
+      settings ? undefined : (start ?? today),
+      settings ? undefined : until,
+    );
+  const [callback, setCallback] = useState<string | null>(null);
   useEffect(() => {
-    let live = true;
-    async function run() {
-      try {
-        const state = await call<ConnectionState>(
-          "/api/v1/calendar/connections",
-        );
-        if (!live) return;
-        setData(state);
-        setCallbackStatus(
-          new URLSearchParams(window.location.search).get("google"),
-        );
-        if (!settings) {
-          const result = await call<{ events: CalendarEvent[] }>(
-            `/api/v1/calendar/events?start=${from}&end=${until}`,
-          );
-          if (live) setEvents(result.events);
-        }
-      } catch (e) {
-        if (live)
-          setError(
-            e instanceof Error ? e.message : "Unable to load calendars.",
-          );
-      }
-    }
-    void run();
-    return () => {
-      live = false;
-    };
-  }, [settings, from, until]);
-  async function act(label: string, fn: () => Promise<void>) {
-    setBusy(label);
-    setError("");
-    setMessage("");
-    try {
-      await fn();
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Calendar request failed.");
-    } finally {
-      setBusy("");
-    }
-  }
+    const timer = setTimeout(
+      () =>
+        setCallback(new URLSearchParams(window.location.search).get("google")),
+      0,
+    );
+    return () => clearTimeout(timer);
+  }, []);
   const connected =
     data?.connections.filter((c) => c.status === "connected") ?? [];
   const selected =
     data?.calendars.filter(
       (c) => c.sync_enabled && connected.some((x) => x.id === c.connection_id),
     ) ?? [];
-  const dayKeys = Array.from(
-    {
-      length: Math.min(
-        125,
-        Math.ceil(
-          (new Date(until).getTime() - new Date(from).getTime()) / 86400000,
-        ),
+  const timestamps = selected
+    .map((c) => c.last_synced_at)
+    .filter((s): s is string => !!s)
+    .sort();
+  const last = timestamps.length === selected.length ? timestamps[0] : null;
+  const syncText = last
+    ? `Updated ${formatInTimeZone(last, "America/Vancouver", "MMM d, h:mm a")}`
+    : selected.length
+      ? "Sync needed"
+      : "No calendars selected";
+  if (!settings) {
+    const upcoming = groupCalendarEvents(
+      events.filter(
+        (e) => !e.end_at || new Date(e.end_at).getTime() > Date.now(),
       ),
-    },
-    (_, i) =>
-      new Date(new Date(from + "T12:00Z").getTime() + i * 86400000)
-        .toISOString()
-        .slice(0, 10),
-  );
+    ).slice(0, 5);
+    return (
+      <section className="panel home-calendar">
+        <div className="panel-heading">
+          <div className="panel-title">
+            <CalendarDays />
+            <h2>Today’s schedule</h2>
+          </div>
+          <Link className="text-link" href="/planner">
+            Planner
+            <ChevronRight size={13} />
+          </Link>
+        </div>
+        <div className="home-agenda">
+          {!data && !error ? (
+            <p className="muted small">Loading schedule…</p>
+          ) : !selected.length ? (
+            <p className="muted small">
+              Connect your calendars in{" "}
+              <Link className="text-link" href="/settings?section=integrations">
+                Settings
+              </Link>
+              .
+            </p>
+          ) : upcoming.length ? (
+            upcoming.map((g) => (
+              <Link key={g.id} href="/planner" className="agenda-compact-row">
+                <time>
+                  {g.event.all_day_start
+                    ? "All day"
+                    : formatInTimeZone(
+                        g.event.start_at!,
+                        "America/Vancouver",
+                        "h:mm a",
+                      )}
+                </time>
+                <div>
+                  <strong>{g.event.title || "Untitled event"}</strong>
+                  <small>
+                    {
+                      data?.calendars.find((c) => c.id === g.event.calendar_id)
+                        ?.name
+                    }
+                    {g.sources.length > 1 ? ` +${g.sources.length - 1}` : ""}
+                  </small>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <p className="muted small">No more cached events today.</p>
+          )}
+        </div>
+        <div className="panel-footer">
+          <span>{syncText}</span>
+          <Link href="/planner" className="text-link">
+            View schedule
+          </Link>
+        </div>
+        {error && (
+          <p className="error-message" role="alert">
+            {error}
+          </p>
+        )}
+      </section>
+    );
+  }
   return (
-    <section className="panel settings-panel" aria-label="Google Calendar">
-      <div className="panel-heading" style={{ padding: 0, marginBottom: 12 }}>
-        <h2 className="inline">
-          <CalendarDays size={18} />
-          Google Calendar
-        </h2>
-        <span className="badge">Read-only</span>
+    <section
+      className="panel settings-panel calendar-connection"
+      aria-label="Google Calendar"
+    >
+      <div className="connection-heading">
+        <span className="connection-icon">
+          <CalendarDays size={22} />
+        </span>
+        <div>
+          <h2>Google Calendar</h2>
+          <p>{selected.length} selected · Read-only</p>
+        </div>
+        <span className={`badge ${connected.length ? "success" : ""}`}>
+          {connected.length ? "Connected" : "Not connected"}
+        </span>
       </div>
-      {settings && callbackStatus && (
+      {callback && callbackMessages[callback] && (
         <p
-          role="status"
           className={
-            callbackStatus === "connected" ? "form-hint" : "error-message"
+            callback === "connected" ? "connection-feedback" : "error-message"
           }
+          role="status"
         >
-          {callbackStatus === "connected"
-            ? "Google account connected. Choose calendars below, then sync them."
-            : callbackStatus === "denied"
-              ? "Google permission was declined. Connect again when ready."
-              : callbackStatus === "list_error"
-                ? "Google account connected, but the calendar list could not load. Tap Refresh calendar list."
-                : callbackStatus === "client_error"
-                  ? "Google rejected the app credentials. Update GOOGLE_CLIENT_SECRET in Vercel with the secret from the same Life OS Web client as GOOGLE_CLIENT_ID, then redeploy."
-                  : callbackStatus === "state_error"
-                    ? "This connection attempt expired or could not be verified. Start again here in the same browser tab."
-                    : callbackStatus === "session_error"
-                      ? "Your Life OS session could not be verified. Sign in again, then reconnect Google."
-                      : callbackStatus === "storage_error"
-                        ? "Google authorization finished, but Life OS could not securely save the connection. The server database setting needs checking."
-                        : callbackStatus === "account_error"
-                          ? "Google granted access, but account verification could not finish. Try reconnecting; the server logs identify the failed step."
-                          : "Google connection could not finish. Start a fresh connection attempt and grant both read-only calendar permissions."}
+          {callbackMessages[callback]}
         </p>
       )}
-      <p>
-        Selected Google calendars stay protected. Sync is manual; Life OS cannot
-        create or move events.
-      </p>
-      {!data && !error && <p role="status">Loading calendar connection…</p>}
+      <div className="connection-summary">
+        <span>{syncText}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!!busy || !selected.length}
+          onClick={() => void sync()}
+        >
+          <RefreshCw size={13} />
+          {busy === "sync" ? "Syncing…" : "Sync selected calendars"}
+        </Button>
+      </div>
+      {!data && !error && (
+        <p className="muted small" role="status">
+          Loading connection…
+        </p>
+      )}
       {data && !data.configured && (
-        <p className="form-hint">
-          Google connection setup is incomplete. Finish the server settings
-          before connecting.
-        </p>
+        <p className="error-message">Google server settings need attention.</p>
       )}
-      {data && (
-        <div className="inline" style={{ flexWrap: "wrap", marginTop: 12 }}>
-          <Button
-            variant="outline"
-            disabled={!!busy || !data.configured}
-            onClick={() =>
-              void act("connect", async () => {
-                const { url } = await call<{ url: string }>(
+      {!!connected.length && (
+        <>
+          <div className="calendar-choice-list">
+            {data?.calendars
+              .filter((c) => connected.some((x) => x.id === c.connection_id))
+              .map((c) => (
+                <label className="calendar-choice" key={c.id}>
+                  <input
+                    type="checkbox"
+                    checked={c.sync_enabled}
+                    disabled={!!busy}
+                    onChange={(e) => {
+                      const enabled = e.currentTarget.checked;
+                      setData((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              calendars: prev.calendars.map((row) =>
+                                row.id === c.id
+                                  ? { ...row, sync_enabled: enabled }
+                                  : row,
+                              ),
+                            }
+                          : prev,
+                      );
+                      void act(c.id, async () => {
+                        try {
+                          await calendarRequest(
+                            "/api/v1/calendar/connections",
+                            {
+                              method: "POST",
+                              body: JSON.stringify({
+                                action: "select",
+                                calendar_id: c.id,
+                                enabled,
+                              }),
+                            },
+                          );
+                        } catch (error) {
+                          setData((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  calendars: prev.calendars.map((row) =>
+                                    row.id === c.id
+                                      ? { ...row, sync_enabled: !enabled }
+                                      : row,
+                                  ),
+                                }
+                              : prev,
+                          );
+                          throw error;
+                        }
+                      });
+                    }}
+                  />
+                  <span
+                    className="calendar-source-dot"
+                    style={{ background: c.color ?? "var(--blue)" }}
+                  />
+                  <span className="calendar-choice-name">{c.name}</span>
+                  <span className="calendar-choice-status">
+                    {c.sync_error
+                      ? "Needs attention"
+                      : c.last_synced_at
+                        ? "Synced"
+                        : "Not synced"}
+                  </span>
+                </label>
+              ))}
+          </div>
+          {connected.map((c) => (
+            <label className="daily-sync-setting" key={c.id}>
+              <input
+                type="checkbox"
+                checked={!!c.daily_sync_enabled}
+                disabled={!!busy}
+                onChange={(e) => {
+                  const enabled = e.currentTarget.checked;
+                  void act("daily", async () => {
+                    await calendarRequest("/api/v1/calendar/connections", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        action: "daily",
+                        connection_id: c.id,
+                        enabled,
+                      }),
+                    });
+                    setMessage(
+                      enabled
+                        ? "Daily read-only refresh enabled."
+                        : "Daily refresh paused.",
+                    );
+                  });
+                }}
+              />
+              <span>
+                <strong>Refresh automatically each day</strong>
+                <small>
+                  Around 6–7 AM Vancouver time. Manual refresh stays available.
+                </small>
+              </span>
+            </label>
+          ))}
+          <details className="connection-details">
+            <summary>Connection details & troubleshooting</summary>
+            <p className="muted small">
+              The cache covers the past 30 days and next 90 days. Outside this
+              range, missing events do not indicate free time.
+            </p>
+            {selected.map((c) => (
+              <div key={c.id} className="sync-detail">
+                <strong>{c.name}</strong>
+                <span>
+                  {c.last_synced_at
+                    ? formatInTimeZone(
+                        c.last_synced_at,
+                        "America/Vancouver",
+                        "MMM d, h:mm a",
+                      )
+                    : "Not synced"}
+                </span>
+                {c.sync_error && (
+                  <p className="error-message">{c.sync_error}</p>
+                )}
+              </div>
+            ))}
+            {data?.daily_runs?.slice(0, 1).map((run, i) => (
+              <p
+                className={
+                  run.status === "failed" ? "error-message" : "muted small"
+                }
+                key={i}
+              >
+                Daily refresh: {run.status} ·{" "}
+                {formatInTimeZone(
+                  run.updated_at,
+                  "America/Vancouver",
+                  "MMM d, h:mm a",
+                )}
+                {run.last_error ? ` · ${run.last_error}` : ""}
+              </p>
+            ))}
+            <p className="muted small">
+              Google may require reconnection after seven days while this app is
+              in Testing. Failed daily runs are not retried automatically.
+            </p>
+          </details>
+        </>
+      )}
+      <div className="connection-actions">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!!busy || !data?.configured}
+          onClick={() => {
+            void (async () => {
+              try {
+                const { url } = await calendarRequest<{ url: string }>(
                   "/api/v1/calendar/oauth/start",
                   { method: "POST" },
                 );
                 window.location.assign(url);
-              })
-            }
-          >
-            <Link2 size={14} />
-            {connected.length ? "Reconnect Google" : "Connect Google Calendar"}
-          </Button>
-          {!!connected.length && (
+              } catch (e) {
+                void act("connect", async () => {
+                  throw e;
+                });
+              }
+            })();
+          }}
+        >
+          <Link2 size={13} />
+          {connected.length ? "Reconnect Google" : "Connect Google Calendar"}
+        </Button>
+        {!!connected.length && (
+          <details className="connection-menu">
+            <summary>Manage</summary>
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               disabled={!!busy}
               onClick={() =>
                 void act("list", async () => {
                   for (const c of connected)
-                    await call("/api/v1/calendar/connections", {
+                    await calendarRequest("/api/v1/calendar/connections", {
                       method: "POST",
                       body: JSON.stringify({
                         action: "refresh",
@@ -200,221 +383,43 @@ export function GoogleCalendarPanel({
             >
               Refresh calendar list
             </Button>
-          )}
-          {!!selected.length && (
-            <Button
-              disabled={!!busy}
-              onClick={() =>
-                void act("sync", async () => {
-                  let failed = 0;
-                  for (const calendar of selected) {
-                    try {
-                      await call("/api/v1/calendar/sync", {
-                        method: "POST",
-                        body: JSON.stringify({ calendar_id: calendar.id }),
-                      });
-                    } catch {
-                      failed++;
-                    }
-                  }
-                  if (failed)
-                    throw Error(
-                      `${failed} calendar sync${failed === 1 ? "" : "s"} failed. Review the status below; previous cached events were kept.`,
-                    );
-                  setMessage("Selected calendars synced.");
-                })
-              }
-            >
-              <RefreshCw size={14} />
-              {busy === "sync" ? "Syncing…" : "Sync selected calendars"}
-            </Button>
-          )}
-        </div>
-      )}
-      {!!connected.length && (
-        <details style={{ marginTop: 18 }} open={settings || !selected.length}>
-          <summary style={{ cursor: "pointer" }}>
-            Choose calendars · {selected.length} selected
-          </summary>
-          <p className="form-hint">
-            Select Personal, Career, Study, SFU Men’s Basketball, SFU, and
-            Holidays in Canada as available. Selection never changes Google.
-          </p>
-          {data?.calendars
-            .filter((c) => connected.some((x) => x.id === c.connection_id))
-            .map((c) => (
-              <div className="setting-line" key={c.id}>
-                <label
-                  style={{ display: "flex", gap: 10, alignItems: "center" }}
-                >
-                  <input
-                    type="checkbox"
-                    style={{ width: 18, height: 18 }}
-                    checked={c.sync_enabled}
-                    disabled={!!busy}
-                    onChange={(e) => {
-                      const enabled = e.currentTarget.checked;
-                      setData((previous) =>
-                        previous
-                          ? {
-                              ...previous,
-                              calendars: previous.calendars.map((row) =>
-                                row.id === c.id
-                                  ? { ...row, sync_enabled: enabled }
-                                  : row,
-                              ),
-                            }
-                          : previous,
-                      );
-                      void act(c.id, async () => {
-                        try {
-                          await call("/api/v1/calendar/connections", {
-                            method: "POST",
-                            body: JSON.stringify({
-                              action: "select",
-                              calendar_id: c.id,
-                              enabled,
-                            }),
-                          });
-                        } catch (error) {
-                          setData((previous) =>
-                            previous
-                              ? {
-                                  ...previous,
-                                  calendars: previous.calendars.map((row) =>
-                                    row.id === c.id
-                                      ? { ...row, sync_enabled: !enabled }
-                                      : row,
-                                  ),
-                                }
-                              : previous,
-                          );
-                          throw error;
-                        }
-                      });
-                    }}
-                  />
-                  <span>
-                    {c.name}
-                    <span className="form-hint" style={{ display: "block" }}>
-                      {" "}
-                      {c.last_synced_at
-                        ? `Last synced ${formatInTimeZone(c.last_synced_at, "America/Vancouver", "MMM d, h:mm a")}`
-                        : "Not synced"}
-                      {c.sync_error && ` · ${c.sync_error}`}
-                    </span>
-                  </span>
-                </label>
-              </div>
-            ))}
-          {connected.map((c) => (
-            <Button
-              key={c.id}
-              variant="ghost"
-              disabled={!!busy}
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Disconnect this Google account? Cached events remain in your export, but disappear from the active calendar.",
+            {connected.map((c) => (
+              <Button
+                key={c.id}
+                variant="ghost"
+                size="sm"
+                disabled={!!busy}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Disconnect Google? Cached events will be hidden and daily refresh will stop.",
+                    )
                   )
-                )
-                  void act("disconnect", async () => {
-                    await call("/api/v1/calendar/connections", {
-                      method: "DELETE",
-                      body: JSON.stringify({ connection_id: c.id }),
+                    void act("disconnect", async () => {
+                      await calendarRequest("/api/v1/calendar/connections", {
+                        method: "DELETE",
+                        body: JSON.stringify({ connection_id: c.id }),
+                      });
+                      setMessage("Google disconnected.");
                     });
-                    setMessage("Google account disconnected.");
-                  });
-              }}
-            >
-              <Unplug size={14} />
-              Disconnect Google account
-            </Button>
-          ))}
-        </details>
-      )}
-      {selected.map((c) => (
-        <p className="form-hint" key={c.id} style={{ marginTop: 8 }}>
-          {c.name}:{" "}
-          {c.coverage_start && c.coverage_end
-            ? `cached ${formatInTimeZone(c.coverage_start, "America/Vancouver", "MMM d, yyyy")} through ${formatInTimeZone(new Date(new Date(c.coverage_end).getTime() - 1), "America/Vancouver", "MMM d, yyyy")}`
-            : "No events synced yet."}
-          {c.sync_error && (
-            <span className="error-message"> {c.sync_error}</span>
-          )}
-        </p>
-      ))}
-      {!settings && !!selected.length && (
-        <div style={{ marginTop: 18 }}>
-          {selected.some(
-            (c) =>
-              !c.coverage_start ||
-              !c.coverage_end ||
-              localDate(c.coverage_start) > from ||
-              localDate(c.coverage_end) < until,
-          ) && (
-            <p className="notice">
-              This view includes dates outside the cached range. Missing events
-              do not indicate free time.
-            </p>
-          )}
-          {dayKeys.map((day) => {
-            const list = events
-              .filter((e) => eventOnDate(e, day))
-              .sort((a, b) =>
-                (a.start_at ?? a.all_day_start ?? "").localeCompare(
-                  b.start_at ?? b.all_day_start ?? "",
-                ),
-              );
-            return list.length ? (
-              <div key={day} style={{ marginBottom: 16 }}>
-                <h3 style={{ marginBottom: 8 }}>
-                  {formatInTimeZone(day + "T12:00Z", "UTC", "EEE, MMM d")}
-                </h3>
-                {list.map((e) => (
-                  <div
-                    key={e.id}
-                    className="setting-line"
-                    style={{
-                      borderLeft: "3px solid var(--primary)",
-                      paddingLeft: 12,
-                    }}
-                  >
-                    <div>
-                      <strong>{e.title || "Untitled event"}</strong>
-                      <p>
-                        {eventTimeLabel(e)} ·{" "}
-                        {
-                          data?.calendars.find((c) => c.id === e.calendar_id)
-                            ?.name
-                        }{" "}
-                        · {e.busy_status === "busy" ? "Busy" : "Free"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null;
-          })}
-          {!events.length && (
-            <p className="form-hint">
-              No cached events in this view. Check the selected calendars and
-              sync status above.
-            </p>
-          )}
-        </div>
-      )}
-      {message && (
-        <p role="status" style={{ marginTop: 12 }}>
-          {message}
+                }}
+              >
+                Disconnect Google
+              </Button>
+            ))}
+          </details>
+        )}
+      </div>
+      {(message || busy) && (
+        <p className="connection-feedback" role="status">
+          {message || "Saving…"}
         </p>
       )}
       {error && (
-        <p role="alert" className="error-message" style={{ marginTop: 12 }}>
+        <p className="error-message" role="alert">
           {error}
         </p>
       )}
-      {busy && busy !== "sync" && <p role="status">Working…</p>}
     </section>
   );
 }
