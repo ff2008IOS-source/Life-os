@@ -1,0 +1,8 @@
+{
+  "name": "life-os-recovery-tools",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "supabase": "3.0.0"
+  }
+}

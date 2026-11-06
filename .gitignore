@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.env*
+!.env.example
+playwright-report/
+test-results/
+backups/
+*.tsbuildinfo
+
+recovery-output/
+ops/recovery/node_modules/
+*.enc
+*.enc.sha256
+supabase/.temp/

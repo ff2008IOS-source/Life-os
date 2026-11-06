@@ -1,0 +1,67 @@
+name: Manual Life OS encrypted backup and recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Backup only, or backup plus restore into an EMPTY separate Free project
+        type: choice
+        required: true
+        default: backup_only
+        options:
+          - backup_only
+          - backup_and_restore
+      recovery_project_ref:
+        description: Separate recovery project reference (required for backup_and_restore)
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: life-os-manual-recovery
+  cancel-in-progress: false
+
+jobs:
+  recovery:
+    if: github.event.repository.private == true && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && vars.LIFE_OS_RECOVERY_ZERO_SPEND_CONFIRMED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out reviewed default-branch source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.22.1"
+      - name: Install locked official Supabase CLI
+        run: npm ci --prefix ops/recovery --no-audit --no-fund
+      - name: Create encrypted backup and optionally rehearse recovery
+        env:
+          LIFE_OS_SOURCE_PROJECT_REF: ygyffrxhdvvathrpqyen
+          LIFE_OS_SOURCE_DB_URL: ${{ secrets.LIFE_OS_SOURCE_DB_URL }}
+          LIFE_OS_SOURCE_DB_PASSWORD: ${{ secrets.LIFE_OS_SOURCE_DB_PASSWORD }}
+          LIFE_OS_SOURCE_DB_CA: ${{ secrets.LIFE_OS_SOURCE_DB_CA }}
+          LIFE_OS_RECOVERY_DB_URL: ${{ secrets.LIFE_OS_RECOVERY_DB_URL }}
+          LIFE_OS_RECOVERY_DB_PASSWORD: ${{ secrets.LIFE_OS_RECOVERY_DB_PASSWORD }}
+          LIFE_OS_RECOVERY_DB_CA: ${{ secrets.LIFE_OS_RECOVERY_DB_CA }}
+          LIFE_OS_BACKUP_PASSPHRASE: ${{ secrets.LIFE_OS_BACKUP_PASSPHRASE }}
+          LIFE_OS_RECOVERY_MODE: ${{ inputs.mode }}
+          LIFE_OS_RECOVERY_PROJECT_REF: ${{ inputs.recovery_project_ref }}
+        run: node scripts/recovery/run.mjs
+      - name: Retain encrypted backup only
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: life-os-encrypted-backup-${{ github.run_id }}
+          path: |
+            recovery-output/life-os-database-backup.enc
+            recovery-output/life-os-database-backup.enc.sha256
+            recovery-output/verification.json
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 0
