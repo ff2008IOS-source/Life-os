@@ -188,6 +188,37 @@ describe("deterministic scheduling constraints", () => {
     );
     expect(result.blocks.reduce((n, b) => n + b.minutes, 0)).toBe(30);
   });
+  it("uses reported work rather than planned duration when calculating remaining effort", () => {
+    const r = schedule(
+      input({
+        tasks: [task("a", { estimated_minutes: 90, actual_minutes: 55 })],
+        existing: [
+          {
+            task_id: "a",
+            status: "completed",
+            start_at: "2026-11-05T17:00:00Z",
+            end_at: "2026-11-05T18:30:00Z",
+            actual_minutes: 45,
+          },
+        ],
+      }),
+    );
+    expect(r.blocks.reduce((n, b) => n + b.minutes, 0)).toBe(35);
+    const unknown = schedule(
+      input({
+        existing: [
+          {
+            task_id: "a",
+            status: "completed",
+            start_at: "2026-11-05T17:00:00Z",
+            end_at: "2026-11-05T18:30:00Z",
+          },
+        ],
+      }),
+    );
+    expect(unknown.blocks).toHaveLength(0);
+    expect(unknown.warnings[0].reason).toContain("actual effort");
+  });
   it("explains short remaining effort rather than silently dropping it", () => {
     const result = schedule(
       input({ tasks: [task("a", { estimated_minutes: 20 })] }),

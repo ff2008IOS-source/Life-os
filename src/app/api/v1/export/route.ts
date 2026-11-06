@@ -22,6 +22,7 @@ const tables = [
   "scheduling_policies",
   "scheduling_automation",
   "work_blocks",
+  "work_completions",
   "scheduling_runs",
   "scheduling_decisions",
   "integration_jobs",

@@ -1,4 +1,5 @@
 "use client";
+import { WorkSessionsPanel } from "./work-sessions-panel";
 import { useState } from "react";
 import { addDays, format } from "date-fns";
 import { ChartNoAxesCombined, CheckCheck, Clock3, Flag } from "lucide-react";
@@ -71,6 +72,11 @@ export function InsightsPage() {
           <option value="year">Last 365 days</option>
         </select>
       </div>
+      <WorkSessionsPanel
+        compact
+        start={start}
+        end={format(addDays(new Date(end + "T12:00:00"), 1), "yyyy-MM-dd")}
+      />
       <div className="stats-grid">
         {[
           {

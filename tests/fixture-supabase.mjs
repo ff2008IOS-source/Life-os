@@ -65,6 +65,21 @@ const server = createServer((req, res) => {
         res.statusCode = status;
         res.end(JSON.stringify(value));
       };
+      // Test-only synthetic provider confirmation; this server is loopback-only and never deployed.
+      if (url.pathname === "/__fixtures/reservation" && req.method === "POST") {
+        const row = await db.query(
+          "insert into work_blocks(id,user_id,task_id,start_at,end_at,status,policy_version,provider_event_id,provider_etag) values($1,$2,$3,$4,$5,'planned',1,$6,'synthetic-etag') returning id,version",
+          [
+            body.id,
+            uid,
+            body.task_id,
+            body.start_at,
+            body.end_at,
+            body.provider_event_id,
+          ],
+        );
+        return send(200, row.rows[0]);
+      }
       if (url.pathname === "/health") return send(200, { ok: true });
       if (url.pathname === "/auth/v1/token") {
         if (body.email !== user.email || body.password !== "test-password-only")
@@ -101,6 +116,8 @@ const server = createServer((req, res) => {
           const fn = url.pathname.split("/").at(-1);
           if (
             ![
+              "complete_work_session",
+              "work_progress_summary",
               "is_approved_user",
               "has_registered_session",
               "initialize_workspace",
@@ -140,6 +157,7 @@ const server = createServer((req, res) => {
           "scheduling_policies",
           "scheduling_automation",
           "work_blocks",
+          "work_completions",
           "scheduling_runs",
           "scheduling_decisions",
           "integration_jobs",
@@ -178,8 +196,9 @@ const server = createServer((req, res) => {
           if (["select", "order", "offset", "limit"].includes(key)) continue;
           const [op, ...parts] = val.split(".");
           const value = parts.join(".");
-          if (op !== "eq") throw Error("Unsupported filter");
-          where.push(`${quote(key)} = ${param(value)}`);
+          const operators = { eq: "=", gte: ">=", gt: ">", lt: "<", lte: "<=" };
+          if (!operators[op]) throw Error("Unsupported filter");
+          where.push(`${quote(key)} ${operators[op]} ${param(value)}`);
         }
         const condition = where.length ? " where " + where.join(" and ") : "";
         let sql = "";

@@ -81,15 +81,22 @@ export const academicSchemas = {
       course_id: z.uuid(),
       topic_id: id,
       task_id: id,
-      start_at: z.iso.datetime({ offset: true }),
-      end_at: z.iso.datetime({ offset: true }),
+      start_at: z.iso.datetime({ offset: true }).nullable().default(null),
+      end_at: z.iso.datetime({ offset: true }).nullable().default(null),
       actual_minutes: z.number().int().positive().nullable().default(null),
       notes: text,
     })
     .strict()
-    .refine((x) => x.end_at > x.start_at, {
-      message: "Session end must follow its start.",
-    }),
+    .refine(
+      (x) =>
+        (!x.start_at && !x.end_at) ||
+        (!!x.start_at &&
+          !!x.end_at &&
+          Date.parse(x.end_at) > Date.parse(x.start_at)),
+      {
+        message: "Session end must follow its start.",
+      },
+    ),
   contacts: z
     .object({
       name: title,

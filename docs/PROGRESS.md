@@ -136,6 +136,7 @@ The compact Calendar/Settings redesign is implemented and tested. The daily read
 ## 2026-11-06 — Operational workspace additions
 
 Implemented locally pending live owner consent and checks:
+
 - Verified-header, read-only Google Sheet snapshots, ten-minute reviewed import jobs, source-change detection and atomic idempotent imports. Source goals/targets remain source records until deliberately promoted. Existing local imported rows are preserved, not overwritten by stale source content.
 - Course/term/assessment/grading-category/topic/study-session forms. Unknown dates and scores remain null; category and assessment formulas must be configured before showing averages. Percentage-scale imports are labelled. Source submission status is separate from confirmed submission state. Contact follow-up CRUD does not message contacts.
 - Calendar-backed scheduling previews, refresh when older than five minutes, fail-closed unknown availability, exclusive all-day boundaries, preserved existing reservations and effort accounting. Apply refreshes calendars again and rejects changed inputs or the freeze window.
@@ -156,3 +157,7 @@ Verified owner RLS visibility of the imported rows. The signed notification time
 ## Project card cleanup and automatic scheduling
 
 Owner requested shorter project summaries, no source links on cards, fixed card overflow and automation enabled. Card text now has bounded summaries, URL/audit-text filtering, wrapping and grid/flex shrink constraints; full source provenance remains in source records/IDs. Short descriptions are used for imported active project descriptions. Automation is an explicit persisted owner setting with a visible off control. The existing signed 15-minute worker checks estimated, eligible tasks against refreshed selected calendars and uses the same protected dedicated-calendar reservation path. Active imported projects participate when automation is enabled. Existing reservations remain fixed; test tasks are excluded; missing estimates do not generate invented work. Disabling automation is checked again before each provider write. Current owner has no active tasks with estimates, so enabled automation should report idle until real tasks are added.
+
+## Life OS 2.0 first increment — development branch
+
+Read-only production audit and local atomic work-session completion are recorded in [the current audit](LIFE_OS_V2_AUDIT.md). Added task/course/topic links, actual effort, completion-backed study history and recorded-work summaries; corrected planned-versus-actual scheduler accounting and protected completed reservations from undo. Typecheck, lint, formatting, build, 104 tests and nine synthetic browser tests passed. No new hosted migration or production release was performed. Two-way Sheets/Calendar reconciliation, native workflows, Groq and tutoring remain future increments.

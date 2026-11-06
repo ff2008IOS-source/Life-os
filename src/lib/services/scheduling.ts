@@ -95,7 +95,7 @@ export async function liveSchedule(
   for (let page = 0; page < 20; page++) {
     const rows = await db
       .from("work_blocks")
-      .select("id,version,task_id,start_at,end_at,status")
+      .select("id,version,task_id,start_at,end_at,status,actual_minutes")
       .eq("user_id", user.id)
       .in("status", ["planned", "completed"])
       .order("id")

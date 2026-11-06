@@ -1,4 +1,5 @@
 "use client";
+import { WorkSessionsPanel } from "./work-sessions-panel";
 import { useState } from "react";
 import { startOfWeek, addDays, format } from "date-fns";
 import { BookOpen, ArrowLeft, ArrowRight, Check, Plus } from "lucide-react";
@@ -145,6 +146,14 @@ export function ReviewsPage() {
           </Button>
         )}
       </div>
+      <WorkSessionsPanel
+        compact
+        start={period}
+        end={format(
+          addDays(new Date(periodEnd + "T12:00:00"), 1),
+          "yyyy-MM-dd",
+        )}
+      />
       {editing === undefined ? (
         <section className="panel">
           <div className="panel-heading">

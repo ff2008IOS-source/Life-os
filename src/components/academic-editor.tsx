@@ -224,6 +224,7 @@ export function AcademicEditor({
         for (const key of Object.keys(shape))
           if (key in (record ?? seed!)) raw[key] = (record ?? seed!)[key];
       for (const field of definitions[kind]) {
+        if (record?.completion_id && field.key !== "notes") continue;
         const value = String(form.get(field.key) ?? "");
         raw[field.key] =
           field.type === "checkbox"
@@ -302,6 +303,7 @@ export function AcademicEditor({
               {options ? (
                 <select
                   name={field.key}
+                  disabled={!!record?.completion_id && field.key !== "notes"}
                   required={field.required}
                   defaultValue={initial == null ? "" : String(initial)}
                   onChange={
@@ -324,12 +326,14 @@ export function AcademicEditor({
               ) : field.type === "textarea" ? (
                 <textarea
                   name={field.key}
+                  disabled={!!record?.completion_id && field.key !== "notes"}
                   defaultValue={String(initial ?? "")}
                   maxLength={10000}
                 />
               ) : (
                 <input
                   name={field.key}
+                  disabled={!!record?.completion_id && field.key !== "notes"}
                   type={field.type ?? "text"}
                   required={field.required}
                   step={field.type === "number" ? "any" : undefined}
