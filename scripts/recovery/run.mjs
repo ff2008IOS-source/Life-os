@@ -22,6 +22,26 @@ import {
 import { encryptBackup, decryptBackup, checksumFile } from "./encryption.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const files = ["roles.sql", "schema.sql", "data.sql", "manifest.json"];
+// Only reviewed literal messages may reach logs; never forward provider output.
+export function safeFailureReason(error) {
+  const allowed = new Set([
+    "Required recovery tool could not start",
+    "Database authentication failed",
+    "Database TLS verification failed",
+    "Database permissions rejected the operation",
+    "Recovery command failed; raw provider output was suppressed",
+    "Database CA certificate configuration is invalid",
+    "This pinned recovery client is verified for Postgres 17 only",
+    "Storage, Vault, MFA or integration credentials need an expanded recovery procedure before this beta workflow can run",
+    "Expected exactly one approved Life OS owner",
+    "A private application table lacks RLS",
+    "Unexpected anonymous or private-schema client access",
+    "Supabase CLI version does not match the reviewed pin",
+    "A required database dump is empty",
+    "Source changed during backup; close the app and retry a manual run",
+  ]);
+  return allowed.has(error?.message) ? error.message : "Unclassified failure; raw error suppressed";
+}
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === "object")
@@ -128,6 +148,7 @@ async function connectionRuntime(connection, ca, work, readOnly = true) {
   ];
   const base = [
     "run",
+    "--interactive",
     "--rm",
     "--network",
     "host",
@@ -311,17 +332,22 @@ export async function runRecovery(env = process.env) {
   let stage = "preflight";
   try {
     await mkdir(output, { recursive: true, mode: 0o700 });
+    stage = "pinned PostgreSQL image download";
     await command("docker", ["pull", POSTGRES_IMAGE]);
+    stage = "source TLS configuration";
     const source = await connectionRuntime(
       config.source,
       env.LIFE_OS_SOURCE_DB_CA,
       working,
       true,
     );
+    stage = "read-only source inventory";
     const baseline = await manifest(source);
+    stage = "source safety checks";
     assertBaseline(baseline);
     let target;
     if (config.target) {
+      stage = "isolated target preflight";
       target = await connectionRuntime(
         config.target,
         env.LIFE_OS_RECOVERY_DB_CA,
@@ -493,9 +519,9 @@ export async function runRecovery(env = process.env) {
         { flag: "a" },
       );
     return report;
-  } catch {
+  } catch (error) {
     throw Error(
-      `Recovery stopped during ${stage}. No credentials or raw provider errors were logged. The live database was never a restore target. Check the operator guide and target configuration.`,
+      `Recovery stopped during ${stage}: ${safeFailureReason(error)}. No credentials or raw provider errors were logged. The live database was never a restore target. Check the operator guide and target configuration.`,
     );
   } finally {
     await rm(working, { recursive: true, force: true });
