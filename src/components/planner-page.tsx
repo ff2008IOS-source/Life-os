@@ -183,7 +183,11 @@ export function PlannerPage() {
                 days={days}
                 view={view}
                 anchor={anchor}
-                tasks={all}
+                tasks={data.tasks.filter(
+                  (t) =>
+                    !t.deleted_at &&
+                    !["completed", "cancelled"].includes(t.status),
+                )}
                 onTask={(task) => setEditor({ task })}
                 onDay={setAnchor}
               />

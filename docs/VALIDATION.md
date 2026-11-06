@@ -86,3 +86,11 @@ All 51 tests across seven files, strict type checking, lint and formatting check
 - TypeScript, ESLint, formatting and production build passed.
 - Applied the additive daily-refresh preference migration. Existing authorized owner connection opted in; new connections default off. Created the production-sensitive cron bearer setting without printing its value. No Google write scope or event-write transport was added.
 - Daily schedule and first deployed worker invocation require hosted verification; a future scheduled trigger must be distinguished from a manual worker test.
+
+### Hosted daily worker verification
+
+The first compact-UI production deployment reached READY. An unauthenticated worker request returned 401. A manual authenticated call to the deployed daily worker returned HTTP 200 with completed=6, failed=0, skipped=0, deferred=0. PostgreSQL confirmed six completed durable jobs, six recently synced calendars, max attempts=1 and zero duplicate `(user_id, calendar_id, provider_event_id)` records. The duplicate-invocation check is recorded after its response. This is a real read-only Google fetch through the background worker; it is not evidence that a future timed cron trigger has already fired. The first scheduled daily invocation remains pending.
+
+A final browser regression run after separating Calendar deadlines from task-list status filters passed all six browser tests. The shared sidebar now distinguishes daily read refresh from disabled automatic task scheduling.
+
+The repeated authenticated worker invocation returned HTTP 200 with completed=0, failed=0, skipped=6, deferred=0, confirming the completed daily jobs were not run again.

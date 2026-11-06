@@ -117,7 +117,10 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               <ShieldCheck size={13} />
               Your private beta
             </strong>
-            <p>Private workspace. Calendar writes and automation are off.</p>
+            <p>
+              Private workspace. Calendar writes and automatic scheduling are
+              off.
+            </p>
           </div>
           <Link href="/settings" className="account">
             <div className="avatar">
