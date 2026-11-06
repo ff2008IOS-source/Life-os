@@ -2,16 +2,21 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { addDays, format } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";
-import { authorized, ApiError } from "@/lib/auth";
+import { ApiError } from "@/lib/auth";
 import { dbError } from "@/lib/http";
-import { loadWorkspace } from "./workspace";
+import { schedulingIdentity } from "./scheduling-identity";
+import { loadWorkspace, loadWorkspaceForUser } from "./workspace";
 import { calendarBusy, type AvailabilityEvent } from "../calendar-availability";
 import { localDate, TIMEZONE } from "../dates";
 import { schedule, type Policy, type ExistingBlock } from "../scheduler";
 import { syncCalendarForUser } from "../integrations/calendar-sync-service";
 import { serverAdmin } from "../supabase/admin";
-export async function liveSchedule(policy: Policy, forceRefresh = false) {
-  const { db, user } = await authorized();
+export async function liveSchedule(
+  policy: Policy,
+  forceRefresh = false,
+  workerUserId?: string,
+) {
+  const { db, user } = await schedulingIdentity(workerUserId);
   const selected = await db
     .from("calendars")
     .select(
@@ -113,7 +118,9 @@ export async function liveSchedule(policy: Policy, forceRefresh = false) {
       new Set(selected.data.map((c) => c.connection_id)).size
   )
     throw new ApiError(409, "Reconnect Google before planning.");
-  const workspace = await loadWorkspace();
+  const workspace = workerUserId
+    ? await loadWorkspaceForUser(workerUserId)
+    : await loadWorkspace();
   const result = schedule({
     now: new Date().toISOString(),
     policy,
@@ -121,14 +128,18 @@ export async function liveSchedule(policy: Policy, forceRefresh = false) {
     existing: existing,
     dependencies: workspace.dependencies,
     tasks: workspace.tasks
-      .filter((t) => !t.deleted_at)
+      .filter(
+        (t) =>
+          !t.deleted_at && (!workerUserId || !t.title.startsWith("[TEST]")),
+      )
       .map((t) => ({
         ...t,
         area: workspace.areas.find((a) => a.id === t.area_id)?.slug ?? null,
         eligible:
           t.scheduling_mode === "eligible" ||
-          !!workspace.projects.find((p) => p.id === t.project_id)
-            ?.automation_enabled,
+          !!workspace.projects.find(
+            (p) => p.id === t.project_id && p.status === "active",
+          )?.automation_enabled,
       })),
   });
   const revision = createHash("sha256")
@@ -154,8 +165,15 @@ export async function liveSchedule(policy: Policy, forceRefresh = false) {
     revision,
   };
 }
-export async function saveSchedulePreview(policy: Policy) {
-  const { user, result, revision } = await liveSchedule(policy);
+export async function saveSchedulePreview(
+  policy: Policy,
+  workerUserId?: string,
+) {
+  const { user, result, revision } = await liveSchedule(
+    policy,
+    false,
+    workerUserId,
+  );
   const run = await serverAdmin()
     .from("scheduling_runs")
     .insert({

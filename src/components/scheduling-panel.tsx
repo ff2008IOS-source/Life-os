@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Pause, Play, ShieldCheck, Clock3, TriangleAlert } from "lucide-react";
+import { Play, ShieldCheck, Clock3, TriangleAlert } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   blockLocalLabel,
   type ScheduleResult,
 } from "@/lib/scheduler";
+import { AutomationControl } from "./automation-control";
 import { ReservationsPanel } from "./reservations-panel";
 import { EmptyState } from "./task-list";
 export function SchedulingPanel() {
@@ -41,14 +42,12 @@ export function SchedulingPanel() {
           <strong>Plan around your connected calendars</strong>
           <p>
             Selected calendars are refreshed before planning when more than five
-            minutes old. Review proposed sessions before reserving time.
+            minutes old. Automation uses the same scheduling boundaries as
+            previews.
           </p>
         </div>
-        <span className="badge amber">
-          <Pause size={10} />
-          Automation off
-        </span>
       </div>
+      <AutomationControl policy={policy} />
       <section className="panel">
         <div className="panel-heading">
           <div className="panel-title">

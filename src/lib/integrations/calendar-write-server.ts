@@ -5,6 +5,7 @@ import { authorized, ApiError } from "../auth";
 import { dbError } from "../http";
 import {
   connectionAccess,
+  connectionAccessForUser,
   integrationAdmin,
   integrationRpc,
 } from "./google-server";
@@ -14,6 +15,7 @@ import {
   assertOwnedReservation,
   type Reservation,
 } from "./calendar-reservation";
+import { schedulingIdentity } from "../services/scheduling-identity";
 import { liveSchedule } from "../services/scheduling";
 import { policySchema, type ScheduleResult } from "../scheduler";
 const providerSchema = z
@@ -173,7 +175,10 @@ async function dedicated(userId: string) {
   dbError(c.error);
   if (!c.data)
     throw new ApiError(409, "Set up the dedicated Life OS calendar first.");
-  const { token, scope } = await connectionAccess(c.data.connection_id);
+  const { token, scope } = await connectionAccessForUser(
+    userId,
+    c.data.connection_id,
+  );
   if (!scope.split(" ").includes(CALENDAR_WRITE_SCOPE))
     throw new ApiError(
       409,
@@ -181,8 +186,8 @@ async function dedicated(userId: string) {
     );
   return { ...c.data, token };
 }
-export async function applyReservations(runId: string) {
-  const { user } = await authorized();
+export async function applyReservations(runId: string, workerUserId?: string) {
+  const { user } = await schedulingIdentity(workerUserId);
   return lock(user.id, async () => {
     const db = integrationAdmin();
     const calendar = await dedicated(user.id);
@@ -205,7 +210,7 @@ export async function applyReservations(runId: string) {
       );
     const proposal = run.proposal as ScheduleResult;
     const policy = policySchema.parse(proposal.policy);
-    const current = await liveSchedule(policy, true);
+    const current = await liveSchedule(policy, true, workerUserId);
     if (current.revision !== run.input_revision)
       throw new ApiError(
         409,
@@ -227,6 +232,19 @@ export async function applyReservations(runId: string) {
     const started = Date.now();
     try {
       for (const b of proposal.blocks) {
+        if (workerUserId) {
+          const setting = await db
+            .from("scheduling_automation")
+            .select("enabled")
+            .eq("user_id", user.id)
+            .single();
+          dbError(setting.error);
+          if (!setting.data?.enabled)
+            throw new ApiError(
+              409,
+              "Automation was turned off. Remaining sessions were not reserved.",
+            );
+        }
         if (Date.now() - started > 180000)
           throw new ApiError(
             409,

@@ -3,19 +3,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
-import {
-  Download,
-  FileSpreadsheet,
-  Pause,
-  LogOut,
-  FlaskConical,
-} from "lucide-react";
+import { Download, FileSpreadsheet, LogOut, FlaskConical } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
 import { PasswordForm } from "./password-forms";
 import { AccountDeletion } from "./account-deletion";
 import { ReservationsPanel } from "./reservations-panel";
 import { MfaPanel } from "./mfa-panel";
+import { DEFAULT_POLICY } from "@/lib/scheduler";
+import { AutomationControl } from "./automation-control";
 import { CareerPanel } from "./career-panel";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
 export function SettingsPage({
@@ -151,6 +147,7 @@ export function SettingsPage({
             <GoogleCalendarPanel settings />
             <CareerPanel compact />
             <ReservationsPanel />
+            <AutomationControl policy={DEFAULT_POLICY} />
             <section className="panel settings-panel">
               <h2>Other connected services</h2>
               <div className="setting-line">
@@ -162,16 +159,6 @@ export function SettingsPage({
                   <p>Read-only import. Mapping must be verified.</p>
                 </div>
                 <span className="badge">Read-only import</span>
-              </div>
-              <div className="setting-line">
-                <div>
-                  <strong className="inline">
-                    <Pause size={15} />
-                    Automatic scheduling
-                  </strong>
-                  <p>Sessions are reserved only after you review a preview.</p>
-                </div>
-                <span className="badge amber">Off</span>
               </div>
               <p className="form-hint" style={{ marginTop: 16 }}>
                 Use the spreadsheet panel to preview and review imports.

@@ -231,11 +231,11 @@ export function TaskEditor({
             name="eligible"
             defaultChecked={task?.scheduling_mode === "eligible"}
           />
-          Include in scheduling previews
+          Schedule this task outside automated projects
         </label>
         <p className="form-hint">
-          Only Academics, Career, and Projects are eligible. No calendar writes
-          are enabled.
+          Tasks in an automated project inherit its setting. When automation is
+          on, estimated eligible work can reserve time in your Life OS calendar.
         </p>
         {task && (
           <>

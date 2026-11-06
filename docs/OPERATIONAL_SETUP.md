@@ -8,7 +8,7 @@
 
 ## Operator notes
 
-- Daily read-only calendar refresh remains the existing Vercel 13:00 UTC job. The separate Supabase `lifeos-notifications` job invokes only `/api/internal/notifications` every 15 minutes. It does not schedule tasks or sync Google every 15 minutes.
+- Daily read-only calendar refresh remains the existing Vercel 13:00 UTC job. The separate Supabase `lifeos-notifications` job invokes only `/api/internal/notifications` every 15 minutes. It also runs explicitly enabled automatic scheduling. Google calendars refresh for actual planning; idle automation does not fetch Google.
 - Notification worker credential is distinct from CRON_SECRET and stored as sensitive Vercel environment configuration and Supabase Vault. Install its timer only after the deployed worker responds successfully; use the narrowly authenticated `/api/internal/notifications/setup`. Never place secrets in migrations, query text, Git or support screenshots.
 - Scheduled calls carry a timestamped HMAC valid for at most five minutes. The long-term secret stays in Vault; it is not copied into pg_net request headers (Supabase owns that extension’s broad queue grants). Setup still requires the full worker secret over HTTPS.
 - Device endpoint/auth keys are service-only and omitted from user exports. Service worker handles push/click only; never cache authenticated pages/API data.

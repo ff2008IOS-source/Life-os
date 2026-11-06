@@ -1,3 +1,4 @@
+import { runSchedulingAutomation } from "@/lib/scheduling-automation";
 import { validNotificationSignature } from "@/lib/notification-worker-auth";
 import { NextResponse } from "next/server";
 import { validCronSecret } from "@/lib/integrations/daily-sync";
@@ -18,7 +19,9 @@ export async function POST(request: Request) {
   )
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    return NextResponse.json(await notificationWorker());
+    const notifications = await notificationWorker();
+    const automation = await runSchedulingAutomation();
+    return NextResponse.json({ ...notifications, automation });
   } catch (e) {
     return failure(e);
   }

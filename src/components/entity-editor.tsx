@@ -278,7 +278,7 @@ export function EntityEditor({
               name="automation_enabled"
               defaultChecked={project?.automation_enabled}
             />
-            Include eligible project tasks in previews
+            Include this project’s estimated tasks in automatic scheduling
           </label>
         )}
         {state.kind === "milestones" && (

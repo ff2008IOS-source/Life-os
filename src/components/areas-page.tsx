@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { AcademicsPanel } from "./academics-panel";
+import { projectSummary } from "@/lib/project-summary";
 import { ContactsPanel } from "./contacts-panel";
 import { CareerPanel } from "./career-panel";
 import { useState } from "react";
@@ -326,7 +327,9 @@ function ProjectCards({
             >
               <h2>{p.name}</h2>
             </button>
-            <p>{p.description || "No description added."}</p>
+            <p className="project-summary">
+              {projectSummary(p.name, p.description, !!p.source_id)}
+            </p>
             <div className="full-width">
               <div className="flex-between small muted">
                 <span>

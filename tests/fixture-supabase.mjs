@@ -138,6 +138,7 @@ const server = createServer((req, res) => {
           "calendars",
           "calendar_events",
           "scheduling_policies",
+          "scheduling_automation",
           "work_blocks",
           "scheduling_runs",
           "scheduling_decisions",

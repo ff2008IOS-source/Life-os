@@ -81,8 +81,8 @@ export function ReservationsPanel({
         <span className="badge">Review first</span>
       </div>
       <p className="muted small">
-        Reservations go only to a separate Life OS calendar. Automatic
-        rescheduling is off. Undo preserves sessions changed in Google and
+        Reservations go only to a separate Life OS calendar. Existing
+        reservations stay fixed. Undo preserves sessions changed in Google and
         sessions within the next hour.
       </p>
       {!state?.calendars.length ? (

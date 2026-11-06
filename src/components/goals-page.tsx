@@ -1,4 +1,5 @@
 "use client";
+import { projectSummary } from "@/lib/project-summary";
 import { useState } from "react";
 import { Plus, Target, Flag, ArrowUpRight } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
@@ -73,9 +74,7 @@ export function GoalsPage() {
                 >
                   <h2>{g.title}</h2>
                 </button>
-                <p>
-                  {g.description || "Add the outcome you’re working toward."}
-                </p>
+                <p>{projectSummary(g.title, g.description, !!g.source_id)}</p>
                 <div className="full-width">
                   <div className="flex-between small muted">
                     <span>{progress.label}</span>

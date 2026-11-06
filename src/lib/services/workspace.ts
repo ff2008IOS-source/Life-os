@@ -1,9 +1,15 @@
 import "server-only";
-import { authorized } from "@/lib/auth";
+import { schedulingIdentity } from "./scheduling-identity";
 import { dbError } from "@/lib/http";
 import type { Workspace } from "@/lib/schemas";
 export async function loadWorkspace(): Promise<Workspace> {
-  const { db, user } = await authorized();
+  return readWorkspace();
+}
+export async function loadWorkspaceForUser(userId: string): Promise<Workspace> {
+  return readWorkspace(userId);
+}
+async function readWorkspace(workerUserId?: string): Promise<Workspace> {
+  const { db, user } = await schedulingIdentity(workerUserId);
   const tables = [
     "tasks",
     "projects",
