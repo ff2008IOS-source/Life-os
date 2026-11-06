@@ -15,12 +15,17 @@ export async function POST(request: Request) {
     )
       throw new ApiError(401, "Unable to sign in with these credentials.");
     const db = await supabase();
-    const { error } = await db.auth.signInWithPassword({ email, password });
+    const { data: login, error } = await db.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error)
       throw new ApiError(
         error.status === 429 ? 429 : 401,
         "Unable to sign in. Check credentials or try again later.",
       );
+    if (login.user?.factors?.some((f) => f.status === "verified"))
+      return NextResponse.json({ ok: true, mfa_required: true });
     const { data: approved } = await db.rpc("is_approved_user");
     if (!approved) {
       await db.auth.signOut();

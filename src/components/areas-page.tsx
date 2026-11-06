@@ -1,5 +1,8 @@
 "use client";
 import Link from "next/link";
+import { AcademicsPanel } from "./academics-panel";
+import { ContactsPanel } from "./contacts-panel";
+import { CareerPanel } from "./career-panel";
 import { useState } from "react";
 import {
   GraduationCap,
@@ -211,45 +214,54 @@ export function AreasPage({ slug }: { slug?: string }) {
             </>
           ) : (
             <div className="dashboard-grid">
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2>
-                    {slug === "academics"
-                      ? "Academic records"
-                      : slug === "career"
-                        ? "Career development"
-                        : slug === "finances"
-                          ? "Your financial workspace"
-                          : "Your wellbeing workspace"}
-                  </h2>
-                  <span className="badge">
-                    {["finances", "wellbeing"].includes(slug)
-                      ? "Optional"
-                      : "No imports"}
-                  </span>
-                </div>
-                <EmptyState
-                  icon={Icon}
-                  title={
-                    slug === "academics"
-                      ? "Verified information first"
-                      : slug === "career"
-                        ? "Build from your actual experience"
-                        : slug === "finances"
-                          ? "A fresh financial picture"
-                          : "Your space, your pace"
-                  }
-                  description={
-                    slug === "academics"
-                      ? "No courses, assessments, grades, or deadlines have been imported. Specialized academic records are a later phase."
-                      : slug === "career"
-                        ? "The career spreadsheet remains untouched. Read-only mapping will be verified after Stage B authorization."
-                        : slug === "finances"
-                          ? "No financial data recorded. Accounts, transactions, and budgets will be available in the specialized phase."
-                          : "No wellbeing data recorded. Optional habits and reflections will be available in the specialized phase."
-                  }
-                />
-              </section>
+              {slug === "academics" ? (
+                <AcademicsPanel />
+              ) : slug === "career" ? (
+                <>
+                  <CareerPanel />
+                  <ContactsPanel />
+                </>
+              ) : (
+                <section className="panel">
+                  <div className="panel-heading">
+                    <h2>
+                      {slug === "academics"
+                        ? "Academic records"
+                        : slug === "career"
+                          ? "Career development"
+                          : slug === "finances"
+                            ? "Your financial workspace"
+                            : "Your wellbeing workspace"}
+                    </h2>
+                    <span className="badge">
+                      {["finances", "wellbeing"].includes(slug)
+                        ? "Optional"
+                        : "No imports"}
+                    </span>
+                  </div>
+                  <EmptyState
+                    icon={Icon}
+                    title={
+                      slug === "academics"
+                        ? "Verified information first"
+                        : slug === "career"
+                          ? "Build from your actual experience"
+                          : slug === "finances"
+                            ? "A fresh financial picture"
+                            : "Your space, your pace"
+                    }
+                    description={
+                      slug === "academics"
+                        ? "No courses, assessments, grades, or deadlines have been imported. Specialized academic records are a later phase."
+                        : slug === "career"
+                          ? "The career spreadsheet remains untouched. Read-only mapping will be verified after Stage B authorization."
+                          : slug === "finances"
+                            ? "No financial data recorded. Accounts, transactions, and budgets will be available in the specialized phase."
+                            : "No wellbeing data recorded. Optional habits and reflections will be available in the specialized phase."
+                    }
+                  />
+                </section>
+              )}
               <section className="panel">
                 <div className="panel-heading">
                   <h2>Next actions</h2>

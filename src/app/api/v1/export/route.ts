@@ -46,6 +46,7 @@ const tables = [
   "export_jobs",
   "deletion_requests",
   "goal_projects",
+  "career_entries",
 ] as const;
 export async function GET() {
   try {

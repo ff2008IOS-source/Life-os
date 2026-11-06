@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import {
+  Bell,
   Home,
   CalendarDays,
   Layers3,
@@ -32,6 +33,7 @@ const navigation = [
   { label: "Planner", href: "/planner", icon: CalendarDays },
   { label: "Life Areas", href: "/areas", icon: Layers3 },
   { label: "Goals", href: "/goals", icon: Target },
+  { label: "Updates", href: "/notifications", icon: Bell },
   { label: "Insights", href: "/insights", icon: ChartNoAxesCombined },
 ];
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
@@ -117,10 +119,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               <ShieldCheck size={13} />
               Your private beta
             </strong>
-            <p>
-              Private workspace. Calendar writes and automatic scheduling are
-              off.
-            </p>
+            <p>Private workspace. Existing Google calendars stay protected.</p>
           </div>
           <Link href="/settings" className="account">
             <div className="avatar">

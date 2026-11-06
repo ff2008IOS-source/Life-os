@@ -1,0 +1,56 @@
+import { test, expect } from "@playwright/test";
+test("academic forms save unknown term dates, course rules and scores without inventing a final grade", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill("beta@example.invalid");
+  await page.getByLabel("Password", { exact: true }).fill("test-password-only");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "A little clarity for today." }),
+  ).toBeVisible();
+  const initialize = page.getByRole("button", { name: /Initialize workspace/ });
+  if (await initialize.count()) {
+    await initialize.click();
+    await expect(initialize).toHaveCount(0);
+  }
+  await page.goto("/areas/academics");
+  await page.getByRole("button", { name: "Term", exact: true }).click();
+  await page.getByLabel("Term name").fill("[TEST] Unknown dates term");
+  await page.getByRole("button", { name: "Save record", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Course", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("combobox", { name: /Academic term/ })
+    .selectOption({ label: "[TEST] Unknown dates term" });
+  await page.getByLabel("Course code").fill("[TEST]101");
+  await page.getByLabel("Course title").fill("[TEST] Confirmed course");
+  await page.getByRole("button", { name: "Save record", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: /Add assessment/ }).click();
+  await page.getByLabel("Assessment title").fill("[TEST] Unknown score");
+  await page.getByRole("button", { name: "Save record", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByText("[TEST] Unknown score", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Incomplete", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("The grading formula is not confirmed.", { exact: false }),
+  ).toBeVisible();
+  const term = await page.request.get("/api/v1/academics");
+  const body = await term.json();
+  expect(
+    body.academic_terms.find(
+      (t: { name: string }) => t.name === "[TEST] Unknown dates term",
+    ).start_date,
+  ).toBe(null);
+  expect(
+    body.assessments.find(
+      (a: { title: string }) => a.title === "[TEST] Unknown score",
+    ).earned_score,
+  ).toBe(null);
+});

@@ -2,20 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authorized, ApiError } from "@/lib/auth";
 import { checkMutation, readJson, dbError, failure } from "@/lib/http";
-import {
-  taskInput,
-  projectInput,
-  goalInput,
-  milestoneInput,
-  reviewInput,
-} from "@/lib/schemas";
-const schemas = {
-  tasks: taskInput,
-  projects: projectInput,
-  goals: goalInput,
-  milestones: milestoneInput,
-  reviews: reviewInput,
-};
+import { entitySchemas as schemas } from "@/lib/entity-schemas";
 type Context = { params: Promise<{ entity: string; id: string }> };
 export async function PATCH(request: Request, { params }: Context) {
   try {

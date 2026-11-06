@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
@@ -11,6 +12,11 @@ import {
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
+import { PasswordForm } from "./password-forms";
+import { AccountDeletion } from "./account-deletion";
+import { ReservationsPanel } from "./reservations-panel";
+import { MfaPanel } from "./mfa-panel";
+import { CareerPanel } from "./career-panel";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
 export function SettingsPage({
   initialSection = "profile",
@@ -143,6 +149,8 @@ export function SettingsPage({
         <div hidden={section !== "integrations"}>
           <div className="settings-grid">
             <GoogleCalendarPanel settings />
+            <CareerPanel compact />
+            <ReservationsPanel />
             <section className="panel settings-panel">
               <h2>Other connected services</h2>
               <div className="setting-line">
@@ -153,7 +161,7 @@ export function SettingsPage({
                   </strong>
                   <p>Read-only import. Mapping must be verified.</p>
                 </div>
-                <span className="badge">Not connected</span>
+                <span className="badge">Read-only import</span>
               </div>
               <div className="setting-line">
                 <div>
@@ -161,19 +169,28 @@ export function SettingsPage({
                     <Pause size={15} />
                     Automatic scheduling
                   </strong>
-                  <p>No unattended scheduling or calendar writes.</p>
+                  <p>Sessions are reserved only after you review a preview.</p>
                 </div>
                 <span className="badge amber">Off</span>
               </div>
               <p className="form-hint" style={{ marginTop: 16 }}>
-                Career spreadsheet connection will be added after Calendar
-                verification.
+                Use the spreadsheet panel to preview and review imports.
               </p>
             </section>
           </div>
         </div>
         <div hidden={section !== "privacy"}>
           <div className="settings-grid">
+            <section className="panel settings-panel">
+              <h2>Notifications</h2>
+              <p>Manage reminders, quiet hours and device push in Updates.</p>
+              <Button variant="outline" asChild>
+                <Link href="/notifications">Open notification settings</Link>
+              </Button>
+            </section>
+            <MfaPanel />
+            <PasswordForm />
+            <AccountDeletion />
             <section className="panel settings-panel">
               <h2>Privacy & recovery</h2>
               <p>Only your approved account can access your workspace.</p>
@@ -201,22 +218,6 @@ export function SettingsPage({
                   </p>
                 </div>
                 <span className="badge amber">Setup needed</span>
-              </div>
-              <div className="setting-line">
-                <div>
-                  <strong>Push notifications</strong>
-                  <p>Not enabled. No timed delivery is promised.</p>
-                </div>
-                <span className="badge">Off</span>
-              </div>
-              <div className="setting-line">
-                <div>
-                  <strong>Account deletion</strong>
-                  <p>
-                    Owner-operated procedure in docs/RECOVERY.md until the
-                    secured deletion workflow is implemented.
-                  </p>
-                </div>
               </div>
               <Button
                 variant="ghost"

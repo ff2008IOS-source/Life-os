@@ -2927,3 +2927,212 @@ input[type="checkbox"] {
   color: var(--muted);
   border-top: 1px solid var(--border);
 }
+.academic-workspace,
+.career-workspace {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 16px;
+  min-width: 0;
+}
+.academic-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.academic-toolbar select {
+  width: auto;
+  max-width: 100%;
+  font-size: 11px;
+  min-height: 36px;
+  padding: 7px 9px;
+}
+.academic-score-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.academic-score-grid > div {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.academic-score-grid span,
+.academic-score-grid small {
+  font-size: 10px;
+  color: var(--muted);
+  display: block;
+}
+.academic-score-grid strong {
+  font-size: 21px;
+  display: block;
+  margin: 4px 0;
+  font-weight: 550;
+}
+.academic-note {
+  padding: 10px 0;
+}
+.academic-record-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  background: none;
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  font-size: 11px;
+}
+.academic-record-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.academic-record-row strong {
+  display: block;
+  font-weight: 550;
+}
+.academic-record-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 4px;
+}
+.academic-record-row:hover {
+  background: var(--blue-soft);
+}
+.academic-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 70dvh;
+  overflow: auto;
+  padding: 3px;
+}
+.source-detail-list {
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+.source-detail-list > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 11px;
+}
+.source-detail-list dt {
+  color: var(--muted);
+}
+.source-detail-list dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.career-record {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.career-record summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+.career-record summary strong {
+  font-size: 12px;
+  font-weight: 550;
+  display: block;
+}
+.career-record summary small {
+  font-size: 10px;
+  color: var(--muted);
+  display: block;
+  margin-top: 3px;
+}
+.career-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.source-import-preview {
+  max-height: 55dvh;
+  overflow: auto;
+  font-size: 12px;
+}
+.source-import-preview details {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.source-import-preview summary {
+  cursor: pointer;
+}
+.source-import-preview details > p {
+  margin-top: 5px;
+}
+@media (max-width: 1150px) {
+  .academic-workspace,
+  .career-workspace {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 640px) {
+  .academic-score-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .academic-toolbar .segmented {
+    width: 100%;
+    overflow: auto;
+  }
+  .academic-record-row {
+    flex-wrap: wrap;
+  }
+  .academic-record-row > div {
+    flex-basis: 65%;
+  }
+  .source-detail-list > div {
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+.auth-utility {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.auth-utility > section {
+  width: min(100%, 460px);
+}
+.auth-utility form,
+.mfa-enrollment {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 16px 0;
+}
+.mfa-enrollment img {
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+}
+.mfa-secret {
+  display: block;
+  overflow-wrap: anywhere;
+  user-select: all;
+  font-size: 11px;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.notification-preference{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border)}.notification-preference>strong{min-width:130px;text-transform:capitalize}.notification-preference label{display:flex;gap:7px;align-items:center;font-size:12px}.notification-preference input[type=checkbox]{width:16px;height:16px;margin:0}.notification-preference input[type=time]{width:110px}

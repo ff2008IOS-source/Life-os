@@ -13,7 +13,8 @@ beforeAll(async () => {
   const source = new PGlite();
   try {
     await source.exec(
-      `create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key); insert into auth.users values('${owner}'); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`,
+      readFileSync("tests/auth-fixture.sql", "utf8") +
+        `insert into auth.users values('${owner}');`,
     );
     for (const file of readdirSync("supabase/migrations")
       .filter((f) => f.endsWith(".sql"))
@@ -27,7 +28,7 @@ beforeAll(async () => {
       `set role authenticated; select set_config('request.jwt.claim.sub','${owner}',false); select public.add_beta_examples(); reset role;`,
     );
     const tables = await source.query<{ table_name: string }>(
-      "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE'",
+      "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts')",
     );
     const records: Export["records"] = {};
     for (const { table_name: table } of tables.rows)

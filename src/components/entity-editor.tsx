@@ -4,7 +4,8 @@ import type { Project, Goal, Milestone } from "@/lib/schemas";
 import { useWorkspace } from "./workspace-provider";
 import { Modal } from "./dialog";
 import { Button } from "./ui/button";
-export type EntityEditorState =
+type Seed = { seed?: Partial<Project & Goal & Milestone> };
+export type EntityEditorState = (
   | { kind: "projects"; record?: Project }
   | { kind: "goals"; record?: Goal }
   | {
@@ -12,7 +13,9 @@ export type EntityEditorState =
       record?: Milestone;
       goalId?: string;
       projectId?: string;
-    };
+    }
+) &
+  Seed;
 export function EntityEditor({
   state,
   onClose,
@@ -23,9 +26,12 @@ export function EntityEditor({
   const { data, mutate, notify, pending } = useWorkspace();
   const [error, setError] = useState("");
   const rec = state.record;
-  const goal = state.kind === "goals" ? state.record : undefined;
-  const project = state.kind === "projects" ? state.record : undefined;
-  const milestone = state.kind === "milestones" ? state.record : undefined;
+  const goal: Partial<Goal> | undefined =
+    state.kind === "goals" ? (state.record ?? state.seed) : undefined;
+  const project: Partial<Project> | undefined =
+    state.kind === "projects" ? (state.record ?? state.seed) : undefined;
+  const milestone: Partial<Milestone> | undefined =
+    state.kind === "milestones" ? (state.record ?? state.seed) : undefined;
   const [progress, setProgress] = useState(goal?.progress_type ?? "milestone");
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -7,6 +7,10 @@ export const CALENDAR_SCOPES = [
   "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
   "https://www.googleapis.com/auth/calendar.events.readonly",
 ] as const;
+export const CALENDAR_WRITE_SCOPE =
+  "https://www.googleapis.com/auth/calendar.app.created";
+export const SHEETS_READ_SCOPE =
+  "https://www.googleapis.com/auth/spreadsheets.readonly";
 export const CALLBACK_PATH = "/api/v1/calendar/oauth/callback";
 export const OAUTH_COOKIE = "life-os-google-oauth";
 export function createOAuthAttempt(
@@ -48,14 +52,21 @@ export function authorizationUrl(
   origin: string,
   state: string,
   challenge: string,
+  sheets = false,
+  reservations = false,
 ) {
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.search = new URLSearchParams({
     client_id: clientId,
     redirect_uri: origin + CALLBACK_PATH,
     response_type: "code",
-    scope: CALENDAR_SCOPES.join(" "),
+    scope: [
+      ...CALENDAR_SCOPES,
+      ...(sheets ? [SHEETS_READ_SCOPE] : []),
+      ...(reservations ? [CALENDAR_WRITE_SCOPE] : []),
+    ].join(" "),
     access_type: "offline",
+    include_granted_scopes: "true",
     prompt: "consent",
     state,
     code_challenge: challenge,

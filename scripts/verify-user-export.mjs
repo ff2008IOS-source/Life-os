@@ -105,7 +105,7 @@ export async function verifyUserExport(input) {
   const db = new PGlite();
   try {
     await db.exec(
-      "create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;",
+      readFileSync(resolve(root, "tests/auth-fixture.sql"), "utf8"),
     );
     await db.query("insert into auth.users(id) values($1),($2)", [
       owner,
@@ -123,7 +123,7 @@ export async function verifyUserExport(input) {
     );
     const columns = (
       await db.query(
-        "select table_name,column_name,data_type,udt_name from information_schema.columns where table_schema='public' order by ordinal_position",
+        "select table_name,column_name,data_type,udt_name from information_schema.columns where table_schema='public' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts') order by ordinal_position",
       )
     ).rows;
     const expectedTables = [

@@ -8,6 +8,7 @@ import {
   blockLocalLabel,
   type ScheduleResult,
 } from "@/lib/scheduler";
+import { ReservationsPanel } from "./reservations-panel";
 import { EmptyState } from "./task-list";
 export function SchedulingPanel() {
   const { data, request } = useWorkspace();
@@ -15,17 +16,15 @@ export function SchedulingPanel() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [policy, setPolicy] = useState(DEFAULT_POLICY);
-  const [busy, setBusy] = useState("");
   async function preview() {
     setPending(true);
     setError("");
     setResult(null);
     try {
-      const intervals = busy.trim() ? JSON.parse(busy) : [];
       setResult(
         (await request("/api/v1/schedule/preview", {
           method: "POST",
-          body: JSON.stringify({ policy, busy: intervals }),
+          body: JSON.stringify({ policy }),
         })) as ScheduleResult,
       );
     } catch (e) {
@@ -39,10 +38,10 @@ export function SchedulingPanel() {
       <div className="notice">
         <ShieldCheck />
         <div>
-          <strong>Preview only · synthetic availability</strong>
+          <strong>Plan around your connected calendars</strong>
           <p>
-            This does not read real calendars or reserve time. Confirm
-            availability before using any proposed session.
+            Selected calendars are refreshed before planning when more than five
+            minutes old. Review proposed sessions before reserving time.
           </p>
         </div>
         <span className="badge amber">
@@ -83,9 +82,7 @@ export function SchedulingPanel() {
           ))}
         </div>
         <details className="panel-body">
-          <summary className="text-link">
-            Adjust preview policy & test availability
-          </summary>
+          <summary className="text-link">Adjust planning boundaries</summary>
           <div className="form-grid" style={{ marginTop: 16 }}>
             <label>
               Daily cap (minutes)
@@ -148,16 +145,6 @@ export function SchedulingPanel() {
               />
             </label>
           </div>
-          <label style={{ marginTop: 16 }}>
-            Synthetic busy intervals (JSON)
-            <textarea
-              value={busy}
-              onChange={(e) => setBusy(e.target.value)}
-              placeholder={
-                '[{"start_at":"2026-11-10T10:00:00-08:00","end_at":"2026-11-10T11:00:00-08:00"}]'
-              }
-            />
-          </label>
         </details>
         <div className="panel-footer flex-between">
           <span>Eligible areas: Academics, Career, Projects</span>
@@ -172,6 +159,10 @@ export function SchedulingPanel() {
           {error}
         </p>
       )}
+      <ReservationsPanel
+        runId={result?.run_id}
+        onApplied={() => setResult(null)}
+      />
       {result && (
         <section className="panel">
           <div className="panel-heading">
@@ -214,8 +205,9 @@ export function SchedulingPanel() {
             </div>
           ))}
           <div className="panel-footer">
-            No calendar changes were made. Availability source: user-supplied
-            test intervals; all other time assumed free.
+            No calendar changes were made. Planned around{" "}
+            {result.calendar_count} selected Google calendars. Preview expires
+            after ten minutes.
           </div>
         </section>
       )}

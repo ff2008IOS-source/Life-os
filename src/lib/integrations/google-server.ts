@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
+import { serverAdmin } from "@/lib/supabase/admin";
 import { z } from "zod";
 import { ApiError, authorized } from "@/lib/auth";
 import { dbError } from "@/lib/http";
@@ -43,16 +43,7 @@ export function googleConfig() {
     dbUrl: dbUrl.trim(),
   };
 }
-export function integrationAdmin() {
-  const c = googleConfig();
-  return createClient(c.dbUrl, c.dbKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}
+export const integrationAdmin = serverAdmin;
 export async function integrationRpc<T>(
   name: string,
   args: Record<string, unknown>,
@@ -235,6 +226,7 @@ export async function connectionAccessForUser(
     user,
     token: credential.access_token,
     refreshToken: credential.refresh_token,
+    scope: credential.scope,
   };
 }
 const calendarList = z.object({
@@ -341,18 +333,51 @@ export async function collectWindowEvents(
   return [...events.values()];
 }
 export async function disconnectGoogle(connectionId: string) {
-  const { user, refreshToken } = await connectionAccess(connectionId);
-  const response = await fetch("https://oauth2.googleapis.com/revoke", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ token: refreshToken }),
-    cache: "no-store",
-    signal: deadline(),
-  });
-  if (!response.ok && response.status !== 400)
-    throw new ApiError(502, "Google could not confirm revocation. Try again.");
+  const { user } = await authorized();
+  return revokeGoogleForUser(user.id, connectionId);
+}
+export async function revokeGoogleForUser(
+  userId: string,
+  connectionId: string,
+) {
+  const db = integrationAdmin();
+  const { data: connection, error } = await db
+    .from("calendar_connections")
+    .select("provider_account_id,status")
+    .eq("user_id", userId)
+    .eq("id", connectionId)
+    .single();
+  dbError(error);
+  if (!connection || connection.status === "revoked") return;
+  const envelope = await integrationRpc<string | null>(
+    "google_get_credential",
+    { p_user: userId, p_connection: connectionId },
+  );
+  if (envelope) {
+    const credential = credentialSchema.parse(
+      JSON.parse(
+        decryptCredential(
+          envelope,
+          googleConfig().key,
+          `${userId}:google:${connection.provider_account_id}`,
+        ),
+      ),
+    );
+    const response = await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token: credential.refresh_token }),
+      cache: "no-store",
+      signal: deadline(),
+    });
+    if (!response.ok && response.status !== 400)
+      throw new ApiError(
+        502,
+        "Google could not confirm revocation. Try again.",
+      );
+  }
   await integrationRpc("google_disconnect", {
-    p_user: user.id,
+    p_user: userId,
     p_connection: connectionId,
   });
 }

@@ -10,6 +10,7 @@ import { AreasPage } from "@/components/areas-page";
 import { GoalsPage } from "@/components/goals-page";
 import { ReviewsPage } from "@/components/reviews-page";
 import { InsightsPage } from "@/components/insights-page";
+import { NotificationsPanel } from "@/components/notifications-panel";
 import { SettingsPage } from "@/components/settings-page";
 export const dynamic = "force-dynamic";
 export default async function Page({
@@ -31,6 +32,7 @@ export default async function Page({
       "reviews",
       "insights",
       "settings",
+      "notifications",
       "more",
     ].includes(page) ||
     path.length > (page === "areas" ? 2 : 1) ||
@@ -61,6 +63,8 @@ export default async function Page({
           <ReviewsPage />
         ) : page === "insights" ? (
           <InsightsPage />
+        ) : page === "notifications" ? (
+          <NotificationsPanel />
         ) : page === "settings" ? (
           <SettingsPage
             initialSection={

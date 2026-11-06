@@ -65,7 +65,10 @@ export type ScheduleResult = {
   blocks: ProposedBlock[];
   warnings: ScheduleWarning[];
   policy: Policy;
-  availability_source: "test";
+  availability_source: "test" | "google_calendar";
+  run_id?: string;
+  expires_at?: string;
+  calendar_count?: number;
   generated_at: string;
 };
 const minute = 60000;

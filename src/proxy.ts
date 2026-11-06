@@ -11,6 +11,11 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
+      cookieOptions: {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.LIFE_OS_APP_ORIGIN?.startsWith("https:") ?? false,
+      },
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll(values) {

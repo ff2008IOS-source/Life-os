@@ -24,7 +24,8 @@ let connection: string, calendar: string;
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(
-    `create role anon; create role authenticated; create role service_role; create schema auth;create table auth.users(id uuid primary key);insert into auth.users values('${a}'),('${b}');create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;`,
+    readFileSync("tests/auth-fixture.sql", "utf8") +
+      `insert into auth.users values('${a}'),('${b}');`,
   );
   for (const file of readdirSync("supabase/migrations").sort())
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));

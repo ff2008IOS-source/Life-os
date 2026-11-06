@@ -9,7 +9,8 @@ import { PGlite } from "@electric-sql/pglite";
 const db = new PGlite();
 const uid = "11111111-1111-4111-8111-111111111111";
 await db.exec(
-  `create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key); insert into auth.users values('${uid}'); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`,
+  readFileSync("tests/auth-fixture.sql", "utf8") +
+    `insert into auth.users values('${uid}');`,
 );
 for (const file of readdirSync("supabase/migrations").sort())
   await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
@@ -101,6 +102,7 @@ const server = createServer((req, res) => {
           if (
             ![
               "is_approved_user",
+              "has_registered_session",
               "initialize_workspace",
               "add_beta_examples",
               "configure_recurrence",
@@ -162,6 +164,7 @@ const server = createServer((req, res) => {
           "export_jobs",
           "deletion_requests",
           "goal_projects",
+          "career_entries",
         ];
         if (!tables.includes(table)) throw Error("Unknown table");
         const params = [];

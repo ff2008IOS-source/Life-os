@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { MfaPanel } from "./mfa-panel";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -19,6 +20,7 @@ export function Login({
 }) {
   const router = useRouter();
   const [error, setError] = useState(reason || "");
+  const [mfa, setMfa] = useState(false);
   const [pending, setPending] = useState(false);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +38,10 @@ export function Login({
       });
       const body = await r.json();
       if (!r.ok) throw Error(body.error.message);
+      if (body.mfa_required) {
+        setMfa(true);
+        return;
+      }
       router.push("/");
       router.refresh();
     } catch (e) {
@@ -105,7 +111,15 @@ export function Login({
               ? "Sign in to your private Life OS workspace."
               : "The application is ready for private Supabase setup."}
           </p>
-          {configured ? (
+          {mfa ? (
+            <MfaPanel
+              challenge
+              onVerified={() => {
+                router.push("/");
+                router.refresh();
+              }}
+            />
+          ) : configured ? (
             <form onSubmit={submit}>
               <label>
                 Email
@@ -169,6 +183,11 @@ export function Login({
               </p>
             </div>
           )}
+          {configured && !mfa && (
+            <Link className="text-link" href="/forgot-password">
+              Forgot your password?
+            </Link>
+          )}
           {error && (
             <p role="alert" className="error-message">
               {error}
@@ -181,7 +200,7 @@ export function Login({
             </span>
           </div>
           <p className="small muted">
-            No real imports · No calendar writes · Automation paused
+            Private account · Connected services are controlled in Settings
           </p>
         </div>
       </section>

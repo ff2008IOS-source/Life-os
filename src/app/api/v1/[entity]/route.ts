@@ -1,20 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorized, ApiError } from "@/lib/auth";
 import { checkMutation, readJson, dbError, failure } from "@/lib/http";
-import {
-  taskInput,
-  projectInput,
-  goalInput,
-  milestoneInput,
-  reviewInput,
-} from "@/lib/schemas";
-const schemas = {
-  tasks: taskInput,
-  projects: projectInput,
-  goals: goalInput,
-  milestones: milestoneInput,
-  reviews: reviewInput,
-};
+import { entitySchemas as schemas } from "@/lib/entity-schemas";
 type Context = { params: Promise<{ entity: string }> };
 function schemaFor(entity: string) {
   const schema = Object.hasOwn(schemas, entity)
@@ -57,7 +44,9 @@ export async function POST(request: Request, { params }: Context) {
     const { db, user } = await authorized();
     const values = schema.parse(await readJson(request));
     const stamp =
-      "status" in values && values.status === "completed"
+      (entity === "tasks" || entity === "milestones") &&
+      "status" in values &&
+      values.status === "completed"
         ? { completed_at: new Date().toISOString() }
         : {};
     const { data, error } = await db

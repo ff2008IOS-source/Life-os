@@ -94,3 +94,11 @@ The first compact-UI production deployment reached READY. An unauthenticated wor
 A final browser regression run after separating Calendar deadlines from task-list status filters passed all six browser tests. The shared sidebar now distinguishes daily read refresh from disabled automatic task scheduling.
 
 The repeated authenticated worker invocation returned HTTP 200 with completed=0, failed=0, skipped=6, deferred=0, confirming the completed daily jobs were not run again.
+
+## Operational workspace checks — 2026-11-06
+
+- Strict TypeScript, ESLint and optimized production build pass.
+- 84 unit/database tests across 14 files pass: grade semantics and unknown values, academic source mapping, source identities, exclusive all-day availability including DST, stable owned event IDs, provider-ownership rejection, notification windows/quiet hours/endpoint restrictions, real PostgreSQL RLS/session/MFA tests, server-only worker/device privileges, mutation serialization and synthetic account cascade deletion.
+- Seven browser tests pass: persisted core workflows, recurring/optimistic changes, dense iPad/iPhone calendar layouts, read-only calendar opt-in/daily controls, live-availability failure when no calendar is selected, academic form persistence with unknown dates/scores, and existing automated WCAG checks.
+- Hosted schema migration smoke checks confirm the existing owner session passes, device credentials and timer configuration are denied to authenticated clients, and no deletion is queued. Security advisors reviewed in SECURITY_READINESS.md.
+- These tests do not verify owner Google Sheets consent, real source import acceptance, real dedicated-calendar reservation/undo, actual MFA enrollment or recovery email receipt, device push receipt, a future scheduled tick, or full hosted restoration. Those remain explicitly owner-dependent; no real source rows or owner deletion requests were created as tests.
