@@ -24,6 +24,7 @@ import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
 import { OccurrencesPanel } from "./occurrences-panel";
 import { SchedulingPanel } from "./scheduling-panel";
+import { GoogleCalendarPanel } from "./google-calendar-panel";
 export function PlannerPage() {
   const { data } = useWorkspace();
   const [tab, setTab] = useState("calendar");
@@ -152,7 +153,8 @@ export function PlannerPage() {
                   <strong>Task deadlines · Vancouver time</strong>
                   <p>
                     These markers show when tasks are due, not reserved work
-                    time. Google calendars are not connected.
+                    time. Google events appear separately below with their own
+                    sync status.
                   </p>
                 </div>
               </div>
@@ -198,6 +200,15 @@ export function PlannerPage() {
                   ))}
                 </div>
               </div>
+              <GoogleCalendarPanel
+                start={dayKey(view === "agenda" ? anchor : days[0])}
+                end={dayKey(
+                  addDays(
+                    view === "agenda" ? anchor : days[days.length - 1],
+                    view === "agenda" ? 30 : 1,
+                  ),
+                )}
+              />
               {view === "month" ? (
                 <div className="calendar-grid">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(

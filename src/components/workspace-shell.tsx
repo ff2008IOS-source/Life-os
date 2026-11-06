@@ -117,7 +117,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               <ShieldCheck size={13} />
               Your private beta
             </strong>
-            <p>Test data only. Calendar writes and automation are off.</p>
+            <p>Private workspace. Calendar writes and automation are off.</p>
           </div>
           <Link href="/settings" className="account">
             <div className="avatar">
@@ -175,7 +175,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           {children}
           <div className="footer-note">
             <ShieldCheck size={11} />
-            Private beta · Test data only · America/Vancouver
+            Private beta · America/Vancouver
           </div>
         </main>
       </div>

@@ -1,5 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { GoogleCalendarPanel } from "./google-calendar-panel";
+import type { ConnectionState } from "@/lib/integrations/calendar-view";
 import {
   CalendarDays,
   CheckCheck,
@@ -11,7 +14,6 @@ import {
   BookOpen,
   Sun,
   CalendarCheck2,
-  ShieldCheck,
   Layers3,
   Plus,
 } from "lucide-react";
@@ -23,6 +25,77 @@ import { goalProgress, taskSummary } from "@/lib/insights";
 import { TIMEZONE, localDate, friendlyDate } from "@/lib/dates";
 export function HomePage() {
   const { data, request, refresh, notify, pending } = useWorkspace();
+  const [calendarSummary, setCalendarSummary] = useState<{
+    count: number | null;
+    note: string;
+  }>({ count: null, note: "Checking calendar connection…" });
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const response = await fetch("/api/v1/calendar/connections", {
+          cache: "no-store",
+        });
+        if (!response.ok) throw Error();
+        const state = (await response.json()) as ConnectionState;
+        const selected = state.calendars.filter(
+          (c) =>
+            c.sync_enabled &&
+            state.connections.some(
+              (x) => x.id === c.connection_id && x.status === "connected",
+            ),
+        );
+        if (!selected.length) {
+          if (live)
+            setCalendarSummary({
+              count: null,
+              note: "Choose calendars in Settings",
+            });
+          return;
+        }
+        const start = localDate();
+        const end = new Date(
+          new Date(start + "T12:00Z").getTime() + 7 * 86400000,
+        )
+          .toISOString()
+          .slice(0, 10);
+        if (
+          selected.some(
+            (c) =>
+              !c.last_synced_at ||
+              !c.coverage_start ||
+              !c.coverage_end ||
+              localDate(c.coverage_start) > start ||
+              localDate(c.coverage_end) < end,
+          )
+        ) {
+          if (live)
+            setCalendarSummary({ count: null, note: "Calendar sync needed" });
+          return;
+        }
+        const eventsResponse = await fetch(
+          `/api/v1/calendar/events?start=${start}&end=${end}`,
+          { cache: "no-store" },
+        );
+        if (!eventsResponse.ok) throw Error();
+        const result = (await eventsResponse.json()) as { events: unknown[] };
+        if (live)
+          setCalendarSummary({
+            count: result.events.length,
+            note: "Cached events · next 7 days",
+          });
+      } catch {
+        if (live)
+          setCalendarSummary({
+            count: null,
+            note: "Calendar status unavailable",
+          });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
   const now = new Date();
   const summary = taskSummary(data.tasks, now);
   const priorities = [...summary.active]
@@ -59,8 +132,8 @@ export function HomePage() {
     },
     {
       label: "Upcoming commitments",
-      value: "—",
-      note: "Calendar not connected",
+      value: calendarSummary.count ?? "—",
+      note: calendarSummary.note,
       icon: CalendarDays,
     },
     {
@@ -210,52 +283,14 @@ export function HomePage() {
           </section>
         </div>
         <div className="stack">
-          <section className="panel">
-            <div className="panel-heading">
-              <div className="panel-title">
-                <CalendarDays />
-                <h2>Today’s schedule</h2>
-              </div>
-              <span className="badge">Not connected</span>
-            </div>
-            <div className="agenda-empty">
-              <div className="agenda-placeholder">
-                <span>CALENDAR</span>
-                <div>
-                  <strong>Your commitments, together</strong>
-                  <p>
-                    Calendar connection is reserved for approved Stage B
-                    testing.
-                  </p>
-                </div>
-              </div>
-              <div className="agenda-placeholder">
-                <span>WORK</span>
-                <div>
-                  <strong>Plan before reserving time</strong>
-                  <p>
-                    Scheduling previews use test availability. No events are
-                    created.
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/planner"
-                className="text-link"
-                style={{ marginTop: 12 }}
-              >
-                Explore your planner
-                <ArrowRight size={12} />
-              </Link>
-            </div>
-            <div className="panel-footer">
-              <ShieldCheck
-                size={11}
-                style={{ display: "inline", marginRight: 6 }}
-              />
-              Your six existing calendars remain untouched.
-            </div>
-          </section>
+          <GoogleCalendarPanel
+            start={localDate()}
+            end={new Date(
+              new Date(localDate() + "T12:00Z").getTime() + 86400000,
+            )
+              .toISOString()
+              .slice(0, 10)}
+          />
           <section className="panel">
             <div className="panel-heading">
               <div className="panel-title">

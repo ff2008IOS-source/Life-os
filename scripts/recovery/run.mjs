@@ -40,7 +40,9 @@ export function safeFailureReason(error) {
     "A required database dump is empty",
     "Source changed during backup; close the app and retry a manual run",
   ]);
-  return allowed.has(error?.message) ? error.message : "Unclassified failure; raw error suppressed";
+  return allowed.has(error?.message)
+    ? error.message
+    : "Unclassified failure; raw error suppressed";
 }
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTheme } from "next-themes";
 import {
   Download,
-  CalendarDays,
   FileSpreadsheet,
   Pause,
   LogOut,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
+import { GoogleCalendarPanel } from "./google-calendar-panel";
 export function SettingsPage() {
   const router = useRouter();
   const { data, request, refresh, notify, pending } = useWorkspace();
@@ -110,19 +110,9 @@ export function SettingsPage() {
             )}
           </form>
         </section>
+        <GoogleCalendarPanel settings />
         <section className="panel settings-panel">
-          <h2>Connected services</h2>
-          <p>Real integrations stay behind the Stage B authorization gate.</p>
-          <div className="setting-line">
-            <div>
-              <strong className="inline">
-                <CalendarDays size={15} />
-                Google Calendar
-              </strong>
-              <p>Six existing calendars will remain read-only.</p>
-            </div>
-            <span className="badge">Not connected</span>
-          </div>
+          <h2>Other connected services</h2>
           <div className="setting-line">
             <div>
               <strong className="inline">
@@ -144,7 +134,8 @@ export function SettingsPage() {
             <span className="badge amber">Off</span>
           </div>
           <p className="form-hint" style={{ marginTop: 16 }}>
-            No credentials have been connected through this application.
+            Career spreadsheet connection will be added after Calendar
+            verification.
           </p>
         </section>
         <section className="panel settings-panel">

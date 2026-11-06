@@ -9,7 +9,7 @@ import { PGlite } from "@electric-sql/pglite";
 const db = new PGlite();
 const uid = "11111111-1111-4111-8111-111111111111";
 await db.exec(
-  `create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); insert into auth.users values('${uid}'); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`,
+  `create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key); insert into auth.users values('${uid}'); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`,
 );
 for (const file of readdirSync("supabase/migrations").sort())
   await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));

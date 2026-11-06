@@ -120,3 +120,7 @@ The user deployed the full source to https://lifeos-beta-ivory.vercel.app and re
 - [ ] Real encrypted backup, hosted restore and isolated browser login rehearsal run and verified.
 
 The recovery setup does not change deployed application behavior. MFA/password recovery engineering and stages B/C/D remain pending.
+
+## 2026-11-06 — Owner-authorized Stage B Calendar work
+
+The owner explicitly deferred hosted backup/restore testing and authorized read-only Calendar, then career spreadsheet, then confirmed records/goals/projects. No Stage C/D or paid-service activation was authorized. The first live Calendar adapter, server-only encrypted token RPCs, OAuth/PKCE/state flow, explicit calendar selection, manual rolling-window sync, disconnect/revocation and cached Home/Planner agenda have been implemented locally. See GOOGLE_CALENDAR_SETUP.md for the exact limits. Verification/deployment evidence is recorded separately; a real Google consent/import is not claimed by code completion.
