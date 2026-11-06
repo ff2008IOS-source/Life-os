@@ -41,6 +41,8 @@ export function EntityEditor({
     if (state.kind === "projects")
       values = {
         name: f.get("name"),
+        source_id: project?.source_id ?? null,
+        source_key: project?.source_key ?? null,
         description: f.get("description"),
         area_id: value("area_id"),
         status: f.get("status"),
@@ -51,6 +53,8 @@ export function EntityEditor({
     else if (state.kind === "goals")
       values = {
         title: f.get("title"),
+        source_id: goal?.source_id ?? null,
+        source_key: goal?.source_key ?? null,
         description: f.get("description"),
         area_id: value("area_id"),
         parent_goal_id: goal?.parent_goal_id ?? null,

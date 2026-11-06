@@ -48,6 +48,8 @@ export const taskInput = z
 export const projectInput = z
   .object({
     name: title,
+    source_id: z.uuid().nullable().optional(),
+    source_key: z.string().max(1000).nullable().optional(),
     description: text,
     area_id: nullableId,
     status: z
@@ -65,6 +67,8 @@ export const projectInput = z
 export const goalInput = z
   .object({
     title,
+    source_id: z.uuid().nullable().optional(),
+    source_key: z.string().max(1000).nullable().optional(),
     description: text,
     area_id: nullableId,
     parent_goal_id: nullableId,

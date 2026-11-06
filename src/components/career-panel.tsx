@@ -13,6 +13,7 @@ type CareerRow = {
   status: string;
   details: Record<string, string | null>;
   source_key: string;
+  source_id?: string | null;
 };
 type Preview = {
   preview_id: string;
@@ -114,12 +115,28 @@ export function CareerPanel({ compact = false }: { compact?: boolean }) {
       title: record.title,
       name: record.title,
       description,
-      area_id: workspace.areas.find((a) => a.slug === "career")?.id,
+      source_id: record.source_id ?? null,
+      source_key: record.source_key,
+      area_id:
+        workspace.areas.find(
+          (a) =>
+            a.slug ===
+            (["Academics", "Beedie"].includes(record.details.Area ?? "")
+              ? "academics"
+              : record.details.Area === "Basketball"
+                ? "unassigned"
+                : "career"),
+        )?.id ?? null,
       progress_type: "qualitative" as const,
       target_date: target,
     };
     setEditor({ kind, seed });
   }
+  const alreadyLinked = (r: CareerRow, kind: "goals" | "projects") =>
+    !!r.source_id &&
+    workspace[kind].some(
+      (row) => row.source_id === r.source_id && row.source_key === r.source_key,
+    );
   const matching = records.filter((r) => r.kind === tab);
   return (
     <section
@@ -227,17 +244,23 @@ export function CareerPanel({ compact = false }: { compact?: boolean }) {
                   <Button
                     variant="outline"
                     size="sm"
+                    disabled={alreadyLinked(record, "goals")}
                     onClick={() => promote(record, "goals")}
                   >
                     <Plus size={12} />
-                    Create confirmed goal
+                    {alreadyLinked(record, "goals")
+                      ? "Already in Goals"
+                      : "Create confirmed goal"}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
+                    disabled={alreadyLinked(record, "projects")}
                     onClick={() => promote(record, "projects")}
                   >
-                    Create project
+                    {alreadyLinked(record, "projects")
+                      ? "Already in Projects"
+                      : "Create project"}
                   </Button>
                   <Button
                     variant="ghost"

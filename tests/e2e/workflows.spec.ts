@@ -172,6 +172,11 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
+  const initialize = page.getByRole("button", { name: /Initialize workspace/ });
+  if (await initialize.count()) {
+    await initialize.click();
+    await expect(initialize).toHaveCount(0);
+  }
   await page.goto("/areas/projects");
   await page.getByRole("button", { name: "New project", exact: true }).click();
   await page

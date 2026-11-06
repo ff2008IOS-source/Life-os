@@ -144,3 +144,11 @@ Implemented locally pending live owner consent and checks:
 - In-app reminders, per-category preferences and Vancouver quiet hours, acknowledgement, optional Web Push device enrollment, generic lock-screen content, expired-device cleanup, capped durable delivery attempts and a notification-only 15-minute worker timer. No private-page service-worker caching. Push is best effort and requires a real device test.
 
 Owner-dependent checks remain: Sheets API enablement and consent; import review/current-record confirmation; separate calendar consent and real apply/undo test; MFA enrollment and recovery email delivery test; Home Screen installation and push opt-in/test. Google External Testing refresh tokens may expire after seven days; production OAuth publishing/configuration must be reviewed for a lasting connection. Full hosted backup restoration remains deferred by the owner.
+
+### Owner-authorized source transfer and activation
+
+Read all nine mapped tabs through the connected read-only Google Drive provider and re-read them before transfer to confirm the values had not changed. The source spreadsheet was not modified. Applied two atomic, idempotent import jobs: 102 career/reference records and 70 academic records (one term, five courses, 31 assessments, 33 study topics). Seven source-reported percentage scores remain unverified; no submission, mastery, course grading formula or active task was inferred.
+
+The owner explicitly selected “Activate only In Progress items.” Activated nine current-term goals and six portfolio projects, retaining source identities and source descriptions. Three future-term goals also marked In Progress remain reference-only. No completed/not-started items were activated and project automation remains off. A source basketball category without a matching native area remains unassigned rather than being silently recategorized. Source identities are retained through native edits and repeat promotion is blocked in the UI/database.
+
+Verified owner RLS visibility of the imported rows. The signed notification timer has also recorded successful scheduled runs; its HTTP transport returns 200. Actual device push receipt and Google website consent for future Sheets refresh/dedicated-calendar writes still require the owner’s interaction.

@@ -24,7 +24,7 @@ const empty: AcademicData = {
   study_sessions: [],
 };
 export function AcademicsPanel() {
-  const [limit, setLimit] = useState(40);
+  const [limit, setLimit] = useState(8);
   const [data, setData] = useState<AcademicData>(empty),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
@@ -310,7 +310,7 @@ export function AcademicsPanel() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setLimit((n) => n + 40)}
+                  onClick={() => setLimit((n) => n + 8)}
                 >
                   Show more records ({rows.length - limit} remaining)
                 </Button>
