@@ -145,7 +145,7 @@ export async function GET(request: Request) {
                       d.course_canvas_id === r.course_canvas_id,
                   );
                   return d
-                    ? `${d.state}${d.pages ? ` · ${d.pages} pages/slides` : ""}${d.truncated ? " · partial extraction" : ""}${d.last_error ? ` · ${d.last_error}` : ""}`
+                    ? `${d.state}${d.pages && !String(r.payload["content-type"] ?? "").includes("wordprocessingml") ? ` · ${d.pages} ${String(r.payload["content-type"] ?? "").includes("presentationml") ? "slides" : "pages"}` : ""}${d.truncated ? " · partial extraction" : ""}${d.last_error ? ` · ${d.last_error}` : ""}`
                     : "File text not extracted yet";
                 })()
               : "Retrieved Canvas record",
