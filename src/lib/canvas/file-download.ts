@@ -16,6 +16,7 @@ export function trustedFileUrl(value: string) {
     url.hash ||
     !(
       url.hostname === "canvas.sfu.ca" ||
+      url.hostname === "inst-fs-yul-prod.inscloudgate.net" ||
       url.hostname.endsWith(".instructureusercontent.com") ||
       /^a\d+-\d+\.cluster\d+\.canvas-user-content\.com$/.test(url.hostname) ||
       /^(?:[a-z0-9][a-z0-9.-]*\.)?s3(?:[.-][a-z]{2}-[a-z]+-\d)?\.amazonaws\.com$/.test(
