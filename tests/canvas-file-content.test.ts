@@ -54,6 +54,10 @@ it("blocks arbitrary download hosts, hidden files and oversized metadata without
   ).toThrow();
   expect(() => trustedFileUrl("http://127.0.0.1/file")).toThrow();
   expect(
+    trustedFileUrl("https://cdn.inst-fs-yul-prod.inscloudgate.net/file")
+      .hostname,
+  ).toBe("cdn.inst-fs-yul-prod.inscloudgate.net");
+  expect(
     trustedFileUrl("https://inst-fs-yul-prod.inscloudgate.net/file").hostname,
   ).toBe("inst-fs-yul-prod.inscloudgate.net");
   expect(
