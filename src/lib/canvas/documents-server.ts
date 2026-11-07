@@ -27,6 +27,8 @@ export async function processCanvasDocuments(
     dbError(claim.error);
     const d = claim.data;
     if (!d) break;
+    let stage = "connection",
+      safeCode = "";
     try {
       const connection = await db
         .from("canvas_connections")
@@ -37,15 +39,18 @@ export async function processCanvasDocuments(
       dbError(connection.error);
       const c = connection.data!;
       const token = decryptToken(c.token_ciphertext, c.token_iv, user);
+      stage = "download";
       const source = await downloadCanvasFile(
         token,
         d.course_canvas_id,
         d.canvas_file_id,
       );
+      stage = "parse";
       const result = await extractCanvasFile(source.bytes, d.content_type);
       const chunks = chunkDocument(
         result.units.filter((u) => u.text.trim().length >= 20),
       );
+      stage = "persist";
       const saved = await db.rpc("canvas_finish_document", {
         p_user: user,
         p_course: d.course_canvas_id,
@@ -56,9 +61,10 @@ export async function processCanvasDocuments(
         p_metadata: source.metadata,
         p_hash: createHash("sha256").update(source.bytes).digest("hex"),
         p_pages: result.pages,
-        p_truncated: result.truncated,
+        p_truncated: result.truncated || chunks.length >= 200,
         p_chunks: chunks,
       });
+      safeCode = saved.error?.code ?? "";
       dbError(saved.error);
       processed++;
     } catch (e) {
@@ -85,7 +91,7 @@ export async function processCanvasDocuments(
                   ? "File extraction timed out."
                   : code === "page_limit" || code === "archive_limit"
                     ? "File extraction safety limit exceeded."
-                    : "File text could not be extracted.",
+                    : `File text could not be extracted (${stage}${/^[A-Z0-9_]{3,40}$/.test(safeCode) ? ":" + safeCode : ""}${/^(parse_[a-z_]+|ERR_[A-Z_]+)$/.test(code) ? ":" + code : ""}).`,
           attempts: d.attempts + 1,
           next_attempt_at: new Date(Date.now() + 3600000).toISOString(),
           lease_token: null,
