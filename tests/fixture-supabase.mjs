@@ -166,6 +166,11 @@ const server = createServer((req, res) => {
           "deletion_requests",
           "goal_projects",
           "career_entries",
+          "canvas_deadlines",
+          "canvas_records",
+          "canvas_sync_jobs",
+          "canvas_mappings",
+          "canvas_grade_history",
         ];
         if (!tables.includes(table)) throw Error("Unknown table");
         const params = [];
@@ -178,8 +183,11 @@ const server = createServer((req, res) => {
           if (["select", "order", "offset", "limit"].includes(key)) continue;
           const [op, ...parts] = val.split(".");
           const value = parts.join(".");
-          if (op !== "eq") throw Error("Unsupported filter");
-          where.push(`${quote(key)} = ${param(value)}`);
+          const operator = { eq: "=", gte: ">=", gt: ">", lt: "<", lte: "<=" }[
+            op
+          ];
+          if (!operator) throw Error("Unsupported filter");
+          where.push(`${quote(key)} ${operator} ${param(value)}`);
         }
         const condition = where.length ? " where " + where.join(" and ") : "";
         let sql = "";

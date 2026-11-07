@@ -123,7 +123,7 @@ export async function verifyUserExport(input) {
     );
     const columns = (
       await db.query(
-        "select table_name,column_name,data_type,udt_name from information_schema.columns where table_schema='public' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts') order by ordinal_position",
+        "select table_name,column_name,data_type,udt_name from information_schema.columns where table_schema='public' and table_name in (select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE') and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts') order by ordinal_position",
       )
     ).rows;
     const expectedTables = [

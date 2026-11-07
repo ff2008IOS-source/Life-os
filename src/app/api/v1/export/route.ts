@@ -48,6 +48,10 @@ const tables = [
   "deletion_requests",
   "goal_projects",
   "career_entries",
+  "canvas_records",
+  "canvas_sync_jobs",
+  "canvas_mappings",
+  "canvas_grade_history",
 ] as const;
 export async function GET() {
   try {
@@ -57,19 +61,24 @@ export async function GET() {
       records[table] = [];
       let page = 0;
       while (true) {
-        const key =
-          table === "profiles"
-            ? "user_id"
-            : table === "goal_tasks"
-              ? "goal_id"
-              : table === "task_dependencies"
-                ? "predecessor_task_id"
-                : "id";
+        const key = ["canvas_records", "canvas_mappings"].includes(table)
+          ? "canvas_id"
+          : table === "canvas_sync_jobs"
+            ? "job_key"
+            : table === "profiles"
+              ? "user_id"
+              : table === "goal_tasks"
+                ? "goal_id"
+                : table === "task_dependencies"
+                  ? "predecessor_task_id"
+                  : "id";
         let query = db
           .from(table)
           .select("*")
           .eq("user_id", user.id)
           .order(key);
+        if (["canvas_records", "canvas_mappings"].includes(table))
+          query = query.order("resource_type");
         if (table === "goal_tasks") query = query.order("task_id");
         if (table === "task_dependencies")
           query = query.order("successor_task_id");

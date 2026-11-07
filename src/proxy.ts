@@ -1,3 +1,4 @@
+import { applicationOrigin } from "@/lib/app-origin";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function proxy(request: NextRequest) {
       cookieOptions: {
         httpOnly: true,
         sameSite: "lax",
-        secure: process.env.LIFE_OS_APP_ORIGIN?.startsWith("https:") ?? false,
+        secure: applicationOrigin()?.startsWith("https:") ?? false,
       },
       cookies: {
         getAll: () => request.cookies.getAll(),

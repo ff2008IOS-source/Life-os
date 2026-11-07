@@ -144,6 +144,15 @@ export function SettingsPage({
         </div>
         <div hidden={section !== "integrations"}>
           <div className="settings-grid">
+            <section className="panel settings-panel">
+              <h2>SFU Canvas</h2>
+              <p className="small muted">
+                Read-only courses, grades, deadlines and course resources.
+              </p>
+              <Link href="/canvas-connect" className="text-link">
+                Connect or manage Canvas
+              </Link>
+            </section>
             <GoogleCalendarPanel settings />
             <CareerPanel compact />
             <ReservationsPanel />

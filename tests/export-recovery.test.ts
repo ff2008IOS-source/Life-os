@@ -28,7 +28,7 @@ beforeAll(async () => {
       `set role authenticated; select set_config('request.jwt.claim.sub','${owner}',false); select public.add_beta_examples(); reset role;`,
     );
     const tables = await source.query<{ table_name: string }>(
-      "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts')",
+      "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts')",
     );
     const records: Export["records"] = {};
     for (const { table_name: table } of tables.rows)

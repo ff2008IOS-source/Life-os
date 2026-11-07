@@ -1,35 +1,127 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import { authorized, ApiError } from "@/lib/auth";
-import { CanvasClient } from "@/lib/canvas/client";
+import { CanvasClient, CanvasApiError } from "@/lib/canvas/client";
 import { canvasAdmin, encryptToken } from "@/lib/canvas/secure";
-
+import { canvasStatus, seedCanvas } from "@/lib/canvas/service";
+import { checkMutation, readJson, dbError, failure } from "@/lib/http";
 export const runtime = "nodejs";
 export async function GET() {
   try {
     const { user } = await authorized();
-    const { data, error } = await canvasAdmin().from("canvas_connections").select("expires_at,last_sync_at,last_error").eq("user_id", user.id).maybeSingle();
-    if (error) throw error;
-    return NextResponse.json({ connected: !!data, expires_at: data?.expires_at, last_sync_at: data?.last_sync_at, last_error: data?.last_error }, { headers: { "Cache-Control": "no-store" } });
-  } catch (e) { return failure(e); }
+    return NextResponse.json(await canvasStatus(user.id), {
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  } catch (e) {
+    return failure(e);
+  }
 }
 export async function POST(request: Request) {
   try {
+    checkMutation(request);
     const { user } = await authorized();
-    const body: unknown = await request.json();
-    if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-    const input = body as Record<string, unknown>;
-    const token = input.token;
-    const expiresAt = input.expires_at;
-    if (typeof token !== "string" || token.length < 12 || token.length > 4096) return NextResponse.json({ error: "Invalid token" }, { status: 400 });
-    if (typeof expiresAt !== "string" || !Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now()) return NextResponse.json({ error: "Enter the future Canvas token expiry date" }, { status: 400 });
-    const courses = await new CanvasClient(token).courses();
-    const encrypted = encryptToken(token);
-    const { error } = await canvasAdmin().from("canvas_connections").upsert({ user_id: user.id, ...encrypted, expires_at: expiresAt, last_error: null, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    if (error) throw error;
-    return NextResponse.json({ connected: true, course_count: courses.length }, { headers: { "Cache-Control": "no-store" } });
-  } catch (e) { return failure(e); }
+    const db = canvasAdmin();
+    const input = z
+      .object({
+        token: z
+          .string()
+          .trim()
+          .min(12)
+          .max(4096)
+          .regex(/^[^\s]+$/),
+        expires_at: z.iso.datetime({ offset: true }),
+      })
+      .strict()
+      .parse(await readJson(request));
+    if (
+      Date.parse(input.expires_at) <= Date.now() ||
+      Date.parse(input.expires_at) > Date.now() + 32 * 86400000
+    )
+      throw new ApiError(
+        422,
+        "Enter the token's actual expiry within the next 32 days.",
+      );
+    const limit = await db.rpc("canvas_token_attempt", { p_user: user.id });
+    dbError(limit.error);
+    if (!limit.data)
+      throw new ApiError(429, "Wait 15 seconds before trying another token.");
+    const identity = await new CanvasClient(input.token).identity();
+    if (!identity.id)
+      throw new ApiError(502, "Canvas did not confirm the token's account.");
+    const account = z
+      .union([z.number().int().positive(), z.string().regex(/^\d+$/)])
+      .transform(String)
+      .parse(identity.id);
+    const binding = await db.rpc("canvas_bind_identity", {
+      p_user: user.id,
+      p_canvas: account,
+    });
+    dbError(binding.error);
+    if (!binding.data)
+      throw new ApiError(
+        422,
+        "This token belongs to a different Canvas account. Existing academic records were preserved.",
+      );
+    const result = await db.from("canvas_connections").upsert(
+      {
+        user_id: user.id,
+        ...encryptToken(input.token, user.id),
+        expires_at: input.expires_at,
+        generation: randomUUID(),
+        enabled: true,
+        last_error: null,
+        lease_token: null,
+        lease_until: null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+    dbError(result.error);
+    await seedCanvas(user.id);
+    const recovery = await db.rpc("canvas_resume_jobs", { p_user: user.id });
+    dbError(recovery.error);
+    return NextResponse.json(
+      { connected: true },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (e) {
+    return failure(
+      e instanceof CanvasApiError
+        ? new ApiError(e.status === 401 ? 422 : 502, e.message)
+        : e,
+    );
+  }
 }
-function failure(e: unknown) {
-  if (e instanceof ApiError) return NextResponse.json({ error: e.message }, { status: e.status });
-  return NextResponse.json({ error: "Canvas connection failed. Check token, expiry and server configuration." }, { status: 500 });
+export async function PATCH(request: Request) {
+  try {
+    checkMutation(request);
+    const { user } = await authorized();
+    const input = z
+      .object({ enabled: z.boolean() })
+      .strict()
+      .parse(await readJson(request));
+    const result = await canvasAdmin()
+      .from("canvas_connections")
+      .update({ enabled: input.enabled })
+      .eq("user_id", user.id);
+    dbError(result.error);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return failure(e);
+  }
+}
+export async function DELETE(request: Request) {
+  try {
+    checkMutation(request);
+    const { user } = await authorized();
+    const result = await canvasAdmin()
+      .from("canvas_connections")
+      .delete()
+      .eq("user_id", user.id);
+    dbError(result.error);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return failure(e);
+  }
 }

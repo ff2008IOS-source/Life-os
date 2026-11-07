@@ -1,3 +1,4 @@
+import { canvasWorker } from "@/lib/canvas/service";
 import { runSchedulingAutomation } from "@/lib/scheduling-automation";
 import { validNotificationSignature } from "@/lib/notification-worker-auth";
 import { NextResponse } from "next/server";
@@ -21,7 +22,11 @@ export async function POST(request: Request) {
   try {
     const notifications = await notificationWorker();
     const automation = await runSchedulingAutomation();
-    return NextResponse.json({ ...notifications, automation });
+    const canvas = await canvasWorker().catch(() => ({
+      error:
+        "Canvas background refresh failed. Review Canvas connection status.",
+    }));
+    return NextResponse.json({ ...notifications, automation, canvas });
   } catch (e) {
     return failure(e);
   }

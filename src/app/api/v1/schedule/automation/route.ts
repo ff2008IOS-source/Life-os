@@ -52,17 +52,15 @@ export async function POST(request: Request) {
         );
     }
     const admin = serverAdmin();
-    const saved = await admin
-      .from("scheduling_automation")
-      .upsert(
-        {
-          user_id: user.id,
-          enabled: input.enabled,
-          policy: input.policy,
-          last_error: null,
-        },
-        { onConflict: "user_id" },
-      );
+    const saved = await admin.from("scheduling_automation").upsert(
+      {
+        user_id: user.id,
+        enabled: input.enabled,
+        policy: input.policy,
+        last_error: null,
+      },
+      { onConflict: "user_id" },
+    );
     dbError(saved.error);
     if (input.enabled) {
       const projects = await admin

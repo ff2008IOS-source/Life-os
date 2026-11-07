@@ -1,3 +1,4 @@
+import { expiryWarning } from "./canvas/resources";
 import "server-only";
 import webpush from "web-push";
 import { formatInTimeZone } from "date-fns-tz";
@@ -74,6 +75,29 @@ export async function generateNotifications(userId: string, now = new Date()) {
       body: "Review progress and choose next week’s priorities.",
       deduplication_key: `weekly:${localDate(now)}`,
     });
+  const canvas = await db
+    .from("canvas_connections")
+    .select("expires_at,last_error")
+    .eq("user_id", userId)
+    .maybeSingle();
+  dbError(canvas.error);
+  if (canvas.data?.expires_at) {
+    const warning = expiryWarning(canvas.data.expires_at, now.getTime());
+    if (warning !== null)
+      candidates.push({
+        category: "integration",
+        title: warning === 0 ? "Canvas token expired" : "Canvas token renewal",
+        body: "Open Settings → SFU Canvas to replace your token. Existing records are preserved.",
+        deduplication_key: `canvas-expiry:${canvas.data.expires_at}:${warning}`,
+      });
+    if (canvas.data.last_error)
+      candidates.push({
+        category: "integration",
+        title: "Canvas needs attention",
+        body: "Open the Canvas connection to review synchronization status.",
+        deduplication_key: `canvas-error:${localDate(now)}`,
+      });
+  }
   const prefs = await db
     .from("notification_preferences")
     .select("*")

@@ -136,6 +136,7 @@ The compact Calendar/Settings redesign is implemented and tested. The daily read
 ## 2026-11-06 — Operational workspace additions
 
 Implemented locally pending live owner consent and checks:
+
 - Verified-header, read-only Google Sheet snapshots, ten-minute reviewed import jobs, source-change detection and atomic idempotent imports. Source goals/targets remain source records until deliberately promoted. Existing local imported rows are preserved, not overwritten by stale source content.
 - Course/term/assessment/grading-category/topic/study-session forms. Unknown dates and scores remain null; category and assessment formulas must be configured before showing averages. Percentage-scale imports are labelled. Source submission status is separate from confirmed submission state. Contact follow-up CRUD does not message contacts.
 - Calendar-backed scheduling previews, refresh when older than five minutes, fail-closed unknown availability, exclusive all-day boundaries, preserved existing reservations and effort accounting. Apply refreshes calendars again and rejects changed inputs or the freeze window.

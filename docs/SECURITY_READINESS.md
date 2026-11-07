@@ -56,6 +56,7 @@ After the owner changed Supabase's setting, a fresh request to `/auth/v1/setting
 ### 2026-11-06 session/MFA and device delivery update
 
 Hosted owner-session checks pass with the registered Auth session; client access to push credentials and notification timer configuration is denied. No real deletion is queued. Advisor findings reviewed after migration:
+
 - `has_registered_session()` and `is_approved_user()` are intentionally narrow, fixed-search-path SECURITY DEFINER booleans with no caller-supplied identity. Authenticated execution is necessary for owner RLS and reveals only the caller’s own authorization result. See https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable.
 - No-policy RLS on approval/credential tables, device endpoints, delivery attempts and write locks is intentional deny-by-default; client grants are revoked. See https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy.
 - Leaked-password detection remains disabled on this Free project (paid upgrade not authorized). App password changes require 12 characters and current password or a verified recovery marker; no claim of full security readiness is made. See https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.

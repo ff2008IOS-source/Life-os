@@ -18,6 +18,7 @@ import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
 import { OccurrencesPanel } from "./occurrences-panel";
 import { SchedulingPanel } from "./scheduling-panel";
+import { CanvasDeadlines } from "./canvas-deadlines";
 import { PlannerCalendar } from "./planner-calendar";
 export function PlannerPage() {
   const { data } = useWorkspace();
@@ -94,6 +95,7 @@ export function PlannerPage() {
           </button>
         ))}
       </div>
+      {tab === "calendar" && <CanvasDeadlines />}
       {tab === "schedule" ? (
         <SchedulingPanel />
       ) : tab === "recurring" ? (

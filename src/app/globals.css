@@ -3135,11 +3135,74 @@ input[type="checkbox"] {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-.notification-preference{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border)}.notification-preference>strong{min-width:130px;text-transform:capitalize}.notification-preference label{display:flex;gap:7px;align-items:center;font-size:12px}.notification-preference input[type=checkbox]{width:16px;height:16px;margin:0}.notification-preference input[type=time]{width:110px}
+.notification-preference {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.notification-preference > strong {
+  min-width: 130px;
+  text-transform: capitalize;
+}
+.notification-preference label {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12px;
+}
+.notification-preference input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.notification-preference input[type="time"] {
+  width: 110px;
+}
 /* Grid/flex items must be allowed to shrink around long imported text. */
-.app-main,.main-content,.app-content,.entity-card,.cards-grid,.dashboard-grid{min-width:0}
-.entity-card{width:100%;max-width:100%;overflow:hidden}
-.entity-card>*{min-width:0;max-width:100%}
-.entity-card h2,.entity-card p,.entity-card .task-main{white-space:normal;overflow-wrap:anywhere;word-break:normal}
-.project-summary{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6}
-.main-shell,.content{min-width:0}
+.app-main,
+.main-content,
+.app-content,
+.entity-card,
+.cards-grid,
+.dashboard-grid {
+  min-width: 0;
+}
+.entity-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+.entity-card > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.entity-card h2,
+.entity-card p,
+.entity-card .task-main {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.project-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.6;
+}
+.main-shell,
+.content {
+  min-width: 0;
+}
+
+.canvas-panel summary,
+.canvas-panel > .text-link {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding-block: 8px;
+  overflow-wrap: anywhere;
+}
