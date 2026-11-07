@@ -3206,3 +3206,209 @@ input[type="checkbox"] {
   padding-block: 8px;
   overflow-wrap: anywhere;
 }
+
+/* Conversational assistant: compact controls, readable transcript, accessible composer. */
+.assistant-chat {
+  max-width: 850px;
+  margin: 0 auto;
+  min-width: 0;
+}
+.assistant-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.assistant-header h1 {
+  font-size: 24px;
+  margin: 0;
+}
+.assistant-header p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+.assistant-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 18px 0;
+}
+.assistant-tools > details {
+  min-width: 0;
+}
+.assistant-tools summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.assistant-tool-body {
+  padding: 12px 0;
+  max-width: 540px;
+}
+.assistant-tool-body select {
+  width: 100%;
+  min-height: 44px;
+}
+.assistant-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.assistant-messages {
+  min-height: 220px;
+}
+.assistant-welcome {
+  padding: 36px 4px;
+  text-align: center;
+}
+.assistant-welcome h2 {
+  font-size: 22px;
+}
+.assistant-welcome p {
+  font-size: 14px;
+  color: var(--muted);
+}
+.assistant-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+.assistant-prompts button {
+  text-align: left;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 44px;
+  background: var(--surface);
+  color: inherit;
+  cursor: pointer;
+}
+.assistant-exchange {
+  margin: 20px 0 30px;
+}
+.chat-message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+  font-size: 15px;
+}
+.chat-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.chat-user {
+  margin-left: auto;
+  width: fit-content;
+  max-width: 90%;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 16px;
+}
+.chat-assistant {
+  padding: 18px 2px 0;
+}
+.chat-evidence {
+  margin-top: 12px;
+}
+.chat-evidence summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  min-height: 36px;
+  padding-top: 8px;
+}
+.chat-evidence p {
+  margin-top: 8px;
+}
+.assistant-thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  padding-top: 18px;
+}
+.assistant-spinner {
+  animation: assistant-spin 1s linear infinite;
+}
+@keyframes assistant-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-spinner {
+    animation: none;
+  }
+}
+.assistant-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px;
+  background: var(--surface);
+}
+.assistant-composer:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.assistant-composer textarea {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 8px;
+  min-height: 54px;
+  max-height: 180px;
+  resize: vertical;
+  box-shadow: none;
+}
+.assistant-composer textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+.assistant-composer .button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px;
+  border-radius: 12px;
+}
+.assistant-footnote {
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  margin: 10px 0;
+}
+@media (max-width: 600px) {
+  .assistant-header h1 {
+    font-size: 21px;
+  }
+  .assistant-header p {
+    font-size: 12px;
+  }
+  .assistant-welcome {
+    padding: 24px 0;
+  }
+  .assistant-tools {
+    margin: 8px 0;
+  }
+  .chat-message {
+    font-size: 15px;
+  }
+}

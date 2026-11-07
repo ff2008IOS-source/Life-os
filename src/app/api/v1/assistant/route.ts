@@ -8,7 +8,8 @@ import {
   AssistantProviderError,
   type AssistantSource,
 } from "@/lib/assistant/provider";
-import { canvasStudyContext } from "@/lib/canvas/study-context";
+import { assistantAcademicContext } from "@/lib/assistant/context-server";
+import { prioritizeAssistantSources } from "@/lib/assistant/academic-context";
 import { localDate } from "@/lib/dates";
 export const maxDuration = 60;
 export async function GET(request: Request) {
@@ -172,21 +173,26 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(2);
     dbError(history.error);
-    for (const exchange of history.data ?? [])
+    sources.push(
+      ...(await assistantAcademicContext(
+        db,
+        user.id,
+        x.question,
+        history.data?.[0]?.question ?? "",
+        x.course_canvas_id,
+      )),
+    );
+    for (const exchange of [...(history.data ?? [])].reverse())
       sources.push({
         id: `history:${exchange.id}`,
-        title: "Prior conversation, AI content unverified",
+        title: "Earlier conversation (AI content unverified)",
         text: JSON.stringify({
           question: exchange.question,
-          answer: exchange.response?.answer,
+          answer: exchange.response?.answer?.slice(0, 450),
         }),
         url: "/assistant",
         trust: "ai_history_not_verified",
       });
-    if (x.course_canvas_id) {
-      const context = await canvasStudyContext(user.id, x.course_canvas_id);
-      sources.push(...context.sources);
-    }
     const [tasks, projects, goals] = await Promise.all([
       db
         .from("tasks")
@@ -233,7 +239,10 @@ export async function POST(request: Request) {
                 : "/areas",
         });
       }
-    const result = await groqAnswer(x.question, sources);
+    const result = await groqAnswer(
+      x.question,
+      prioritizeAssistantSources(x.question, sources),
+    );
     const save = await serverAdmin()
       .from("assistant_exchanges")
       .update({
