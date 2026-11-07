@@ -36,6 +36,48 @@ export async function seedCanvas(user: string) {
     ),
   );
 }
+// Discover links from already imported modules without fetching an index Canvas may deny.
+// Every discovered resource still requires its own authorized Canvas GET.
+export async function seedModuleLinks(user: string) {
+  const db = canvasAdmin();
+  for (let page = 0; page < 10; page++) {
+    const result = checked(
+      await db
+        .from("canvas_records")
+        .select("canvas_id,course_canvas_id,payload")
+        .eq("user_id", user)
+        .eq("resource_type", "module_item")
+        .order("canvas_id")
+        .range(page * 500, page * 500 + 499),
+    );
+    const rows = result.data ?? [];
+    const specs = rows.flatMap((r) =>
+      children("module_item", r.payload, r.course_canvas_id),
+    );
+    const unique = [...new Map(specs.map((j) => [j.key, j])).values()];
+    for (let offset = 0; offset < unique.length; offset += 100)
+      checked(
+        await db.from("canvas_sync_jobs").upsert(
+          unique.slice(offset, offset + 100).map((j) => ({
+            user_id: user,
+            job_key: j.key,
+            resource_type: j.type,
+            path: j.path,
+            params: j.params,
+            course_canvas_id: j.course,
+            single_resource: j.single,
+            interval_minutes: j.minutes,
+          })),
+          { onConflict: "user_id,job_key", ignoreDuplicates: true },
+        ),
+      );
+    if (rows.length < 500) return;
+  }
+  throw new ApiError(
+    422,
+    "Module-link discovery reached its safety limit. Existing imports and jobs are preserved.",
+  );
+}
 export async function canvasStatus(user: string) {
   const db = canvasAdmin();
   const [connection, jobs, mappings] = await Promise.all([
@@ -84,7 +126,7 @@ export async function canvasStatus(user: string) {
 }
 export async function syncCanvas(
   user: string,
-  { manual = false, limit = 3 } = {},
+  { manual = false, discover = false, limit = 3 } = {},
 ) {
   const db = canvasAdmin(),
     lease = randomUUID();
@@ -110,6 +152,7 @@ export async function syncCanvas(
       decryptToken(connection.token_ciphertext, connection.token_iv, user),
     );
     await seedCanvas(user);
+    if (discover) await seedModuleLinks(user);
     if (manual)
       checked(await db.rpc("canvas_request_refresh", { p_user: user }));
     const jobs =
@@ -143,13 +186,17 @@ export async function syncCanvas(
             "Canvas pagination repeated a previously imported page.",
           );
         const page = await canvas.page(current, {}, j.single_resource);
-        const records = page.records.map((p) => ({
-          type: j.resource_type,
-          id: resourceId(j.resource_type, p, j.course_canvas_id),
-          course: j.course_canvas_id,
-          payload: p,
-          normalized: normalized(j.resource_type, p),
-        }));
+        const records = page.records
+          .filter(
+            (p) => j.resource_type !== "page_content" || p.published !== false,
+          )
+          .map((p) => ({
+            type: j.resource_type,
+            id: resourceId(j.resource_type, p, j.course_canvas_id),
+            course: j.course_canvas_id,
+            payload: p,
+            normalized: normalized(j.resource_type, p),
+          }));
         const enqueue = page.records.flatMap((p) =>
           children(j.resource_type, p, j.course_canvas_id),
         );
@@ -170,7 +217,7 @@ export async function syncCanvas(
         const status = e instanceof CanvasApiError ? e.status : 500;
         const message =
           e instanceof CanvasApiError
-            ? e.message
+            ? `${e.message} (Canvas HTTP ${e.status})`
             : "This Canvas resource could not be validated or saved. Its cursor was preserved for retry.";
         errors.push(message);
         checked(
@@ -239,7 +286,7 @@ export async function canvasWorker() {
     if (!approved.data) continue;
     if (row.enabled && Date.parse(row.expires_at) > now) {
       try {
-        outcomes.push(await syncCanvas(row.user_id, { limit: 10 }));
+        outcomes.push(await syncCanvas(row.user_id, { limit: 20 }));
       } catch (e) {
         if (!(e instanceof ApiError && e.status === 409)) throw e;
       }

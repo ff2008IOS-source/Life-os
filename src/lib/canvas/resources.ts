@@ -142,6 +142,39 @@ export function children(
       }),
     ].map((j) => ({ ...j, key: j.key + ":" + c }));
   }
+  if (type === "module_item" && course && p.published !== false) {
+    if (
+      p.type === "Page" &&
+      typeof p.page_url === "string" &&
+      p.page_url.length > 0 &&
+      p.page_url.length <= 500 &&
+      ![".", ".."].includes(p.page_url)
+    )
+      return [
+        job(
+          "page_content",
+          `courses/${course}/pages/${encodeURIComponent(p.page_url)}`,
+          course,
+          360,
+          {},
+          true,
+        ),
+      ];
+    if (p.type === "File") {
+      const file = id.safeParse(p.content_id);
+      if (file.success)
+        return [
+          job(
+            "file",
+            `courses/${course}/files/${file.data}`,
+            course,
+            360,
+            {},
+            true,
+          ),
+        ];
+    }
+  }
   if (type === "module" && course)
     return [
       job(

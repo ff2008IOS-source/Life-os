@@ -140,6 +140,56 @@ describe("Canvas read-only client and credential boundary", () => {
       resourceId("submission", { assignment_id: 2, user_id: 3 }, "1"),
     ).toBe("1:2:3");
   });
+  it("discovers specific module-linked pages and file metadata without relying on listing permissions", () => {
+    expect(
+      children(
+        "module_item",
+        { id: 1, type: "Page", page_url: "lecture-intro" },
+        "10",
+      ),
+    ).toMatchObject([
+      {
+        type: "page_content",
+        path: "courses/10/pages/lecture-intro",
+        single: true,
+      },
+    ]);
+    expect(
+      children("module_item", { id: 2, type: "File", content_id: 123 }, "10"),
+    ).toMatchObject([
+      { type: "file", path: "courses/10/files/123", single: true },
+    ]);
+    expect(
+      children(
+        "module_item",
+        { type: "Page", page_url: "draft", published: false },
+        "10",
+      ),
+    ).toEqual([]);
+    expect(
+      children("module_item", { type: "Page", page_url: ".." }, "10"),
+    ).toEqual([]);
+    expect(
+      children("module_item", { type: "ExternalTool", content_id: 123 }, "10"),
+    ).toEqual([]);
+    expect(
+      children(
+        "module_item",
+        { type: "File", content_id: "https://evil.invalid" },
+        "10",
+      ),
+    ).toEqual([]);
+  });
+  it("distinguishes an unavailable resource from a timeout without retrying a 404", async () => {
+    const send = vi.fn().mockResolvedValue(new Response("", { status: 404 }));
+    await expect(
+      new CanvasClient("synthetic-token", send).page("courses/1/pages"),
+    ).rejects.toMatchObject({
+      status: 404,
+      message: expect.stringContaining("could not find"),
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
   it("calculates expiry thresholds without assuming a month is unlimited", () => {
     const now = Date.parse("2026-11-07T12:00Z");
     expect(expiryWarning("2026-11-14T12:00Z", now)).toBe(7);

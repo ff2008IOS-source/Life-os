@@ -21,7 +21,8 @@ test("Canvas connection is private and secure UI handles verification, sync and 
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
   let connected = false,
-    saves = 0;
+    saves = 0,
+    outstanding = false;
   await page.route("**/api/canvas/connection", async (route) => {
     const method = route.request().method();
     if (method === "POST") {
@@ -43,15 +44,27 @@ test("Canvas connection is private and secure UI handles verification, sync and 
             }
           : null,
         warning: null,
-        resources: [],
+        resources: outstanding
+          ? [
+              {
+                job_key: "page_content:synthetic",
+                resource_type: "page_content",
+                last_success_at: null,
+                last_error: null,
+                next_url: null,
+                next_run_at: new Date().toISOString(),
+              },
+            ]
+          : [],
         conflicts: [],
         stale: true,
       },
     });
   });
-  await page.route("**/api/canvas/sync**", (route) =>
-    route.fulfill({ json: { processed: 5, pending: 0, errors: [] } }),
-  );
+  await page.route("**/api/canvas/sync**", (route) => {
+    outstanding = false;
+    return route.fulfill({ json: { processed: 5, pending: 0, errors: [] } });
+  });
   await page.goto("/canvas-connect");
   await expect(page.getByText("Not connected", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Canvas access token")).toHaveAttribute(
@@ -89,5 +102,22 @@ test("Canvas connection is private and secure UI handles verification, sync and 
   await page.getByRole("button", { name: "Verify and save token" }).click();
   await expect(page.getByLabel("Canvas access token")).toHaveValue("");
   expect(saves).toBe(2);
+  outstanding = true;
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Continue sync", exact: true }),
+  ).toBeVisible();
+  const continuation = page.waitForRequest(
+    (r) => r.url().includes("/api/canvas/sync") && r.method() === "POST",
+  );
+  await page
+    .getByRole("button", { name: "Continue sync", exact: true })
+    .click();
+  const sent = new URL((await continuation).url());
+  expect(sent.searchParams.get("discover")).toBe("true");
+  expect(sent.searchParams.has("refresh")).toBe(false);
+  await expect(
+    page.getByRole("button", { name: "Sync now", exact: true }),
+  ).toBeVisible();
   // The Canvas service is mocked above. Real PostgreSQL ingestion/rotation is tested separately.
 });

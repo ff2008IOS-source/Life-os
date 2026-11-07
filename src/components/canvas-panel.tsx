@@ -37,6 +37,10 @@ export function CanvasPanel() {
       live = false;
     };
   }, []);
+  const pending =
+    state?.resources.filter(
+      (j) => !j.last_error && (!j.last_success_at || !!j.next_url),
+    ).length ?? 0;
   async function sync() {
     setBusy(true);
     setError("");
@@ -47,9 +51,13 @@ export function CanvasPanel() {
           processed: number;
           pending: number;
           errors: string[];
-        }>("/api/canvas/sync" + (i === 0 ? "?refresh=true" : ""), {
-          method: "POST",
-        });
+        }>(
+          "/api/canvas/sync" +
+            (i === 0 ? `?discover=true${pending ? "" : "&refresh=true"}` : ""),
+          {
+            method: "POST",
+          },
+        );
         count += d.processed;
         setMessage(
           `${count} resource records checked. ${d.pending} pages/jobs ready to continue.`,
@@ -60,7 +68,7 @@ export function CanvasPanel() {
         if (!d.pending) break;
         if (i === 39)
           setMessage(
-            "Progress saved. Select Sync now to continue remaining pages.",
+            "Progress saved. Select Continue sync to finish remaining resources.",
           );
       }
       await reload();
@@ -191,7 +199,7 @@ export function CanvasPanel() {
           }
           onClick={() => void sync()}
         >
-          {busy ? "Working…" : "Sync now"}
+          {busy ? "Working…" : pending ? "Continue sync" : "Sync now"}
         </Button>
         {state?.connected && (
           <Button
@@ -274,6 +282,12 @@ export function CanvasPanel() {
             </div>
           ))}
         </details>
+      )}
+      {pending > 0 && (
+        <p role="status" className="small">
+          {pending} resource jobs still need to finish. Your saved records are
+          available; continue syncing without replacing the token.
+        </p>
       )}
       <details>
         <summary>Synchronization status by resource</summary>

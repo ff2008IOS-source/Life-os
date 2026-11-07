@@ -1,3 +1,4 @@
+import { children } from "../src/lib/canvas/resources";
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync, readdirSync } from "node:fs";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
@@ -346,5 +347,33 @@ describe("Canvas atomic ingestion and isolation", () => {
     } finally {
       await db.exec("reset role");
     }
+  });
+  it("deduplicates jobs discovered from module links across repeated page commits", async () => {
+    const item = { id: 77, type: "Page", page_url: "lecture-intro" };
+    const record = {
+      type: "module_item",
+      id: "10:77",
+      course: "10",
+      payload: item,
+      normalized: null,
+    };
+    for (let i = 0; i < 2; i++)
+      await db.query(
+        "select canvas_store_page($1,$2,$3,'course:courses',$4::jsonb,null,'https://canvas.sfu.ca/api/v1/courses',$5::jsonb)",
+        [
+          owner,
+          lease,
+          generation,
+          JSON.stringify([record]),
+          JSON.stringify(children("module_item", item, "10")),
+        ],
+      );
+    expect(
+      (
+        await db.query(
+          "select count(*)::int n from canvas_sync_jobs where job_key='page_content:courses/10/pages/lecture-intro'",
+        )
+      ).rows[0],
+    ).toEqual({ n: 1 });
   });
 });
