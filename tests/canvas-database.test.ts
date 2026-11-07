@@ -146,11 +146,48 @@ describe("Canvas atomic ingestion and isolation", () => {
         "select local_id from canvas_mappings where resource_type='assignment'",
       )
     ).rows[0].local_id;
+    const version = (
+      await db.query<{ version: number }>(
+        "select version from assessments where id=$1",
+        [a],
+      )
+    ).rows[0].version;
     await db.query(
-      "select canvas_accept($1,'assignment','10:20',$2,$3::jsonb,$4::jsonb)",
+      "update assessments set notes='[TEST] newer owner note' where id=$1",
+      [a],
+    );
+    await expect(
+      db.query(
+        "select canvas_accept_versioned($1,'assignment','10:20',$2,$3,$4::jsonb,$5::jsonb)",
+        [
+          owner,
+          a,
+          version,
+          JSON.stringify(assignment(10).normalized),
+          JSON.stringify(assignment(10).payload),
+        ],
+      ),
+    ).rejects.toMatchObject({ code: "40001" });
+    expect(
+      (
+        await db.query<{ notes: string }>(
+          "select notes from assessments where id=$1",
+          [a],
+        )
+      ).rows[0].notes,
+    ).toBe("[TEST] newer owner note");
+    const current = (
+      await db.query<{ version: number }>(
+        "select version from assessments where id=$1",
+        [a],
+      )
+    ).rows[0].version;
+    await db.query(
+      "select canvas_accept_versioned($1,'assignment','10:20',$2,$3,$4::jsonb,$5::jsonb)",
       [
         owner,
         a,
+        current,
         JSON.stringify(assignment(10).normalized),
         JSON.stringify(assignment(10).payload),
       ],

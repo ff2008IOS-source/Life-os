@@ -1,4 +1,5 @@
 import "server-only";
+import { canvasHealth } from "./health";
 import { randomUUID } from "node:crypto";
 import { canvasAdmin, decryptToken } from "./secure";
 import { CanvasClient, CanvasApiError, canvasUrl } from "./client";
@@ -102,7 +103,9 @@ export async function canvasStatus(user: string) {
       .limit(51),
   ]);
   [connection, jobs, mappings].forEach(checked);
+  const health = canvasHealth(jobs.data ?? []);
   return {
+    health,
     connected: !!connection.data,
     connection: connection.data,
     warning: connection.data?.expires_at
@@ -112,16 +115,7 @@ export async function canvasStatus(user: string) {
     resources_truncated: (jobs.data?.length ?? 0) > 500,
     conflicts: mappings.data?.slice(0, 50) ?? [],
     conflicts_truncated: (mappings.data?.length ?? 0) > 50,
-    stale:
-      !connection.data?.last_sync_at ||
-      Date.now() - Date.parse(connection.data.last_sync_at) > 2 * 3600000 ||
-      (jobs.data ?? []).some(
-        (j) =>
-          !!j.last_error ||
-          !j.last_success_at ||
-          Date.now() - Date.parse(j.last_success_at) >
-            j.interval_minutes * 90000,
-      ),
+    stale: !connection.data?.last_sync_at || health.academic_stale_count > 0,
   };
 }
 export async function syncCanvas(

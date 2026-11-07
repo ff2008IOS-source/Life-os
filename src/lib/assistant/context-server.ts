@@ -7,6 +7,7 @@ import {
   plainStudyText,
   type AcademicCandidate,
 } from "./academic-context";
+import { ensureCanvasDocument } from "../canvas/documents-server";
 import { materialRelevance } from "./material-search";
 import type { AssistantSource } from "./provider";
 export async function assistantAcademicContext(
@@ -104,7 +105,74 @@ export async function assistantAcademicContext(
     focus?.canvas_course ??
     linked?.canvas_id ??
     pinnedCourse;
-  if (course) {
+  if (
+    course &&
+    (/\b(exam|midterm|test|study|topics|chapter|syllabus|material|lecture|reading|quiz|assessment)\b/i.test(
+      question + " " + previousQuestion,
+    ) ||
+      explicit)
+  ) {
+    let extraction = "available";
+    try {
+      await ensureCanvasDocument(user, course, question, focus?.title ?? "");
+    } catch {
+      extraction =
+        "File extraction could not complete; existing material remains available.";
+    }
+    const terms = (
+      question +
+      " " +
+      (focus?.title ?? "") +
+      " exam midterm syllabus chapters"
+    )
+      .toLowerCase()
+      .match(/[a-z0-9]{2,}/g)
+      ?.filter(
+        (word) =>
+          ![
+            "what",
+            "next",
+            "hello",
+            "about",
+            "topics",
+            "need",
+            "should",
+            "please",
+            "the",
+            "are",
+            "on",
+            "my",
+            "do",
+            "to",
+            "yes",
+            "that",
+            "for",
+          ].includes(word),
+      )
+      .slice(0, 18) ?? ["exam"];
+    const found = await db.rpc("canvas_search_materials", {
+      p_course: course,
+      p_query: [...new Set(terms)].join(" OR "),
+    });
+    dbError(found.error);
+    for (const document of found.data ?? [])
+      sources.push({
+        id: `canvas:document:${course}:${document.file_id}:${document.page}:${document.chunk_index}`,
+        title: `${document.title} · page/slide ${document.page}`,
+        text: JSON.stringify({
+          excerpt: document.text,
+          coverage: /answer|solution|practice|20(?:0\d|1\d|2[0-5])/i.test(
+            document.title,
+          )
+            ? "Historical/practice material; does not prove current exam scope"
+            : "Retrieved file text; exact current exam scope must be stated explicitly",
+          truncated: document.truncated,
+        }),
+        trust: "untrusted_extracted_document_text",
+        retrieved_at: document.extracted_at,
+        url: `https://canvas.sfu.ca/courses/${course}/files/${document.file_id}`,
+      });
+
     const [pages, modules, announcements] = await Promise.all(
       ["page_content", "module_item", "announcement"].map((type) =>
         db
@@ -167,7 +235,10 @@ export async function assistantAcademicContext(
         body_records_checked: records.length,
         module_titles_checked: modules.data?.length ?? 0,
         matched_excerpts: ranked.length,
-        files: "File/slide metadata is not extracted PDF/PPT content",
+        extraction,
+        extracted_chunks_found: found.data?.length ?? 0,
+        files:
+          "Accessible supported files are extracted in bounded batches; scanned, denied or oversized files may remain unavailable.",
         coverage:
           "Bounded search of saved pages, announcements and available syllabus. Do not claim no material exists; retrieval may be incomplete.",
         available_page_titles: records

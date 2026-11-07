@@ -1,3 +1,4 @@
+import { canvasDocumentWorker } from "@/lib/canvas/documents-server";
 import { personalWorkflowWorker } from "@/lib/personal-workflows-server";
 import { canvasWorker } from "@/lib/canvas/service";
 import { runSchedulingAutomation } from "@/lib/scheduling-automation";
@@ -26,12 +27,14 @@ export async function POST(request: Request) {
       "automation",
       "canvas",
       "personal_workflows",
+      "canvas_documents",
     ] as const;
     const results = await Promise.allSettled([
       notificationWorker(),
       runSchedulingAutomation(),
       canvasWorker(),
       personalWorkflowWorker(),
+      canvasDocumentWorker(),
     ]);
     const response = Object.fromEntries(
       results.map((r, i) => [

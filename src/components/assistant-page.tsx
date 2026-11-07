@@ -657,7 +657,8 @@ function displaySources(exchange: Exchange) {
     (source) =>
       source.id.startsWith("assessment:") ||
       source.id.startsWith("canvas:assignment:") ||
-      source.id.startsWith("canvas:page_content:"),
+      source.id.startsWith("canvas:page_content:") ||
+      source.id.startsWith("canvas:document:"),
   );
   const cited = exchange.sources.filter((source) =>
     exchange.response?.source_ids.includes(source.id),

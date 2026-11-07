@@ -15,6 +15,7 @@ export async function POST(request: Request) {
         id: z.string().regex(/^[\d:]+$/),
         target: z.uuid(),
         confirmed: z.literal(true),
+        expected_version: z.number().int().positive(),
         source_hash: z.string().regex(/^[a-f0-9]{64}$/),
       })
       .strict()
@@ -38,14 +39,20 @@ export async function POST(request: Request) {
         409,
         "Canvas changed since this review. Reload the values before confirming.",
       );
-    const result = await db.rpc("canvas_accept", {
+    const result = await db.rpc("canvas_accept_versioned", {
       p_user: user.id,
       p_type: x.type,
       p_id: x.id,
       p_target: x.target,
+      p_expected_version: x.expected_version,
       p_values: normalized(x.type, r.data.payload),
       p_source: r.data.payload,
     });
+    if (result.error?.code === "40001")
+      throw new ApiError(
+        409,
+        "Life OS or Canvas changed since this review. Reload the values before confirming.",
+      );
     dbError(result.error);
     return NextResponse.json({ ok: true });
   } catch (e) {
@@ -81,7 +88,7 @@ export async function GET(request: Request) {
     dbError(m.error);
     const courses = await owner
       .from("courses")
-      .select("id,code,title,term_id")
+      .select("id,code,title,term_id,version")
       .eq("user_id", user.id)
       .limit(500);
     dbError(courses.error);
@@ -89,7 +96,7 @@ export async function GET(request: Request) {
     if (x.type === "assignment_group" && m.data?.local_id) {
       const group = await owner
         .from("grading_categories")
-        .select("name,weight")
+        .select("name,weight,version")
         .eq("user_id", user.id)
         .eq("id", m.data.local_id)
         .single();
@@ -100,7 +107,7 @@ export async function GET(request: Request) {
       const a = await owner
         .from("assessments")
         .select(
-          "title,earned_score,maximum_score,due_at,due_date,submission_state,notes,score_unit,verification_status",
+          "version,title,earned_score,maximum_score,due_at,due_date,submission_state,notes,score_unit,verification_status",
         )
         .eq("user_id", user.id)
         .eq("id", m.data.local_id)

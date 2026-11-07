@@ -160,6 +160,19 @@ export function CanvasPanel() {
           }
         }}
       >
+        {state?.health && (
+          <p className="form-hint">
+            {state.health.academic_stale_count === 0
+              ? "Academic resources are within their refresh targets."
+              : `${state.health.academic_stale_count} academic resources need refresh.`}
+            {state.health.restricted_count > 0
+              ? ` ${state.health.restricted_count} resource listings are unavailable to this Canvas account; permitted module-linked sources can still sync.`
+              : ""}
+            {state.health.material_backlog_count > 0
+              ? ` ${state.health.material_backlog_count} material jobs are waiting for refresh.`
+              : ""}
+          </p>
+        )}
         <label>
           Canvas access token
           <input
@@ -246,11 +259,12 @@ export function CanvasPanel() {
           </Button>
         )}
       </div>
-      {state?.connection?.last_error && (
-        <p role="alert" className="error-message">
-          {state.connection.last_error}
-        </p>
-      )}
+      {state?.connection?.last_error &&
+        !/Canvas HTTP (403|404|406)/.test(state.connection.last_error) && (
+          <p role="alert" className="error-message">
+            {state.connection.last_error}
+          </p>
+        )}
       {message && (
         <p role="status" className="small">
           {message}
@@ -327,7 +341,7 @@ function ConflictReview({
       source_hash: string;
       target: string | null;
       local: Record<string, unknown> | null;
-      courses: { id: string; code: string; title: string }[];
+      courses: { id: string; code: string; title: string; version: number }[];
     } | null>(null),
     [target, setTarget] = useState(""),
     [error, setError] = useState("");
@@ -398,6 +412,10 @@ function ConflictReview({
                     target,
                     confirmed: true,
                     source_hash: details.source_hash,
+                    expected_version:
+                      type === "course"
+                        ? details.courses.find((c) => c.id === target)?.version
+                        : details.local?.version,
                   }),
                 });
                 setDetails(null);
