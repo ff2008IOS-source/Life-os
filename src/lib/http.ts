@@ -1,9 +1,10 @@
+import { applicationOrigin } from "./app-origin";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { ApiError } from "./auth";
 export function checkMutation(request: Request) {
   const origin = request.headers.get("origin");
-  const expected = process.env.LIFE_OS_APP_ORIGIN;
+  const expected = applicationOrigin();
   if (!expected)
     throw new ApiError(
       503,

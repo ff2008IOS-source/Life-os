@@ -1,6 +1,8 @@
 "use client";
+import { formatInTimeZone } from "date-fns-tz";
+import { vancouverInputInstant } from "@/lib/local-time-input";
 import { RecurrenceEditor } from "./recurrence-editor";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Trash2, RotateCcw } from "lucide-react";
 import type { Task, TaskInput } from "@/lib/schemas";
 import { taskInput } from "@/lib/schemas";
@@ -25,6 +27,33 @@ export function TaskEditor({
   defaultArea?: string;
 }) {
   const { data, mutate, notify, request, refresh, pending } = useWorkspace();
+  const [context, setContext] = useState<{
+    courses: { id: string; code: string; title: string }[];
+    topics: { id: string; course_id: string; title: string }[];
+  }>({ courses: [], topics: [] });
+  const [contextError, setContextError] = useState("");
+  const [course, setCourse] = useState(task?.course_id ?? "");
+  const [topic, setTopic] = useState(task?.topic_id ?? "");
+  useEffect(() => {
+    let live = true;
+    void fetch("/api/v1/work/context", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok)
+          throw Error(
+            "Course and topic links could not be loaded. Existing links will be preserved.",
+          );
+        return r.json();
+      })
+      .then((d) => {
+        if (live && d) setContext(d);
+      })
+      .catch((e) => {
+        if (live) setContextError(e.message);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
   const [error, setError] = useState("");
   const [dueType, setDueType] = useState(task?.due_at ? "timed" : "date");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -33,24 +62,29 @@ export function TaskEditor({
     setError("");
     const f = new FormData(e.currentTarget);
     const num = (k: string) => (f.get(k) ? Number(f.get(k)) : null);
-    const values = {
-      title: f.get("title"),
-      description: f.get("description"),
-      status: f.get("status"),
-      priority: Number(f.get("priority")),
-      area_id: f.get("area_id") || null,
-      project_id: f.get("project_id") || null,
-      parent_task_id: task?.parent_task_id ?? null,
-      due_date: dueType === "date" ? f.get("due_date") || null : null,
-      due_at: dueType === "timed" ? f.get("due_at") || null : null,
-      due_timezone: "America/Vancouver",
-      estimated_minutes: num("estimated_minutes"),
-      actual_minutes: num("actual_minutes"),
-      scheduling_mode: f.get("eligible") ? "eligible" : "manual",
-      priority_order: task?.priority_order ?? null,
-      deleted_at: task?.deleted_at ?? null,
-    };
     try {
+      const values = {
+        title: f.get("title"),
+        description: f.get("description"),
+        status: f.get("status"),
+        priority: Number(f.get("priority")),
+        area_id: f.get("area_id") || null,
+        project_id: f.get("project_id") || null,
+        course_id: course || null,
+        topic_id: topic || null,
+        parent_task_id: task?.parent_task_id ?? null,
+        due_date: dueType === "date" ? f.get("due_date") || null : null,
+        due_at:
+          dueType === "timed"
+            ? vancouverInputInstant(String(f.get("due_at") ?? ""), task?.due_at)
+            : null,
+        due_timezone: "America/Vancouver",
+        estimated_minutes: num("estimated_minutes"),
+        actual_minutes: num("actual_minutes"),
+        scheduling_mode: f.get("eligible") ? "eligible" : "manual",
+        priority_order: task?.priority_order ?? null,
+        deleted_at: task?.deleted_at ?? null,
+      };
       await mutate("tasks", task?.id ?? null, values, task?.version);
       notify(task ? "Task updated" : "Task captured");
       onClose();
@@ -157,6 +191,50 @@ export function TaskEditor({
             </select>
           </label>
         </div>
+        <div className="form-grid">
+          <label>
+            Linked course
+            <select
+              name="course_id"
+              disabled={!!contextError}
+              value={course}
+              onChange={(e) => {
+                setCourse(e.target.value);
+                setTopic("");
+              }}
+            >
+              <option value="">No course</option>
+              {context.courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Linked study topic
+            <select
+              name="topic_id"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              disabled={!course || !!contextError}
+            >
+              <option value="">No topic</option>
+              {context.topics
+                .filter((t) => t.course_id === course)
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </div>
+        {contextError && (
+          <p role="alert" className="error-message">
+            {contextError}
+          </p>
+        )}
         <fieldset>
           <legend>Deadline</legend>
           <div
@@ -189,11 +267,19 @@ export function TaskEditor({
             </label>
           ) : (
             <label className="form-hint">
-              Deadline timestamp with timezone offset
+              Deadline in Vancouver
               <input
                 name="due_at"
-                placeholder="2026-11-10T17:00:00-08:00"
-                defaultValue={task?.due_at ?? ""}
+                type="datetime-local"
+                defaultValue={
+                  task?.due_at
+                    ? formatInTimeZone(
+                        task.due_at,
+                        "America/Vancouver",
+                        "yyyy-MM-dd'T'HH:mm",
+                      )
+                    : ""
+                }
               />
             </label>
           )}

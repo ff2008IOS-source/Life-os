@@ -12,7 +12,7 @@ import { AutomationControl } from "./automation-control";
 import { ReservationsPanel } from "./reservations-panel";
 import { EmptyState } from "./task-list";
 export function SchedulingPanel() {
-  const { data, request } = useWorkspace();
+  const { data, request, refresh } = useWorkspace();
   const [result, setResult] = useState<ScheduleResult | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -160,7 +160,10 @@ export function SchedulingPanel() {
       )}
       <ReservationsPanel
         runId={result?.run_id}
-        onApplied={() => setResult(null)}
+        onApplied={() => {
+          setResult(null);
+          void refresh();
+        }}
       />
       {result && (
         <section className="panel">

@@ -2,7 +2,7 @@
 
 ## Current verification boundary
 
-The JSON download is a user export, not a transactionally consistent complete backup. It excludes Auth identities, secrets and provider credentials. The app does not claim automatic backups. A hosted restore rehearsal is mandatory before Stage B imports. An independent PGlite database snapshot has been restored into a second engine and checked for record/audit counts and cross-user RLS. This establishes only local PostgreSQL recovery behavior, not a pg_dump/Supabase hosted restore.
+The JSON download is a user export, not a transactionally consistent complete backup. It excludes Auth identities, secrets and provider credentials. The app does not claim automatic backups. A complete hosted recovery rehearsal remains outstanding; previous imports do not prove disaster recovery. An independent PGlite database snapshot has been restored into a second engine and checked for record/audit counts and cross-user RLS. This establishes only local PostgreSQL recovery behavior, not a pg_dump/Supabase hosted restore.
 
 ## Independent full backup (owner-operated)
 
@@ -12,7 +12,7 @@ Use the official Supabase CLI/pg_dump workflow: https://supabase.com/docs/guides
 2. Export roles, schema, and data using the current official CLI guide. Include the private schema and approved-user provisioning. Retain versioned SQL migrations separately. Check which managed Auth objects the provider supports restoring; do not blindly replace managed roles/extensions.
 3. Record migration version, export time, row counts per table, CLI/PostgreSQL versions and checksums in a manifest. Encrypt backup files using an owner-held key, then copy to user-selected off-site storage. A second copy in the same database is not independent.
 4. Separately inventory Auth settings, redirects, allowed-user identity, environment-variable names and OAuth setup. Back up encryption keys separately from ciphertext. Do not put credential values in the manifest.
-5. Set a manual weekly backup reminder while automatic off-site backup is unavailable. Choose retention and a restore target before real import. Free hosting alone cannot guarantee a zero-loss recovery point.
+5. Set a manual weekly backup reminder while automatic off-site backup is unavailable. Choose retention and an isolated restore target before further production release. Free hosting alone cannot guarantee a zero-loss recovery point.
 
 ## Restore rehearsal
 
@@ -39,3 +39,7 @@ Run `node scripts/verify-user-export.mjs /path/to/life-os-export.json` on a trus
 The supplied 2026-11-06 export successfully restored all 20 records across 44 tables, with content equality, database constraints, owner access, cross-user isolation and anonymous denial verified. The uploaded export itself is not part of the repository.
 
 This is **user-data recovery**, not real Supabase Auth or full-project disaster recovery. Missing tables, incompatible schema, mixed owners, broken references or server-only credential references cause failure rather than silently losing data. An active integration requires separate credential recovery/reconnection. Independent provider-supported full backup/restore remains a launch prerequisite.
+
+## Life OS 2.0 completion history
+
+User exports include `work_completions`, course/topic task links, actual block effort and linked study sessions. Restore these with their original ownership and foreign-key relationships; never recompute actual effort from planned calendar duration. The additive completion migration is tested locally and requires release review before production application. These tests do not restore production Auth, encryption keys, OAuth grants or Google resources.

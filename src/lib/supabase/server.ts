@@ -1,3 +1,4 @@
+import { applicationOrigin } from "@/lib/app-origin";
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -18,7 +19,7 @@ export async function supabase() {
       cookieOptions: {
         httpOnly: true,
         sameSite: "lax",
-        secure: process.env.LIFE_OS_APP_ORIGIN?.startsWith("https:") ?? false,
+        secure: applicationOrigin()?.startsWith("https:") ?? false,
       },
       cookies: {
         getAll: () => jar.getAll(),

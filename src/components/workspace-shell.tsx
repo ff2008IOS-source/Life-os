@@ -34,6 +34,7 @@ const navigation = [
   { label: "Life Areas", href: "/areas", icon: Layers3 },
   { label: "Goals", href: "/goals", icon: Target },
   { label: "Updates", href: "/notifications", icon: Bell },
+  { label: "Assistant", href: "/assistant", icon: BookOpen },
   { label: "Insights", href: "/insights", icon: ChartNoAxesCombined },
 ];
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
@@ -206,9 +207,14 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <Link
           href="/more"
           className={
-            ["/goals", "/insights", "/more", "/settings", "/reviews"].includes(
-              path,
-            )
+            [
+              "/goals",
+              "/assistant",
+              "/insights",
+              "/more",
+              "/settings",
+              "/reviews",
+            ].includes(path)
               ? "active"
               : ""
           }
@@ -314,6 +320,11 @@ export function MorePage() {
         </div>
       </div>
       <div className="more-list">
+        <Link href="/assistant">
+          <BookOpen />
+          Assistant
+          <ArrowUpRight size={14} />
+        </Link>
         <Link href="/goals">
           <Target />
           Goals

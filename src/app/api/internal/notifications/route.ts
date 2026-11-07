@@ -1,3 +1,5 @@
+import { personalWorkflowWorker } from "@/lib/personal-workflows-server";
+import { canvasWorker } from "@/lib/canvas/service";
 import { runSchedulingAutomation } from "@/lib/scheduling-automation";
 import { validNotificationSignature } from "@/lib/notification-worker-auth";
 import { NextResponse } from "next/server";
@@ -19,9 +21,32 @@ export async function POST(request: Request) {
   )
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const notifications = await notificationWorker();
-    const automation = await runSchedulingAutomation();
-    return NextResponse.json({ ...notifications, automation });
+    const names = [
+      "notifications",
+      "automation",
+      "canvas",
+      "personal_workflows",
+    ] as const;
+    const results = await Promise.allSettled([
+      notificationWorker(),
+      runSchedulingAutomation(),
+      canvasWorker(),
+      personalWorkflowWorker(),
+    ]);
+    const response = Object.fromEntries(
+      results.map((r, i) => [
+        names[i],
+        r.status === "fulfilled"
+          ? { status: "completed", result: r.value }
+          : {
+              status: "failed",
+              error: `${names[i]} worker failed. Review its source status and latest successful run.`,
+            },
+      ]),
+    );
+    return NextResponse.json(response, {
+      status: results.every((r) => r.status === "rejected") ? 500 : 200,
+    });
   } catch (e) {
     return failure(e);
   }

@@ -1,3 +1,4 @@
+import { expiryWarning } from "./canvas/resources";
 import "server-only";
 import webpush from "web-push";
 import { formatInTimeZone } from "date-fns-tz";
@@ -73,6 +74,49 @@ export async function generateNotifications(userId: string, now = new Date()) {
       title: "Time for your weekly review",
       body: "Review progress and choose next week’s priorities.",
       deduplication_key: `weekly:${localDate(now)}`,
+    });
+  const canvas = await db
+    .from("canvas_connections")
+    .select("expires_at,last_error")
+    .eq("user_id", userId)
+    .maybeSingle();
+  dbError(canvas.error);
+  if (canvas.data?.expires_at) {
+    const warning = expiryWarning(canvas.data.expires_at, now.getTime());
+    if (warning !== null)
+      candidates.push({
+        category: "integration",
+        title: warning === 0 ? "Canvas token expired" : "Canvas token renewal",
+        body: "Open Settings → SFU Canvas to replace your token. Existing records are preserved.",
+        deduplication_key: `canvas-expiry:${canvas.data.expires_at}:${warning}`,
+      });
+    if (canvas.data.last_error)
+      candidates.push({
+        category: "integration",
+        title: "Canvas needs attention",
+        body: "Open the Canvas connection to review synchronization status.",
+        deduplication_key: `canvas-error:${localDate(now)}`,
+      });
+  }
+  const preparedChecks = await db
+    .from("personal_workflow_runs")
+    .select("id,workflow_type")
+    .eq("user_id", userId)
+    .not("scheduled_for", "is", null)
+    .gte("generated_at", new Date(now.getTime() - 7 * 86400000).toISOString())
+    .order("generated_at", { ascending: false })
+    .limit(20);
+  dbError(preparedChecks.error);
+  for (const run of preparedChecks.data ?? [])
+    candidates.push({
+      category:
+        run.workflow_type === "daily_check" ? "deadlines" : "weekly_review",
+      title:
+        run.workflow_type === "daily_check"
+          ? "Your daily check is ready"
+          : "Your career debrief is ready",
+      body: "Open Weekly Review to read the saved check and choose any next actions.",
+      deduplication_key: `personal-workflow:${run.id}`,
     });
   const prefs = await db
     .from("notification_preferences")
