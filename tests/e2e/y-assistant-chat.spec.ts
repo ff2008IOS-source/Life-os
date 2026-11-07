@@ -101,6 +101,9 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
       ),
     ).toBe(true);
   }
+  expect(
+    (await page.locator(".assistant-composer").boundingBox())!.height,
+  ).toBeLessThan(120);
   await page.screenshot({
     path: test.info().outputPath("assistant-chat-phone.png"),
     fullPage: true,

@@ -3357,6 +3357,7 @@ input[type="checkbox"] {
 }
 .assistant-composer {
   display: flex;
+  flex-direction: row;
   align-items: flex-end;
   gap: 8px;
   border: 1px solid var(--border);
