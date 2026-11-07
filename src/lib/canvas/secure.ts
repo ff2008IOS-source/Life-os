@@ -21,7 +21,7 @@ export function decryptToken(ciphertext: string, nonce: string) {
 }
 export function canvasAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = process.env.SUPABASE_SECRET_KEY;
   if (!url || !secret) throw new Error("Canvas server configuration incomplete");
   return createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
 }
