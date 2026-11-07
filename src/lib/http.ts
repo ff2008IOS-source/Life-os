@@ -1,17 +1,17 @@
-import { applicationOrigin } from "./app-origin";
+import { permittedApplicationOrigins } from "./app-origin";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { ApiError } from "./auth";
 export function checkMutation(request: Request) {
   const origin = request.headers.get("origin");
-  const expected = applicationOrigin();
-  if (!expected)
+  const permitted = permittedApplicationOrigins();
+  if (permitted.length === 0)
     throw new ApiError(
       503,
       "Configure the application origin before making changes.",
       "SETUP_REQUIRED",
     );
-  if (!origin || origin !== expected)
+  if (!origin || !permitted.includes(origin))
     throw new ApiError(
       403,
       "Request origin could not be verified.",
