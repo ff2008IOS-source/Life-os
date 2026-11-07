@@ -1,7 +1,6 @@
 import "server-only";
 import { Worker } from "node:worker_threads";
-import { createRequire } from "node:module";
-const requireModule = createRequire(import.meta.url);
+import { join } from "node:path";
 export type ExtractedUnit = { page: number; text: string };
 export type ExtractedFile = {
   units: ExtractedUnit[];
@@ -28,8 +27,8 @@ export async function extractCanvasFile(
     eval: true,
     workerData: {
       bytes,
-      pdf: requireModule.resolve("unpdf"),
-      zip: requireModule.resolve("fflate"),
+      pdf: join(process.cwd(), "node_modules/unpdf/dist/index.mjs"),
+      zip: join(process.cwd(), "node_modules/fflate/lib/node.cjs"),
       mime,
     },
     resourceLimits: {
