@@ -12,6 +12,8 @@ export const taskInput = z
       .default("inbox"),
     area_id: nullableId,
     project_id: nullableId,
+    course_id: z.uuid().nullable().optional(),
+    topic_id: z.uuid().nullable().optional(),
     parent_task_id: nullableId,
     priority: z.number().int().min(1).max(4).default(2),
     due_at: z.iso.datetime({ offset: true }).nullable().default(null),
@@ -44,6 +46,9 @@ export const taskInput = z
   .strict()
   .refine((t) => !(t.due_at && t.due_date), {
     message: "Choose a date-only or a timed deadline, not both.",
+  })
+  .refine((t) => !t.topic_id || !!t.course_id, {
+    message: "A study topic requires its course.",
   });
 export const projectInput = z
   .object({

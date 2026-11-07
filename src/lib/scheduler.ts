@@ -41,6 +41,7 @@ export type Busy = { start_at: string; end_at: string };
 export type ExistingBlock = Busy & {
   task_id: string;
   status: "planned" | "completed";
+  actual_minutes?: number | null;
 };
 export type ScheduleInput = {
   now: string;
@@ -196,15 +197,23 @@ export function schedule(input: ScheduleInput): ScheduleResult {
       );
       continue;
     }
-    const completed = input.existing
-      .filter((b) => b.task_id === task.id && b.status === "completed")
-      .reduce(
-        (sum, b) =>
-          sum +
-          (new Date(b.end_at).getTime() - new Date(b.start_at).getTime()) /
-            minute,
-        0,
+    const completedBlocks = input.existing.filter(
+      (b) => b.task_id === task.id && b.status === "completed",
+    );
+    if (
+      task.actual_minutes === null &&
+      completedBlocks.some((b) => b.actual_minutes == null)
+    ) {
+      warn(
+        "Record actual effort for completed reservations before planning remaining work.",
+        null,
       );
+      continue;
+    }
+    const completed = completedBlocks.reduce(
+      (sum, b) => sum + (b.actual_minutes ?? 0),
+      0,
+    );
     const planned = reserved.filter((b) => b.task_id === task.id);
     let remaining = Math.max(
       0,

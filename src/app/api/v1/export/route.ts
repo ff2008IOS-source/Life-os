@@ -22,6 +22,13 @@ const tables = [
   "scheduling_policies",
   "scheduling_automation",
   "work_blocks",
+  "work_completions",
+  "personal_workflow_settings",
+  "personal_workflow_runs",
+  "assistant_settings",
+  "assistant_conversations",
+  "assistant_exchanges",
+  "assistant_usage",
   "scheduling_runs",
   "scheduling_decisions",
   "integration_jobs",
@@ -63,15 +70,19 @@ export async function GET() {
       while (true) {
         const key = ["canvas_records", "canvas_mappings"].includes(table)
           ? "canvas_id"
-          : table === "canvas_sync_jobs"
-            ? "job_key"
-            : table === "profiles"
-              ? "user_id"
-              : table === "goal_tasks"
-                ? "goal_id"
-                : table === "task_dependencies"
-                  ? "predecessor_task_id"
-                  : "id";
+          : table === "assistant_usage"
+            ? "usage_day"
+            : table === "personal_workflow_settings"
+              ? "workflow_type"
+              : table === "canvas_sync_jobs"
+                ? "job_key"
+                : ["profiles", "assistant_settings"].includes(table)
+                  ? "user_id"
+                  : table === "goal_tasks"
+                    ? "goal_id"
+                    : table === "task_dependencies"
+                      ? "predecessor_task_id"
+                      : "id";
         let query = db
           .from(table)
           .select("*")

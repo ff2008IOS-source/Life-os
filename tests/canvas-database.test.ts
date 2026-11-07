@@ -168,6 +168,14 @@ describe("Canvas atomic ingestion and isolation", () => {
       )
     ).rows[0].id;
     expect(first).toBe(again);
+    expect(
+      (
+        await db.query<{ linked: boolean }>(
+          "select t.course_id=a.course_id linked from tasks t join assessments a on a.task_id=t.id where t.id=$1",
+          [first],
+        )
+      ).rows[0].linked,
+    ).toBe(true);
     await store([assignment(10)]);
     const before = (await db.query("select version from assessments")).rows[0];
     await store([assignment(10)]);

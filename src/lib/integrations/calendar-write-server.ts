@@ -400,6 +400,19 @@ export async function undoReservations(runId: string) {
         );
         continue;
       }
+      const local = await db
+        .from("work_blocks")
+        .select("provider_etag,status")
+        .eq("user_id", user.id)
+        .eq("provider_event_id", p.provider_event_id)
+        .maybeSingle();
+      dbError(local.error);
+      if (local.data?.status === "completed") {
+        conflicts.push(
+          "Completed work is preserved. This reservation cannot be undone as unworked time.",
+        );
+        continue;
+      }
       const path = `/calendar/v3/calendars/${encodeURIComponent(calendar.provider_calendar_id)}/events/${p.provider_event_id}`;
       const found = await googleWrite(path, calendar.token, "GET");
       if (![404, 410].includes(found.status)) {
@@ -424,13 +437,6 @@ export async function undoReservations(runId: string) {
             );
             continue;
           }
-          const local = await db
-            .from("work_blocks")
-            .select("provider_etag")
-            .eq("user_id", user.id)
-            .eq("provider_event_id", p.provider_event_id)
-            .maybeSingle();
-          dbError(local.error);
           if (!local.data?.provider_etag) {
             conflicts.push(
               "An unconfirmed session was preserved. Review or remove it directly in the dedicated Google calendar, then retry Undo to reconcile.",

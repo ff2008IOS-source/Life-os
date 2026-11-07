@@ -34,6 +34,7 @@ const navigation = [
   { label: "Life Areas", href: "/areas", icon: Layers3 },
   { label: "Goals", href: "/goals", icon: Target },
   { label: "Updates", href: "/notifications", icon: Bell },
+  { label: "Assistant", href: "/assistant", icon: BookOpen },
   { label: "Insights", href: "/insights", icon: ChartNoAxesCombined },
 ];
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {

@@ -1,4 +1,5 @@
 "use client";
+import { WorkSessionsPanel } from "./work-sessions-panel";
 import { useState } from "react";
 import {
   addDays,
@@ -97,7 +98,10 @@ export function PlannerPage() {
       </div>
       {tab === "calendar" && <CanvasDeadlines />}
       {tab === "schedule" ? (
-        <SchedulingPanel />
+        <>
+          <SchedulingPanel />
+          <WorkSessionsPanel />
+        </>
       ) : tab === "recurring" ? (
         <OccurrencesPanel />
       ) : (

@@ -98,6 +98,26 @@ export async function generateNotifications(userId: string, now = new Date()) {
         deduplication_key: `canvas-error:${localDate(now)}`,
       });
   }
+  const preparedChecks = await db
+    .from("personal_workflow_runs")
+    .select("id,workflow_type")
+    .eq("user_id", userId)
+    .not("scheduled_for", "is", null)
+    .gte("generated_at", new Date(now.getTime() - 7 * 86400000).toISOString())
+    .order("generated_at", { ascending: false })
+    .limit(20);
+  dbError(preparedChecks.error);
+  for (const run of preparedChecks.data ?? [])
+    candidates.push({
+      category:
+        run.workflow_type === "daily_check" ? "deadlines" : "weekly_review",
+      title:
+        run.workflow_type === "daily_check"
+          ? "Your daily check is ready"
+          : "Your career debrief is ready",
+      body: "Open Weekly Review to read the saved check and choose any next actions.",
+      deduplication_key: `personal-workflow:${run.id}`,
+    });
   const prefs = await db
     .from("notification_preferences")
     .select("*")

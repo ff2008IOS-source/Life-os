@@ -1,3 +1,4 @@
+import { AssistantPage } from "@/components/assistant-page";
 import { notFound, redirect } from "next/navigation";
 import { loadWorkspace } from "@/lib/services/workspace";
 import { ApiError } from "@/lib/auth";
@@ -26,6 +27,7 @@ export default async function Page({
   if (
     ![
       "home",
+      "assistant",
       "planner",
       "areas",
       "goals",
@@ -61,6 +63,8 @@ export default async function Page({
           <GoalsPage />
         ) : page === "reviews" ? (
           <ReviewsPage />
+        ) : page === "assistant" ? (
+          <AssistantPage />
         ) : page === "insights" ? (
           <InsightsPage />
         ) : page === "notifications" ? (
