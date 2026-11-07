@@ -4,6 +4,7 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     "/api/**/*": [
       "./node_modules/unpdf/dist/**/*",
+      "./node_modules/unpdf/package.json",
       "./node_modules/fflate/**/*",
     ],
   },

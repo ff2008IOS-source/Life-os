@@ -23,6 +23,7 @@ export const workCompletionInput = z
     },
   );
 export type WorkBlock = {
+  provider_event_id?: string | null;
   id: string;
   task_id: string;
   start_at: string;

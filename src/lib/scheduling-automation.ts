@@ -1,4 +1,5 @@
 import "server-only";
+import { schedulingEligible } from "./scheduling-eligibility";
 import { randomUUID } from "node:crypto";
 import { serverAdmin } from "./supabase/admin";
 import { dbError } from "./http";
@@ -20,19 +21,25 @@ export async function runSchedulingAutomation() {
     try {
       const data = await loadWorkspaceForUser(userId);
       summary.checked++;
+      const holds = await db
+        .from("managed_calendar_state")
+        .select("task_id")
+        .eq("user_id", userId)
+        .eq("planning_hold", true)
+        .limit(1000);
+      dbError(holds.error);
+      const held = new Set((holds.data ?? []).map((x) => x.task_id));
       const eligible = data.tasks.some(
         (t) =>
           !t.deleted_at &&
           !t.title.startsWith("[TEST]") &&
           !["completed", "cancelled"].includes(t.status) &&
           !!t.estimated_minutes &&
-          (t.scheduling_mode === "eligible" ||
-            data.projects.some(
-              (p) =>
-                p.id === t.project_id &&
-                p.status === "active" &&
-                p.automation_enabled,
-            )),
+          schedulingEligible(
+            t,
+            data.projects.find((p) => p.id === t.project_id),
+            held.has(t.id),
+          ),
       );
       if (!eligible) {
         await db

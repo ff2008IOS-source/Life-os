@@ -56,6 +56,10 @@ const tables = [
   "deletion_requests",
   "goal_projects",
   "career_entries",
+  "sheet_sync_sources",
+  "sheet_sync_mappings",
+  "sheet_sync_outbox",
+  "managed_calendar_state",
   "canvas_documents",
   "canvas_document_chunks",
   "canvas_records",
@@ -71,32 +75,35 @@ export async function GET() {
       records[table] = [];
       let page = 0;
       while (true) {
-        const key = ["canvas_documents", "canvas_document_chunks"].includes(
-          table,
-        )
+        const documents = [
+          "canvas_documents",
+          "canvas_document_chunks",
+        ].includes(table);
+        const key = documents
           ? "course_canvas_id"
-          : ["canvas_records", "canvas_mappings"].includes(table)
-            ? "canvas_id"
-            : table === "assistant_usage"
-              ? "usage_day"
-              : table === "personal_workflow_settings"
-                ? "workflow_type"
-                : table === "canvas_sync_jobs"
-                  ? "job_key"
-                  : ["profiles", "assistant_settings"].includes(table)
-                    ? "user_id"
-                    : table === "goal_tasks"
-                      ? "goal_id"
-                      : table === "task_dependencies"
-                        ? "predecessor_task_id"
-                        : "id";
+          : table === "managed_calendar_state"
+            ? "block_id"
+            : ["canvas_records", "canvas_mappings"].includes(table)
+              ? "canvas_id"
+              : table === "assistant_usage"
+                ? "usage_day"
+                : table === "personal_workflow_settings"
+                  ? "workflow_type"
+                  : table === "canvas_sync_jobs"
+                    ? "job_key"
+                    : ["profiles", "assistant_settings"].includes(table)
+                      ? "user_id"
+                      : table === "goal_tasks"
+                        ? "goal_id"
+                        : table === "task_dependencies"
+                          ? "predecessor_task_id"
+                          : "id";
         let query = db
           .from(table)
           .select("*")
           .eq("user_id", user.id)
           .order(key);
-        if (["canvas_documents", "canvas_document_chunks"].includes(table))
-          query = query.order("canvas_file_id");
+        if (documents) query = query.order("canvas_file_id");
         if (table === "canvas_document_chunks")
           query = query.order("chunk_index");
         if (["canvas_records", "canvas_mappings"].includes(table))

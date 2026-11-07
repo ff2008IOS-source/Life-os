@@ -189,3 +189,37 @@ export function prioritizeAssistantSources(
     .sort((a, b) => score(b.source) - score(a.source) || a.index - b.index)
     .map((x) => x.source);
 }
+/** Carry only the most recent explicitly mentioned course into an academic follow-up.
+ * Never treat earlier AI wording as a verified course fact or pin a global question. */
+export function conversationQuestion(
+  question: string,
+  previousQuestions: string,
+  courses: string[],
+) {
+  const mentions = (text: string, course: string) =>
+    courseCode(course).length >= 4 &&
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .includes(courseCode(course));
+  if (
+    courses.some((c) => mentions(question, c)) ||
+    /\b(all (?:my )?courses|across (?:my |all )?courses|overall|new topic|different course)\b/i.test(
+      question,
+    )
+  )
+    return question;
+  if (
+    !/\b(exams?|midterms?|tests?|quizzes?|assignments?|study|teach|explain|chapters?|topics?|it|that|those|this|yes|more|continue|examples?|why)\b/i.test(
+      question,
+    )
+  )
+    return question;
+  for (const previous of previousQuestions.split("\n").slice(0, 6)) {
+    const matched = courses.filter((c) => mentions(previous, c));
+    if (matched.length === 1)
+      return question + " [Conversation course: " + matched[0] + "]";
+    if (matched.length > 1) return question; // A cross-course comparison does not establish a single focus.
+  }
+  return question;
+}

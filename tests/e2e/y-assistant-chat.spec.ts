@@ -118,20 +118,20 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
     });
   await page.reload();
   await expect(page.getByLabel("Assistant reply")).toHaveCount(12);
-  await page.locator(".assistant-messages").evaluate((element) => {
+  await page.getByRole("log", { name: "Messages" }).evaluate((element) => {
     element.scrollTop = 0;
   });
   await expect(page.getByLabel("Your question")).toBeInViewport();
   expect(
     await page
-      .locator(".assistant-messages")
+      .getByRole("log", { name: "Messages" })
       .evaluate((element) => element.scrollHeight > element.clientHeight),
   ).toBe(true);
   await page.setViewportSize({ width: 390, height: 500 });
   await expect(page.getByLabel("Your question")).toBeInViewport();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
-    (await page.locator(".assistant-composer").boundingBox())!.height,
+    (await page.locator(".assistant-composer:visible").boundingBox())!.height,
   ).toBeLessThan(120);
   await page.screenshot({
     path: test.info().outputPath("assistant-chat-phone.png"),

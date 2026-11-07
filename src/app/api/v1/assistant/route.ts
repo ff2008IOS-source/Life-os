@@ -171,18 +171,18 @@ export async function POST(request: Request) {
       )
       .eq("status", "completed")
       .order("created_at", { ascending: false })
-      .limit(2);
+      .limit(6);
     dbError(history.error);
     sources.push(
       ...(await assistantAcademicContext(
         db,
         user.id,
         x.question,
-        history.data?.[0]?.question ?? "",
+        (history.data ?? []).map((e) => e.question).join("\n"),
         x.course_canvas_id,
       )),
     );
-    for (const exchange of [...(history.data ?? [])].reverse())
+    for (const exchange of [...(history.data ?? [])].slice(0, 2).reverse())
       sources.push({
         id: `history:${exchange.id}`,
         title: "Earlier conversation (AI content unverified)",
