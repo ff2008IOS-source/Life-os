@@ -13,6 +13,12 @@ export type CalendarRecord = {
   sync_error: string | null;
 };
 export type CalendarEvent = {
+  work_session?: {
+    block_id: string;
+    task_id: string;
+    status: string;
+    flexibility: string;
+  } | null;
   id: string;
   calendar_id: string;
   provider_event_id: string;

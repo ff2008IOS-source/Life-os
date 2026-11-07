@@ -3507,3 +3507,86 @@ input[type="checkbox"] {
 .assistant-chat[data-compact="true"] .assistant-header h1 {
   font-size: 18px;
 }
+
+/* Calendar source/type keys remain visible; filters affect display only. */
+.calendar-source-legend,
+.calendar-kind-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.calendar-source-legend .source-filter {
+  min-height: 28px;
+  padding: 4px 7px;
+}
+.calendar-kind-legend {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.calendar-kind-legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+.calendar-kind-legend button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--blue-soft);
+  border-color: var(--border);
+}
+.calendar-kind-marker {
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+.kind-all {
+  border-radius: 50%;
+}
+.kind-commitments {
+  background: currentColor;
+}
+.kind-sessions {
+  border-style: dashed;
+}
+.kind-deadlines {
+  transform: rotate(45deg);
+  width: 7px;
+  height: 7px;
+}
+.flexible-work-session {
+  border-left-style: dashed;
+}
+.calendar-overlap-icon {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  color: var(--warning);
+  background: var(--surface);
+}
+.time-event small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.planner-calendar .time-grid-scroll {
+  height: clamp(260px, calc(100dvh - 550px), 430px);
+}
+@media (max-width: 700px) {
+  .planner-calendar .time-grid-scroll {
+    height: clamp(250px, calc(100dvh - 540px), 380px);
+  }
+}
+.calendar-source-legend .source-filter[aria-pressed="false"] {
+  opacity: 1;
+  text-decoration: line-through;
+}

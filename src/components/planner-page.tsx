@@ -195,6 +195,7 @@ export function PlannerPage() {
                 )}
                 onTask={(task) => setEditor({ task })}
                 onDay={setAnchor}
+                onManageSession={() => setTab("schedule")}
               />
               <CanvasDeadlines />
             </>

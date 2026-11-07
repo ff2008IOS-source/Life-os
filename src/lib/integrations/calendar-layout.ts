@@ -14,6 +14,7 @@ export function groupCalendarEvents(
   for (const event of events) {
     const key = group
       ? JSON.stringify([
+          event.work_session?.block_id ?? "imported",
           event.title.trim().replace(/\s+/g, " "),
           event.start_at,
           event.end_at,
