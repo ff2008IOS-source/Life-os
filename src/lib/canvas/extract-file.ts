@@ -16,7 +16,7 @@ if(head.startsWith('%PDF-')){const{getDocumentProxy}=await import(pathToFileURL(
 else if(bytes[0]===80&&bytes[1]===75){const{unzipSync,strFromU8}=await import(pathToFileURL(workerData.zip).href);let declared=0;const zip=unzipSync(bytes,{filter:file=>{if(!/^(ppt\/slides\/slide\d+\.xml|word\/document\.xml)$/.test(file.name))return false;declared+=file.originalSize;if(file.originalSize>4000000||declared>20000000)throw Error('archive_limit');return true;}});const names=Object.keys(zip).sort((a,b)=>Number(a.match(/slide(\d+)/)?.[1]??0)-Number(b.match(/slide(\d+)/)?.[1]??0));if(!names.length)throw Error('unsupported');if(names.length>150)throw Error('page_limit');pages=names.length;for(let i=0;i<names.length;i++){const xml=strFromU8(zip[names[i]]);if(/<!DOCTYPE|<!ENTITY/i.test(xml))throw Error('unsupported');add(i+1,[...xml.matchAll(/<(?:a|w):t(?:\s[^>]*)?>([\s\S]*?)<\/(?:a|w):t>/g)].map(m=>m[1].replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'")).join(' '));}}
 else if(workerData.mime.startsWith('text/')){pages=1;add(1,new TextDecoder().decode(bytes));}
 else throw Error('unsupported');parentPort.postMessage({ok:true,result:{units,pages,truncated}});
-})().catch(e=>parentPort.postMessage({ok:false,error:['page_limit','archive_limit','unsupported'].includes(e.message)?e.message:'parse_failed'}));`;
+})().catch(e=>parentPort.postMessage({ok:false,error:['page_limit','archive_limit','unsupported'].includes(e.message)?e.message:['ERR_MODULE_NOT_FOUND','MODULE_NOT_FOUND','ERR_INVALID_ARG_TYPE'].includes(e.code)?e.code:'parse_failed'}));`;
 export async function extractCanvasFile(
   bytes: Uint8Array,
   mime: string,
@@ -56,7 +56,13 @@ export async function extractCanvasFile(
     worker.on("message", (m) =>
       m.ok ? end(undefined, m.result) : end(m.error),
     );
-    worker.on("error", () => end("parse_failed"));
+    worker.on("error", (e: Error & { code?: string }) =>
+      end(
+        e.code === "ERR_WORKER_OUT_OF_MEMORY"
+          ? "parse_memory_limit"
+          : "parse_worker_failed",
+      ),
+    );
     worker.on("exit", () => {
       if (!settled) end("parse_failed");
     });
