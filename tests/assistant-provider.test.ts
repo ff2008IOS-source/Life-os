@@ -93,3 +93,87 @@ it("fails safely without a server credential", async () => {
   );
   expect(transport).not.toHaveBeenCalled();
 });
+
+it("reserves an exact conservative request bound and adapts the prompt to the remaining window", async () => {
+  const { prepareGroqRequest, providerRetrySeconds } =
+    await import("../src/lib/assistant/provider");
+  const first = prepareGroqRequest(
+    "Explain the recorded scope",
+    [source],
+    8000,
+  );
+  expect(first.budget).toBeLessThanOrEqual(8000);
+  const requestBytes = new TextEncoder().encode(
+    JSON.stringify(first.request),
+  ).length;
+  expect(first.budget).toBeGreaterThanOrEqual(
+    requestBytes + first.request.max_completion_tokens,
+  );
+  const reduced = prepareGroqRequest(
+    "Explain the recorded scope",
+    [source],
+    first.budget,
+  );
+  expect(reduced.budget).toBeLessThanOrEqual(first.budget);
+  expect(reduced.sources).toHaveLength(1);
+  expect(providerRetrySeconds(new Headers({ "Retry-After": "12" }))).toBe(12);
+});
+
+it("guards the exact overconfident midterm and UTC-date failures rather than trusting model prose", async () => {
+  const { guardAcademicReply } = await import("../src/lib/assistant/provider");
+  const sources = [
+    {
+      id: "academics:upcoming",
+      title: "lookup",
+      text: JSON.stringify({ explicit_midterm_identified: false }),
+      url: "/academics",
+    },
+    {
+      id: "assessment:exam",
+      title: "ECON115 Exam 2",
+      text: JSON.stringify({
+        course: "ECON115",
+        title: "Exam 2",
+        deadline_iso: "2026-11-13",
+        deadline_local: "Friday, Nov 13, 2026 (date only; time unknown)",
+        verification: "UNVERIFIED imported record",
+      }),
+      url: "/academics",
+    },
+  ];
+  const guarded = guardAcademicReply(
+    "my next midterm",
+    {
+      answer:
+        "Your next midterm is the ECON 115 Exam 2, scheduled for 2026-11-13.",
+      source_ids: [],
+      unknowns: [],
+      next_actions: [],
+    },
+    sources,
+  );
+  expect(guarded.answer).toContain("unverified");
+  expect(guarded.answer).toContain("can’t confirm");
+  expect(guarded.answer).not.toContain("Your next midterm is");
+  expect(guarded.source_ids).toContain("assessment:exam");
+  const dateSources = [
+    sources[0],
+    {
+      ...sources[1],
+      text: JSON.stringify({
+        course: "GEOG104",
+        title: "Knowledge Test #2",
+        deadline_iso: "2026-11-08",
+        deadline_local: "Sunday, Nov 8 at 11:59 PM Vancouver",
+        verification: "Canvas-retrieved",
+      }),
+    },
+  ];
+  expect(
+    guardAcademicReply(
+      "next test",
+      { ...guarded, answer: "Your test is due 2026-11-09." },
+      dateSources,
+    ).answer,
+  ).toContain("Sunday, Nov 8");
+});

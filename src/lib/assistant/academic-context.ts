@@ -1,4 +1,5 @@
 import type { AssistantSource } from "./provider";
+import { formatInTimeZone } from "date-fns-tz";
 import { localDate, deadlineInstant } from "../dates";
 export type AcademicCandidate = {
   id: string;
@@ -60,60 +61,102 @@ export function academicContext(
     })
     .sort((a, b) => instant(a)!.getTime() - instant(b)!.getTime());
   const wantsExam = /\b(exam|examination|test|midterm|final)\b/i.test(question);
+  const wantsMidterm = /\bmidterm\b/i.test(question);
+  const wantsFinal = /\bfinal\b/i.test(question);
+  const realExam = (a: AcademicCandidate) =>
+    exam.test(a.title) && !/\b(practice|sample|makeups?|mock)\b/i.test(a.title);
   const matching = upcoming.filter(
     (a) =>
       (!mentioned || courseCode(a.course) === courseCode(mentioned)) &&
-      (!wantsExam || exam.test(a.title)),
+      (!wantsExam || realExam(a)) &&
+      (!wantsMidterm ||
+        /\bmidterm\b/i.test(a.title + " " + (a.description ?? ""))) &&
+      (!wantsFinal || /\bfinal\b/i.test(a.title)),
   );
   const focus = matching[0];
+  const tentative =
+    !focus && wantsMidterm
+      ? upcoming
+          .filter(
+            (a) =>
+              realExam(a) &&
+              /\bexam/i.test(a.title) &&
+              (!mentioned || courseCode(a.course) === courseCode(mentioned)),
+          )
+          .slice(0, 1)
+      : [];
+  const materialFocus = focus ?? tentative[0];
   const unknown = all.filter(
-    (a) => !a.due_at && !a.due_date && (!wantsExam || exam.test(a.title)),
+    (a) => !a.due_at && !a.due_date && (!wantsExam || realExam(a)),
   ).length;
+  const sources: AssistantSource[] = [];
   const overview: AssistantSource = {
     id: "academics:upcoming",
-    title: "Upcoming assessments across saved courses",
+    title: "Assessment lookup and uncertainty",
     url: "/canvas-materials",
     trust: "mixed_provenance_dates_not_completion",
     text: JSON.stringify({
-      as_of: now.toISOString(),
+      as_of: formatInTimeZone(
+        now,
+        "America/Vancouver",
+        "EEE, MMM d, yyyy, h:mm a zzz",
+      ),
       timezone: "America/Vancouver",
-      searched_course_count: new Set(all.map((a) => a.course)).size,
-      loaded_records: all.length,
+      searched_course_count: new Set(all.map((a) => courseCode(a.course))).size,
       unknown_deadlines: unknown,
-      upcoming: matching.slice(0, 4).map((a) => ({
-        course: a.course,
-        title: a.title,
-        due: a.due_at ?? a.due_date,
-        source: a.verification,
-      })),
-      unknown_date_assessments: all
-        .filter(
-          (a) => !a.due_at && !a.due_date && (!wantsExam || exam.test(a.title)),
-        )
-        .slice(0, 2)
-        .map((a) => ({ course: a.course, title: a.title })),
+      explicit_midterm_identified: wantsMidterm ? !!focus : undefined,
+      rule:
+        !focus && wantsMidterm
+          ? "No explicitly identified dated midterm was found. Any Exam record below is only a candidate, NOT a confirmed midterm."
+          : "Use source verification labels. A deadline is NOT an exam start time. Missing dates prevent a definitive claim about the actual next exam.",
       coverage:
-        "Saved data only; missing dates and stale imports can hide other assessments. Exam scope must be explicitly stated in source material, never inferred from all course topics.",
+        "Partial saved records; exam scope must be explicit, never inferred from all course topics.",
     }),
   };
-  const sources: AssistantSource[] = [overview];
-  for (const a of matching.slice(0, 2))
+  sources.push(overview);
+  for (const a of [...matching.slice(0, 1), ...tentative])
     sources.push({
       id: a.id,
-      title: `${a.course} · ${a.title}`,
+      title: a.course + " · " + a.title,
       url: a.url,
       trust: a.verification,
       retrieved_at: a.synced_at,
       text: JSON.stringify({
         course: a.course,
         title: a.title,
-        due_at: a.due_at,
-        due_date: a.due_date ?? null,
+        deadline_iso: a.due_at ? localDate(a.due_at) : (a.due_date ?? null),
+        deadline_local: a.due_at
+          ? formatInTimeZone(
+              a.due_at,
+              "America/Vancouver",
+              "EEEE, MMM d, yyyy 'at' h:mm a zzz",
+            )
+          : a.due_date
+            ? formatInTimeZone(
+                new Date(a.due_date + "T12:00:00Z"),
+                "UTC",
+                "EEEE, MMM d, yyyy",
+              ) + " (date only; time unknown)"
+            : null,
+        deadline_kind: "Due deadline, not necessarily exam start",
         description: plainStudyText(a.description, 1000),
-        verification: a.verification,
+        verification:
+          a.verification === "Canvas-retrieved"
+            ? "Canvas-retrieved; check last sync"
+            : a.verification === "unverified"
+              ? "UNVERIFIED imported record; tentative, requires confirmation"
+              : a.verification,
+        midterm_confirmed: wantsMidterm ? !!focus : undefined,
       }),
     });
-  return { sources, focus, upcoming, unknown_deadlines: unknown };
+
+  return {
+    sources,
+    focus,
+    materialFocus,
+    upcoming,
+    unknown_deadlines: unknown,
+  };
 }
 
 /** Prevent academic context from crowding out a career question (and vice versa). */
@@ -132,9 +175,9 @@ export function prioritizeAssistantSources(
   const score = (s: AssistantSource) => {
     if (s.id.startsWith("history:")) return 75;
     if (s.id === "academics:upcoming")
-      return academic ? 120 : career ? 20 : 100;
+      return academic ? 130 : career ? 20 : 100;
     if (s.id.startsWith("canvas:assignment:") || s.id.startsWith("assessment:"))
-      return academic ? 110 : career ? 10 : 90;
+      return academic ? 125 : career ? 10 : 90;
     if (s.id.startsWith("canvas:")) return academic ? 105 : 15;
     if (s.id.startsWith("project:") || s.id.startsWith("goal:"))
       return career ? 120 : 40;

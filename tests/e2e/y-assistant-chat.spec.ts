@@ -101,6 +101,35 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
       ),
     ).toBe(true);
   }
+  await expect(page.getByLabel("Records consulted").first()).toBeVisible();
+  for (let i = 0; i < 10; i++)
+    exchanges.push({
+      id: `long-${i}`,
+      question: "Synthetic long conversation",
+      status: "completed",
+      response: {
+        answer: "A saved response. ".repeat(50),
+        source_ids: [],
+        unknowns: [],
+        next_actions: [],
+      },
+      sources: [],
+      error: null,
+    });
+  await page.reload();
+  await expect(page.getByLabel("Assistant reply")).toHaveCount(12);
+  await page.locator(".assistant-messages").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await expect(page.getByLabel("Your question")).toBeInViewport();
+  expect(
+    await page
+      .locator(".assistant-messages")
+      .evaluate((element) => element.scrollHeight > element.clientHeight),
+  ).toBe(true);
+  await page.setViewportSize({ width: 390, height: 500 });
+  await expect(page.getByLabel("Your question")).toBeInViewport();
+  await page.setViewportSize({ width: 390, height: 844 });
   expect(
     (await page.locator(".assistant-composer").boundingBox())!.height,
   ).toBeLessThan(120);

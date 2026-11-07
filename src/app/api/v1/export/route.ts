@@ -29,6 +29,7 @@ const tables = [
   "assistant_conversations",
   "assistant_exchanges",
   "assistant_usage",
+  "assistant_request_limits",
   "scheduling_runs",
   "scheduling_decisions",
   "integration_jobs",

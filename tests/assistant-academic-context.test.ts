@@ -34,7 +34,7 @@ it("finds the nearest recorded exam across courses without requiring a selected 
   expect(result.focus?.id).toBe("next");
   expect(result.unknown_deadlines).toBe(1);
   expect(result.sources[1].text).toContain("Chapters 4–6");
-  expect(result.sources[0].text).toContain("PSYC 100");
+  expect(JSON.parse(result.sources[0].text).searched_course_count).toBe(4);
   const prompt = boundedPrompt("What's on my next test?", result.sources);
   expect(prompt.sources.some((s) => s.id === "next")).toBe(true);
   expect(prompt.messages[1].content).toContain("Exam 2");
@@ -103,5 +103,38 @@ it("does not mislabel an earlier final project as an exam", () => {
     [...data, a("project", "PSYC100", "Final project", "2026-11-08T20:00Z")],
     now,
   );
-  expect(r.focus?.id).toBe("next");
+  expect(r.focus).toBeUndefined();
+});
+
+it("does not call an unverified Exam 2 a confirmed midterm, or mix in unrelated knowledge tests", () => {
+  const r = academicContext(
+    "What about my next midterm?",
+    [
+      {
+        ...a("candidate", "ECON 115", "Exam 2", null),
+        due_date: "2026-11-13",
+        verification: "unverified",
+      },
+      a("geog", "GEOG104", "Knowledge Test #2", "2026-11-09T06:59:59Z"),
+    ],
+    now,
+  );
+  expect(r.focus).toBeUndefined();
+  expect(r.materialFocus?.id).toBe("candidate");
+  expect(r.sources[1].text).toContain("UNVERIFIED");
+  expect(r.sources[1].text).toContain("Friday, Nov 13");
+  expect(r.sources[1].text).not.toContain("GEOG");
+});
+it("formats Canvas due dates in Vancouver and excludes practice or makeup items from next-exam lookup", () => {
+  const r = academicContext(
+    "next test",
+    [
+      a("geog", "GEOG104", "Knowledge Test #2", "2026-11-09T06:59:59Z"),
+      a("practice", "ECON115", "Practice Exam", "2026-11-08T01:00Z"),
+    ],
+    now,
+  );
+  expect(r.focus?.id).toBe("geog");
+  expect(r.sources[1].text).toContain("Sunday, Nov 8");
+  expect(r.sources[1].text).toContain("not necessarily exam start");
 });

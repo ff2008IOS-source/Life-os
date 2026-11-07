@@ -7,6 +7,7 @@ import {
   plainStudyText,
   type AcademicCandidate,
 } from "./academic-context";
+import { materialRelevance } from "./material-search";
 import type { AssistantSource } from "./provider";
 export async function assistantAcademicContext(
   db: SupabaseClient,
@@ -91,50 +92,93 @@ export async function assistantAcademicContext(
       normal(question).includes(courseCode(c.payload.course_code ?? "")) &&
       courseCode(c.payload.course_code ?? "").length >= 4,
   );
+  const focus = result.materialFocus;
+  const linked = focus
+    ? canvasCourses.data?.find(
+        (c) =>
+          courseCode(c.payload.course_code ?? "") === courseCode(focus.course),
+      )
+    : null;
   const course =
-    explicit?.canvas_id ?? result.focus?.canvas_course ?? pinnedCourse;
+    explicit?.canvas_id ??
+    focus?.canvas_course ??
+    linked?.canvas_id ??
+    pinnedCourse;
   if (course) {
-    const pages = await db
-      .from("canvas_records")
-      .select("resource_type,canvas_id,payload,synced_at")
-      .eq("user_id", user)
-      .eq("course_canvas_id", course)
-      .in("resource_type", ["page_content", "module_item"])
-      .order("synced_at", { ascending: false })
-      .limit(100);
-    dbError(pages.error);
-    const terms =
-      (question + " " + (result.focus?.title ?? ""))
-        .toLowerCase()
-        .match(/[a-z0-9]{4,}/g) ?? [];
-    const ranked = (pages.data ?? [])
+    const [pages, modules, announcements] = await Promise.all(
+      ["page_content", "module_item", "announcement"].map((type) =>
+        db
+          .from("canvas_records")
+          .select("resource_type,canvas_id,payload,synced_at")
+          .eq("user_id", user)
+          .eq("course_canvas_id", course)
+          .eq("resource_type", type)
+          .order("synced_at", { ascending: false })
+          .limit(200),
+      ),
+    );
+    for (const r of [pages, modules, announcements]) dbError(r.error);
+    const syllabus = canvasCourses.data?.find((c) => c.canvas_id === course);
+    const records = [
+      ...(pages.data ?? []),
+      ...(announcements.data ?? []),
+      ...(syllabus?.payload.syllabus_body
+        ? [
+            {
+              resource_type: "course",
+              canvas_id: course,
+              payload: {
+                title: "Course syllabus",
+                body: syllabus.payload.syllabus_body,
+              },
+              synced_at: syllabus.synced_at,
+            },
+          ]
+        : []),
+    ];
+    const ranked = records
       .map((p) => ({
         p,
-        score: terms.reduce(
-          (n, t) =>
-            n +
-            (String(p.payload.title ?? "")
-              .toLowerCase()
-              .includes(t)
-              ? 3
-              : 0),
-          0,
+        ...materialRelevance(
+          p.payload.title ?? p.payload.name ?? "",
+          p.payload.body ?? p.payload.message ?? "",
+          question,
+          focus?.title ?? "",
         ),
       }))
-      .filter((x) => x.score > 0)
+      .filter((x) => x.score > 0 && x.excerpt)
       .sort((a, b) => b.score - a.score);
-    for (const { p } of ranked.slice(0, 2)) {
-      const text = plainStudyText(p.payload.body ?? p.payload.title, 900);
-      if (text)
-        sources.push({
-          id: `canvas:${p.resource_type}:${p.canvas_id}`,
-          title: plainStudyText(p.payload.title, 100),
-          text,
-          trust: "untrusted_course_content_not_complete_exam_scope",
-          retrieved_at: p.synced_at,
-          url: `https://canvas.sfu.ca/courses/${course}`,
-        });
-    }
+    for (const { p, excerpt } of ranked.slice(0, 3))
+      sources.push({
+        id: `canvas:${p.resource_type}:${p.canvas_id}`,
+        title: plainStudyText(p.payload.title ?? p.payload.name, 100),
+        text: excerpt,
+        trust: "Source excerpt; only explicit exam scope is authoritative",
+        retrieved_at: p.synced_at,
+        url: `https://canvas.sfu.ca/courses/${course}`,
+      });
+    sources.push({
+      id: "academics:retrieval",
+      title: "Material search coverage",
+      url: `https://canvas.sfu.ca/courses/${course}`,
+      trust: "retrieval_report_not_exam_scope",
+      text: JSON.stringify({
+        course,
+        body_records_checked: records.length,
+        module_titles_checked: modules.data?.length ?? 0,
+        matched_excerpts: ranked.length,
+        files: "File/slide metadata is not extracted PDF/PPT content",
+        coverage:
+          "Bounded search of saved pages, announcements and available syllabus. Do not claim no material exists; retrieval may be incomplete.",
+        available_page_titles: records
+          .map((p) => p.payload.title ?? p.payload.name)
+          .slice(0, 12),
+        linked_module_titles: (modules.data ?? [])
+          .map((p) => p.payload.title)
+          .filter((t) => /exam|midterm|review|syllabus/i.test(t ?? ""))
+          .slice(0, 5),
+      }),
+    });
   }
   return sources;
 }

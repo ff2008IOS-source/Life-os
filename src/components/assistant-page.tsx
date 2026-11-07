@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, Plus, Settings2, History, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
+import { formatInTimeZone } from "date-fns-tz";
+import { Modal } from "./dialog";
+import { limitMessage, type AssistantLimits } from "@/lib/assistant/limits";
 import { calendarRequest } from "./use-calendar";
 import type { AssistantReply, AssistantSource } from "@/lib/assistant/provider";
 type Conversation = {
@@ -10,6 +13,7 @@ type Conversation = {
   course_canvas_id: string | null;
 };
 type State = {
+  limits?: AssistantLimits;
   configured: boolean;
   settings: {
     enabled: boolean;
@@ -35,8 +39,64 @@ export function AssistantPage() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [sending, setSending] = useState("");
-  const settingsRef = useRef<HTMLDetailsElement>(null),
-    bottom = useRef<HTMLDivElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false),
+    [historyOpen, setHistoryOpen] = useState(false),
+    [now, setNow] = useState(Date.now());
+  const messages = useRef<HTMLDivElement>(null),
+    chat = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const fit = () => {
+      const root = chat.current;
+      if (!root) return;
+      const viewport = window.visualViewport;
+      const bottom =
+        (viewport?.height ?? innerHeight) + (viewport?.offsetTop ?? 0);
+      const nav = document
+        .querySelector(".mobile-nav")
+        ?.getBoundingClientRect();
+      const inset =
+        nav && nav.height && nav.top < bottom ? bottom - nav.top : 0;
+      const available = Math.max(
+        160,
+        bottom - root.getBoundingClientRect().top - inset - 16,
+      );
+      root.style.height = available + "px";
+      root.style.minHeight = "0";
+      root.dataset.compact = String(available < 300);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("scroll", fit);
+    return () => {
+      window.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("scroll", fit);
+    };
+  }, []);
+  const retryAt = state?.limits?.retry_at
+    ? Date.parse(state.limits.retry_at)
+    : 0;
+  const waiting =
+    !!state?.limits?.reason &&
+    state.limits.reason !== "disabled" &&
+    (!retryAt || retryAt > now);
+  useEffect(() => {
+    if (!state?.limits?.reason || !retryAt) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const refresh = setTimeout(
+      () => {
+        void calendarRequest<State>("/api/v1/assistant")
+          .then(setState)
+          .catch(() => {});
+      },
+      Math.max(1000, retryAt - Date.now() + 100),
+    );
+    return () => {
+      clearInterval(timer);
+      clearTimeout(refresh);
+    };
+  }, [state?.limits?.reason, retryAt]);
   const intent = useRef<{
     id: string;
     question: string;
@@ -81,11 +141,15 @@ export function AssistantPage() {
   }, []);
   useEffect(() => {
     if (exchanges.length || sending)
-      bottom.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      messages.current?.scrollTo({
+        top: messages.current.scrollHeight,
+        behavior: "smooth",
+      });
   }, [exchanges, sending]);
   async function send() {
     if (
       busy ||
+      waiting ||
       !question.trim() ||
       !state?.configured ||
       !state.settings?.enabled
@@ -107,7 +171,7 @@ export function AssistantPage() {
         course: courseId,
       };
     try {
-      const d = await calendarRequest<{
+      const d = await assistantSend<{
         conversation_id: string;
         status: string;
       }>("/api/v1/assistant", {
@@ -121,8 +185,9 @@ export function AssistantPage() {
       });
       if (d.status === "completed") {
         intent.current = null;
-        setQuestion("");
+        setQuestion((current) => (current === question ? "" : current));
       }
+      if (d.status === "failed") intent.current = null;
       await reload();
       setConversation({
         id: d.conversation_id,
@@ -131,7 +196,17 @@ export function AssistantPage() {
       });
       await history(d.conversation_id);
     } catch (e) {
-      setError((e as Error).message);
+      if (e instanceof AssistantRequestError && e.limits) {
+        setState((current) =>
+          current ? { ...current, limits: e.limits } : current,
+        );
+        setError("");
+      } else setError((e as Error).message);
+      if (
+        e instanceof AssistantRequestError &&
+        ["AI_PROVIDER_LIMIT", "AI_UNAVAILABLE"].includes(e.code)
+      )
+        intent.current = null;
       await reload().catch(() => {});
       if (conversation) await history(conversation.id).catch(() => {});
     } finally {
@@ -140,7 +215,11 @@ export function AssistantPage() {
     }
   }
   return (
-    <section className="assistant-chat" aria-label="Assistant conversation">
+    <section
+      ref={chat}
+      className="assistant-chat"
+      aria-label="Assistant conversation"
+    >
       <div className="assistant-header">
         <div>
           <h1>Life OS assistant</h1>
@@ -163,11 +242,25 @@ export function AssistantPage() {
         </Button>
       </div>
       <div className="assistant-tools">
-        <details>
-          <summary>
-            <History size={16} />
-            History
-          </summary>
+        <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
+          <History size={16} />
+          History
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
+          <Settings2 size={16} />
+          Settings
+        </Button>
+        {state?.limits && (
+          <span className="assistant-remaining">
+            {state.limits.remaining_requests} messages left today
+          </span>
+        )}
+        <Modal
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          title="Conversation history"
+          description="Reopen or delete your saved conversations."
+        >
           <div className="assistant-tool-body">
             <label>
               Saved conversations
@@ -183,6 +276,7 @@ export function AssistantPage() {
                   try {
                     if (c) await history(c.id);
                     else setExchanges([]);
+                    setHistoryOpen(false);
                   } catch (e) {
                     setError((e as Error).message);
                   }
@@ -229,12 +323,13 @@ export function AssistantPage() {
               your data export.
             </p>
           </div>
-        </details>
-        <details ref={settingsRef}>
-          <summary>
-            <Settings2 size={16} />
-            Settings
-          </summary>
+        </Modal>
+        <Modal
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          title="AI settings"
+          description="Control your free usage allowance and privacy."
+        >
           <div className="assistant-tool-body">
             <form
               key={JSON.stringify(state?.settings)}
@@ -293,9 +388,10 @@ export function AssistantPage() {
                 courses, course excerpts and recent conversation context are
                 sent to Groq. Canvas credentials are never included.
                 Conversations stay in Life OS and can be deleted below or
-                exported in Privacy settings. One request per minute, no
-                automatic provider retries or paid fallback. Keep provider
-                data-retention controls configured in your Groq account.
+                exported in Privacy settings. Follow-ups share a rolling token
+                allowance. There are no automatic provider retries or paid
+                fallback. Keep provider data-retention controls configured in
+                your Groq account.
               </p>
               <Button disabled={busy || !state}>Save AI settings</Button>
             </form>
@@ -306,7 +402,7 @@ export function AssistantPage() {
               · {state?.usage?.requests ?? 0} requests used today.
             </p>
           </div>
-        </details>
+        </Modal>
       </div>
       {state && (!state.settings?.enabled || !state.configured) && (
         <div className="assistant-notice" role="status">
@@ -317,7 +413,7 @@ export function AssistantPage() {
             variant="outline"
             size="sm"
             onClick={() => {
-              if (settingsRef.current) settingsRef.current.open = true;
+              setSettingsOpen(true);
             }}
           >
             Open AI settings
@@ -326,6 +422,9 @@ export function AssistantPage() {
       )}
       <div
         className="assistant-messages"
+        ref={messages}
+        role="log"
+        aria-live="polite"
         aria-label="Messages"
         aria-busy={busy}
       >
@@ -366,6 +465,30 @@ export function AssistantPage() {
               {x.response ? (
                 <>
                   <p>{x.response.answer}</p>
+                  <div
+                    className="chat-source-chips"
+                    role="group"
+                    aria-label="Records consulted"
+                  >
+                    {displaySources(x)
+                      .slice(0, 2)
+                      .map((source) => (
+                        <a
+                          key={source.id}
+                          href={source.url}
+                          className="chat-source-chip"
+                        >
+                          {source.title}
+                          <span>
+                            {source.trust?.toLowerCase().includes("unverified")
+                              ? "Unverified import"
+                              : source.id.startsWith("canvas:")
+                                ? "Canvas record"
+                                : "Saved record"}
+                          </span>
+                        </a>
+                      ))}
+                  </div>
                   {(x.response.source_ids.length > 0 ||
                     x.response.unknowns.length > 0 ||
                     x.response.next_actions.length > 0) && (
@@ -390,7 +513,7 @@ export function AssistantPage() {
                               {s.title}
                             </a>
                             {s.retrieved_at
-                              ? ` · Synced ${new Date(s.retrieved_at).toLocaleString()}`
+                              ? ` · Synced ${formatInTimeZone(s.retrieved_at, "America/Vancouver", "MMM d, h:mm a zzz")}`
                               : ""}
                           </p>
                         ))}
@@ -420,7 +543,6 @@ export function AssistantPage() {
             </p>
           </div>
         )}
-        <div ref={bottom} />
       </div>
       <form
         className="assistant-composer"
@@ -455,6 +577,7 @@ export function AssistantPage() {
           aria-label="Ask assistant"
           disabled={
             busy ||
+            waiting ||
             !state?.configured ||
             !state.settings?.enabled ||
             !question.trim()
@@ -464,6 +587,19 @@ export function AssistantPage() {
           <span className="sr-only">Send message</span>
         </Button>
       </form>
+      {waiting && state?.limits && (
+        <p className="assistant-limit" role="status">
+          {limitMessage(state.limits)}{" "}
+          {state.limits.reason !== "daily" && retryAt > now
+            ? `Try again in ${Math.ceil((retryAt - now) / 1000)}s.`
+            : ""}
+          {!retryAt && (
+            <button type="button" onClick={() => void reload()}>
+              Refresh status
+            </button>
+          )}
+        </p>
+      )}
       {error && (
         <p className="error-message" role="alert">
           {error}
@@ -475,4 +611,60 @@ export function AssistantPage() {
       </p>
     </section>
   );
+}
+
+class AssistantRequestError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public limits?: AssistantLimits,
+  ) {
+    super(message);
+  }
+}
+async function assistantSend<T>(url: string, options: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...options,
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    const limits =
+      body.limits ??
+      (body.error?.retry_at
+        ? {
+            available_tokens: 0,
+            remaining_requests: 1,
+            daily_limit: 10,
+            reason: "provider",
+            retry_at: body.error.retry_at,
+            reset_at: body.error.retry_at,
+          }
+        : undefined);
+    throw new AssistantRequestError(
+      body.error?.message ??
+        "The message could not be sent. Your draft is kept.",
+      body.error?.code ?? "UNKNOWN",
+      limits,
+    );
+  }
+  return body;
+}
+
+function displaySources(exchange: Exchange) {
+  const real = exchange.sources.filter(
+    (source) =>
+      source.id.startsWith("assessment:") ||
+      source.id.startsWith("canvas:assignment:") ||
+      source.id.startsWith("canvas:page_content:"),
+  );
+  const cited = exchange.sources.filter((source) =>
+    exchange.response?.source_ids.includes(source.id),
+  );
+  return [
+    ...new Map(
+      [...real, ...cited].map((source) => [source.id, source]),
+    ).values(),
+  ];
 }

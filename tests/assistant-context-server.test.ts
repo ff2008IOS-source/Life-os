@@ -66,3 +66,89 @@ it("retrieves owned assessments across courses into the actual provider prompt w
     ),
   ).toBe(true);
 });
+
+it("relinks an imported exam to its Canvas course and retrieves scope from a body with an unhelpful title", async () => {
+  const calls: URL[] = [];
+  const db = createClient("https://synthetic.invalid", "synthetic-public-key", {
+    auth: { persistSession: false },
+    global: {
+      fetch: async (input) => {
+        const u = new URL(String(input));
+        calls.push(u);
+        let data: unknown[] = [];
+        if (u.pathname.endsWith("/courses"))
+          data = [
+            { id: "native-econ", code: "ECON 115", title: "Macroeconomics" },
+          ];
+        if (u.pathname.endsWith("/assessments"))
+          data = [
+            {
+              id: "exam",
+              course_id: "native-econ",
+              title: "Exam 2",
+              due_at: null,
+              due_date: "2099-11-13",
+              verification_status: "unverified",
+              source_key: "original-sheet",
+            },
+          ];
+        if (u.pathname.endsWith("/canvas_records")) {
+          const type = u.searchParams.get("resource_type");
+          if (type === "eq.course")
+            data = [
+              {
+                canvas_id: "16929",
+                payload: { course_code: "ECON115 D100" },
+                synced_at: "2026-11-07T08:00Z",
+              },
+            ];
+          if (type === "eq.page_content")
+            data = [
+              {
+                resource_type: "page_content",
+                canvas_id: "16929:page",
+                payload: {
+                  title: "Course information",
+                  body:
+                    "Welcome. ".repeat(250) +
+                    "Exam 2 covers chapters 7 and 8. This is the current exam scope.",
+                },
+                synced_at: "2026-11-07T08:00Z",
+              },
+            ];
+        }
+        return new Response(JSON.stringify(data), {
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    },
+  });
+  const sources = await assistantAcademicContext(
+    db,
+    "owner-test",
+    "What topics are on my next midterm?",
+    "",
+    null,
+  );
+  expect(
+    calls.some(
+      (u) =>
+        u.searchParams.get("resource_type") === "eq.page_content" &&
+        u.searchParams.get("course_canvas_id") === "eq.16929",
+    ),
+  ).toBe(true);
+  expect(sources.some((s) => s.text.includes("covers chapters 7 and 8"))).toBe(
+    true,
+  );
+  expect(
+    sources.some((s) => s.text.includes("UNVERIFIED imported record")),
+  ).toBe(true);
+  const { prepareGroqRequest } = await import("../src/lib/assistant/provider");
+  const prompt = prepareGroqRequest(
+    "What topics are on my next midterm?",
+    sources,
+  );
+  expect(JSON.stringify(prompt.request.messages)).toContain(
+    "covers chapters 7 and 8",
+  );
+});
