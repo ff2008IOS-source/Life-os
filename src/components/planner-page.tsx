@@ -96,7 +96,6 @@ export function PlannerPage() {
           </button>
         ))}
       </div>
-      {tab === "calendar" && <CanvasDeadlines />}
       {tab === "schedule" ? (
         <>
           <SchedulingPanel />
@@ -197,6 +196,7 @@ export function PlannerPage() {
                 onTask={(task) => setEditor({ task })}
                 onDay={setAnchor}
               />
+              <CanvasDeadlines />
             </>
           ) : (
             <section className="panel">

@@ -90,6 +90,34 @@ const server = createServer((req, res) => {
         );
         return send(200, row.rows[0]);
       }
+      if (
+        url.pathname === "/__fixtures/canvas-deadline" &&
+        req.method === "POST"
+      ) {
+        await db.query(
+          "insert into canvas_records(user_id,resource_type,canvas_id,course_canvas_id,payload) values($1,'assignment','999:999001','999',$2::jsonb) on conflict(user_id,resource_type,canvas_id)do update set payload=excluded.payload",
+          [
+            uid,
+            JSON.stringify({
+              id: 999001,
+              name: "[TEST] Graded but submission unknown",
+              due_at: new Date(Date.now() + 86400000).toISOString(),
+              submission: { workflow_state: "graded" },
+            }),
+          ],
+        );
+        return send(200, { ok: true });
+      }
+      if (
+        url.pathname === "/__fixtures/canvas-deadline" &&
+        req.method === "DELETE"
+      ) {
+        await db.query(
+          "delete from canvas_records where user_id=$1 and resource_type='assignment' and canvas_id='999:999001'",
+          [uid],
+        );
+        return send(200, { ok: true });
+      }
       if (url.pathname === "/health") return send(200, { ok: true });
       if (url.pathname === "/auth/v1/token") {
         if (body.email !== user.email || body.password !== "test-password-only")
@@ -225,6 +253,28 @@ const server = createServer((req, res) => {
         let where = [];
         for (const [key, val] of url.searchParams) {
           if (["select", "order", "offset", "limit"].includes(key)) continue;
+          // Deliberately bounded PostgREST subset used by the deadline API.
+          // Identifiers are validated and all comparison values parameterized.
+          if (key === "or" && val === "(published.is.null,published.eq.true)") {
+            where.push(
+              `(${quote("published")} is null or ${quote("published")} = ${param(true)})`,
+            );
+            continue;
+          }
+          if (val.startsWith("in.(") || val.startsWith("not.in.(")) {
+            const negative = val.startsWith("not.");
+            const list = val.slice(negative ? 8 : 4, -1).split(",");
+            if (
+              !val.endsWith(")") ||
+              !list.length ||
+              list.some((x) => !/^[a-zA-Z0-9_-]+$/.test(x))
+            )
+              throw Error("Unsupported list filter");
+            where.push(
+              `${quote(key)} ${negative ? "not in" : "in"} (${list.map((x) => param(x)).join(",")})`,
+            );
+            continue;
+          }
           const [op, ...parts] = val.split(".");
           const value = parts.join(".");
           const operator = { eq: "=", gte: ">=", gt: ">", lt: "<", lte: "<=" }[
