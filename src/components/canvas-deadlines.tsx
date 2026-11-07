@@ -60,7 +60,7 @@ export function CanvasDeadlines() {
       <h2>Canvas deadlines</h2>
       <p className="form-hint">
         Academic deadlines stay separate from study sessions. Upcoming shows the
-        next 30 days; submission and grades are separate facts.
+        next 30 days. A grade alone does not confirm submission.
       </p>
       <div className="career-import-actions" aria-label="Canvas deadline views">
         {[

@@ -90,6 +90,34 @@ const server = createServer((req, res) => {
         );
         return send(200, row.rows[0]);
       }
+      if (
+        url.pathname === "/__fixtures/canvas-deadline" &&
+        req.method === "POST"
+      ) {
+        await db.query(
+          "insert into canvas_records(user_id,resource_type,canvas_id,course_canvas_id,payload) values($1,'assignment','999:999001','999',$2::jsonb) on conflict(user_id,resource_type,canvas_id)do update set payload=excluded.payload",
+          [
+            uid,
+            JSON.stringify({
+              id: 999001,
+              name: "[TEST] Graded but submission unknown",
+              due_at: new Date(Date.now() + 86400000).toISOString(),
+              submission: { workflow_state: "graded" },
+            }),
+          ],
+        );
+        return send(200, { ok: true });
+      }
+      if (
+        url.pathname === "/__fixtures/canvas-deadline" &&
+        req.method === "DELETE"
+      ) {
+        await db.query(
+          "delete from canvas_records where user_id=$1 and resource_type='assignment' and canvas_id='999:999001'",
+          [uid],
+        );
+        return send(200, { ok: true });
+      }
       if (url.pathname === "/health") return send(200, { ok: true });
       if (url.pathname === "/auth/v1/token") {
         if (body.email !== user.email || body.password !== "test-password-only")

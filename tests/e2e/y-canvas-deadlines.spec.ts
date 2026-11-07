@@ -50,6 +50,24 @@ test("Canvas deadlines default to upcoming and separate unknown past-due work fr
     expect(response.status()).toBe(200);
     expect((await response.json()).records).toEqual([]);
   }
+  const seed = "http://127.0.0.1:54329/__fixtures/canvas-deadline";
+  expect((await page.request.post(seed)).status()).toBe(200);
+  try {
+    for (const view of ["upcoming", "history"]) {
+      const response = await page.request.get(
+        `/api/canvas/deadlines?view=${view}`,
+      );
+      expect(response.status()).toBe(200);
+      expect((await response.json()).records).toEqual([
+        expect.objectContaining({
+          title: "[TEST] Graded but submission unknown",
+          submission_state: "graded",
+        }),
+      ]);
+    }
+  } finally {
+    await page.request.delete(seed);
+  }
   await page.goto("/planner");
   const panel = page.locator("section").filter({
     has: page.getByRole("heading", { name: "Canvas deadlines", exact: true }),
