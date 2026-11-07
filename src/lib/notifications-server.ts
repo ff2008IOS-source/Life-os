@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expiryWarning } from "./canvas/resources";
 import "server-only";
 import webpush from "web-push";
@@ -90,12 +91,15 @@ export async function generateNotifications(userId: string, now = new Date()) {
         body: "Open Settings → SFU Canvas to replace your token. Existing records are preserved.",
         deduplication_key: `canvas-expiry:${canvas.data.expires_at}:${warning}`,
       });
-    if (canvas.data.last_error)
+    if (
+      canvas.data.last_error &&
+      !/Canvas HTTP (403|404|406)/.test(canvas.data.last_error)
+    )
       candidates.push({
         category: "integration",
         title: "Canvas needs attention",
         body: "Open the Canvas connection to review synchronization status.",
-        deduplication_key: `canvas-error:${localDate(now)}`,
+        deduplication_key: `canvas-error:${canvas.data.expires_at}:${createHash("sha256").update(canvas.data.last_error).digest("hex").slice(0, 16)}`,
       });
   }
   const preparedChecks = await db

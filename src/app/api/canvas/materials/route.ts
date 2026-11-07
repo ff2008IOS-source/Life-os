@@ -49,6 +49,30 @@ export async function GET(request: Request) {
       );
     const rows = await query;
     dbError(rows.error);
+    const ids = (rows.data ?? [])
+      .filter((r) => r.resource_type === "file")
+      .map((r) => String(r.payload.id));
+    const docs = ids.length
+      ? await db
+          .from("canvas_documents")
+          .select(
+            "canvas_file_id,course_canvas_id,state,pages,truncated,extracted_at,last_error",
+          )
+          .eq("user_id", user.id)
+          .in("canvas_file_id", ids)
+          .limit(31)
+      : { data: [], error: null };
+    const chunks = ids.length
+      ? await db
+          .from("canvas_document_chunks")
+          .select("canvas_file_id,course_canvas_id,text")
+          .eq("user_id", user.id)
+          .eq("chunk_index", 0)
+          .in("canvas_file_id", ids)
+          .limit(31)
+      : { data: [], error: null };
+    dbError(docs.error);
+    dbError(chunks.error);
     return NextResponse.json(
       {
         courses: courses.data?.slice(0, 500).map((r) => ({
@@ -69,9 +93,18 @@ export async function GET(request: Request) {
               r.resource_type,
             300,
           ),
-          text: plainCanvasText(
-            r.payload.body ?? r.payload.description ?? r.payload.syllabus_body,
-          ),
+          text:
+            r.resource_type === "file"
+              ? (chunks.data?.find(
+                  (c) =>
+                    c.canvas_file_id === String(r.payload.id) &&
+                    c.course_canvas_id === r.course_canvas_id,
+                )?.text ?? "")
+              : plainCanvasText(
+                  r.payload.body ??
+                    r.payload.description ??
+                    r.payload.syllabus_body,
+                ),
           due_at: r.payload.due_at ?? null,
           score: r.payload.submission?.score ?? r.payload.score ?? null,
           maximum: r.payload.points_possible ?? null,
@@ -105,7 +138,16 @@ export async function GET(request: Request) {
           ),
           content_status:
             r.resource_type === "file"
-              ? "Metadata only; open Canvas for file contents"
+              ? (() => {
+                  const d = docs.data?.find(
+                    (d) =>
+                      d.canvas_file_id === String(r.payload.id) &&
+                      d.course_canvas_id === r.course_canvas_id,
+                  );
+                  return d
+                    ? `${d.state}${d.pages ? ` · ${d.pages} pages/slides` : ""}${d.truncated ? " · partial extraction" : ""}${d.last_error ? ` · ${d.last_error}` : ""}`
+                    : "File text not extracted yet";
+                })()
               : "Retrieved Canvas record",
           url: r.course_canvas_id
             ? `https://canvas.sfu.ca/courses/${r.course_canvas_id}`

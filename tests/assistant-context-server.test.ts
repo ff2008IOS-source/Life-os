@@ -1,5 +1,8 @@
 import { it, expect, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+vi.mock("../src/lib/canvas/documents-server", () => ({
+  ensureCanvasDocument: async () => ({ known_files: 0, truncated: false }),
+}));
 import { createClient } from "@supabase/supabase-js";
 import { assistantAcademicContext } from "../src/lib/assistant/context-server";
 import { boundedPrompt } from "../src/lib/assistant/provider";
@@ -7,6 +10,10 @@ it("retrieves owned assessments across courses into the actual provider prompt w
   const calls: URL[] = [];
   const transport = vi.fn(async (input: RequestInfo | URL) => {
     const u = new URL(String(input));
+    if (u.pathname.includes("/rpc/"))
+      return new Response("[]", {
+        headers: { "Content-Type": "application/json" },
+      });
     calls.push(u);
     let data: unknown[] = [];
     if (u.pathname.endsWith("/courses"))
@@ -74,6 +81,10 @@ it("relinks an imported exam to its Canvas course and retrieves scope from a bod
     global: {
       fetch: async (input) => {
         const u = new URL(String(input));
+        if (u.pathname.includes("/rpc/"))
+          return new Response("[]", {
+            headers: { "Content-Type": "application/json" },
+          });
         calls.push(u);
         let data: unknown[] = [];
         if (u.pathname.endsWith("/courses"))

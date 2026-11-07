@@ -23,6 +23,8 @@ type Data = {
   }[];
 };
 export function CanvasMaterials() {
+  const [revision, setRevision] = useState(0);
+  const [reading, setReading] = useState(false);
   const [data, setData] = useState<Data | null>(null),
     [course, setCourse] = useState(""),
     [page, setPage] = useState(0),
@@ -46,7 +48,7 @@ export function CanvasMaterials() {
     return () => {
       active = false;
     };
-  }, [course, page]);
+  }, [course, page, revision]);
   return (
     <section className="panel settings-panel">
       <div className="academic-toolbar">
@@ -57,8 +59,9 @@ export function CanvasMaterials() {
       </div>
       <p className="small muted">
         Canvas snapshots show what was retrieved, not complete course or exam
-        coverage. Files are metadata only. Check source freshness before relying
-        on a deadline or grade.
+        coverage. Supported accessible files can be read automatically; scanned
+        or restricted files may remain unavailable. Check source freshness
+        before relying on a deadline or grade.
       </p>
       <label>
         Canvas course
@@ -77,6 +80,30 @@ export function CanvasMaterials() {
           ))}
         </select>
       </label>
+      <Button
+        variant="outline"
+        disabled={reading}
+        onClick={async () => {
+          setReading(true);
+          setError("");
+          try {
+            const r = await fetch("/api/canvas/documents", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ course: course || null }),
+            });
+            const d = await r.json();
+            if (!r.ok) throw Error(d.error?.message ?? "File reading failed.");
+            setRevision((v) => v + 1);
+          } catch (e) {
+            setError((e as Error).message);
+          } finally {
+            setReading(false);
+          }
+        }}
+      >
+        {reading ? "Reading course files…" : "Read next course files"}
+      </Button>
       {data?.courses_truncated && <p>Course list exceeds this view’s limit.</p>}
       {data?.records.map((r) => (
         <details key={r.type + r.id} className="setting-line">

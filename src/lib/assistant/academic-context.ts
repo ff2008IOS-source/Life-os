@@ -178,6 +178,7 @@ export function prioritizeAssistantSources(
       return academic ? 130 : career ? 20 : 100;
     if (s.id.startsWith("canvas:assignment:") || s.id.startsWith("assessment:"))
       return academic ? 125 : career ? 10 : 90;
+    if (s.id.startsWith("canvas:document:")) return academic ? 120 : 20;
     if (s.id.startsWith("canvas:")) return academic ? 105 : 15;
     if (s.id.startsWith("project:") || s.id.startsWith("goal:"))
       return career ? 120 : 40;

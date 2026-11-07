@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ["unpdf", "fflate"],
+  outputFileTracingIncludes: {
+    "/api/**/*": [
+      "./node_modules/unpdf/dist/**/*",
+      "./node_modules/fflate/**/*",
+    ],
+  },
   async headers() {
     return [
       {
