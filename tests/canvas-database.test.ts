@@ -472,3 +472,87 @@ describe("Canvas atomic ingestion and isolation", () => {
     ).toEqual({ n: 1 });
   });
 });
+it("uses the latest owned submission, keeps graded-missing work outstanding and preserves unknown status", async () => {
+  const insert = async (
+    user: string,
+    type: string,
+    id: string,
+    payload: unknown,
+    at: string,
+  ) =>
+    db.query(
+      "insert into canvas_records(user_id,resource_type,canvas_id,course_canvas_id,payload,synced_at) values($1,$2,$3,'990',$4::jsonb,$5)",
+      [user, type, id, JSON.stringify(payload), at],
+    );
+  await insert(
+    owner,
+    "assignment",
+    "990:991",
+    {
+      id: 991,
+      name: "[TEST] Old graded snapshot",
+      due_at: "2026-11-01T20:00:00Z",
+      submission: { workflow_state: "graded", missing: false },
+    },
+    "2026-11-01T21:00:00Z",
+  );
+  await insert(
+    owner,
+    "submission",
+    "990:991:77",
+    {
+      assignment_id: 991,
+      user_id: 77,
+      workflow_state: "graded",
+      missing: true,
+      submitted_at: null,
+    },
+    "2026-11-02T21:00:00Z",
+  );
+  await insert(
+    other,
+    "submission",
+    "990:991:77",
+    {
+      assignment_id: 991,
+      user_id: 77,
+      workflow_state: "submitted",
+      submitted_at: "2026-11-02T19:00Z",
+    },
+    "2026-11-03T21:00:00Z",
+  );
+  await insert(
+    owner,
+    "assignment",
+    "990:992",
+    { id: 992, name: "[TEST] Unknown status", due_at: "2026-11-01T20:00:00Z" },
+    "2026-11-01T21:00:00Z",
+  );
+  const rows = await db.query(
+    "select canvas_id,submission_state from canvas_deadlines where user_id=$1 and course_canvas_id='990' order by canvas_id",
+    [owner],
+  );
+  expect(rows.rows).toEqual([
+    { canvas_id: "990:991", submission_state: "missing" },
+    { canvas_id: "990:992", submission_state: "unknown" },
+  ]);
+  await db.query(
+    "update canvas_records set payload=$1::jsonb,synced_at='2026-11-04T21:00Z' where user_id=$2 and resource_type='submission' and canvas_id='990:991:77'",
+    [
+      JSON.stringify({
+        workflow_state: "submitted",
+        missing: true,
+        submitted_at: "2026-11-02T19:00Z",
+      }),
+      owner,
+    ],
+  );
+  expect(
+    (
+      await db.query(
+        "select submission_state from canvas_deadlines where user_id=$1 and canvas_id='990:991'",
+        [owner],
+      )
+    ).rows[0],
+  ).toEqual({ submission_state: "needs_review" });
+});
