@@ -48,6 +48,17 @@ it("blocks arbitrary download hosts, hidden files and oversized metadata without
     trustedFileUrl("https://canvas.sfu.ca.attacker.invalid/file"),
   ).toThrow();
   expect(() => trustedFileUrl("http://127.0.0.1/file")).toThrow();
+  expect(
+    trustedFileUrl(
+      "https://canvas-files.s3.ca-central-1.amazonaws.com/course.pdf",
+    ).hostname,
+  ).toBe("canvas-files.s3.ca-central-1.amazonaws.com");
+  expect(() =>
+    trustedFileUrl(
+      "https://canvas-files.s3.ca-central-1.amazonaws.com.attacker.invalid/a",
+    ),
+  ).toThrow();
+  expect(() => trustedFileUrl("https://canvas.sfu.ca:8443/a")).toThrow();
   const transport = vi.fn(
     async () =>
       new Response(

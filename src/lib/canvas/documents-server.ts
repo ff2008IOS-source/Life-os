@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { canvasAdmin, decryptToken } from "./secure";
-import { downloadCanvasFile } from "./file-download";
+import { downloadCanvasFile, CanvasFileHostError } from "./file-download";
 import { extractCanvasFile, chunkDocument } from "./extract-file";
 import { CanvasApiError } from "./client";
 import { dbError } from "../http";
@@ -76,13 +76,16 @@ export async function processCanvasDocuments(
         .from("canvas_documents")
         .update({
           state,
-          last_error: status
-            ? `Canvas file HTTP ${status}`
-            : code === "parse_timeout"
-              ? "File extraction timed out."
-              : code === "page_limit" || code === "archive_limit"
-                ? "File extraction safety limit exceeded."
-                : "File text could not be extracted.",
+          last_error:
+            e instanceof CanvasFileHostError
+              ? `Canvas file storage host is not approved: ${e.hostname}`
+              : status
+                ? `Canvas file HTTP ${status}`
+                : code === "parse_timeout"
+                  ? "File extraction timed out."
+                  : code === "page_limit" || code === "archive_limit"
+                    ? "File extraction safety limit exceeded."
+                    : "File text could not be extracted.",
           attempts: d.attempts + 1,
           next_attempt_at: new Date(Date.now() + 3600000).toISOString(),
           lease_token: null,

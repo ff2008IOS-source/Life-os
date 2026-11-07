@@ -1,5 +1,10 @@
 import "server-only";
 import { CanvasClient, CanvasApiError, CANVAS_ORIGIN } from "./client";
+export class CanvasFileHostError extends CanvasApiError {
+  constructor(public hostname: string) {
+    super(422, "Canvas returned an unsupported file host.");
+  }
+}
 export const MAX_CANVAS_FILE_BYTES = 12 * 1024 * 1024;
 export function trustedFileUrl(value: string) {
   const url = new URL(value);
@@ -11,10 +16,13 @@ export function trustedFileUrl(value: string) {
     url.hash ||
     !(
       url.hostname === "canvas.sfu.ca" ||
-      url.hostname.endsWith(".instructureusercontent.com")
+      url.hostname.endsWith(".instructureusercontent.com") ||
+      /^(?:[a-z0-9][a-z0-9.-]*\.)?s3(?:[.-][a-z]{2}-[a-z]+-\d)?\.amazonaws\.com$/.test(
+        url.hostname,
+      )
     )
   )
-    throw new CanvasApiError(422, "Canvas returned an unsupported file host.");
+    throw new CanvasFileHostError(url.hostname);
   return url;
 }
 export async function boundedFileBody(
