@@ -109,6 +109,20 @@ it("stores actual extracted text atomically, searches with owner isolation and d
     (await db.query("select * from canvas_search_materials('55','inflation')"))
       .rows,
   ).toHaveLength(1);
+  expect(
+    (
+      await db.query(
+        "select * from canvas_search_materials('55','nonexistent query','7')",
+      )
+    ).rows,
+  ).toHaveLength(1);
+  expect(
+    (
+      await db.query(
+        "select * from canvas_search_materials('55','inflation','999')",
+      )
+    ).rows,
+  ).toHaveLength(0);
   await expect(
     db.query("delete from canvas_document_chunks"),
   ).rejects.toMatchObject({ code: "42501" });

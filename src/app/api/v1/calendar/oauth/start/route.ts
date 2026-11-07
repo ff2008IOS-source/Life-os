@@ -47,6 +47,10 @@ export async function POST(request: Request) {
           purpose !== null &&
           "reservations" in purpose &&
           purpose.reservations === true,
+        typeof purpose === "object" &&
+          purpose !== null &&
+          "sheets_write" in purpose &&
+          purpose.sheets_write === true,
       ),
     });
   } catch (e) {
