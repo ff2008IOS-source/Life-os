@@ -5,9 +5,11 @@ export class CanvasApiError extends Error {
     public readonly status: number,
     message = status === 404
       ? "Canvas could not find this resource. It may be hidden, removed or unavailable to this account."
-      : status === 504
-        ? "Canvas did not respond before the request timeout. Previously imported information is preserved."
-        : "Canvas could not be reached. Previously imported information is preserved.",
+      : status === 406
+        ? "Canvas could not return this resource through the API. Other resources can still synchronize."
+        : status === 504
+          ? "Canvas did not respond before the request timeout. Previously imported information is preserved."
+          : "Canvas could not be reached. Previously imported information is preserved.",
   ) {
     super(message);
     this.name = "CanvasApiError";

@@ -45,6 +45,14 @@ it("seeds stable file identities idempotently and serializes document work", asy
   expect(
     (await db.query("select count(*)::int n from canvas_documents")).rows[0],
   ).toEqual({ n: 1 });
+  expect(
+    (
+      await db.query("select canvas_claim_document($1,'999','7',$2)d", [
+        owner,
+        randomUUID(),
+      ])
+    ).rows[0],
+  ).toEqual({ d: null });
   const lease = randomUUID();
   const first = (
     await db.query<{ d: { source_version: string } }>(

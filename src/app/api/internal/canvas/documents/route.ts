@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { readJson } from "@/lib/http";
 import { NextResponse } from "next/server";
 import { validNotificationSignature } from "@/lib/notification-worker-auth";
 import { canvasDocumentWorker } from "@/lib/canvas/documents-server";
@@ -13,7 +15,17 @@ export async function POST(request: Request) {
   )
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    return NextResponse.json(await canvasDocumentWorker());
+    const target = z
+      .object({
+        course: z.string().regex(/^\d+$/).optional(),
+        file: z.string().regex(/^\d+$/).optional(),
+      })
+      .strict()
+      .refine((x) => !x.file || !!x.course)
+      .parse(await readJson(request));
+    return NextResponse.json(
+      await canvasDocumentWorker(target.course ?? null, target.file ?? null),
+    );
   } catch (e) {
     return failure(e);
   }

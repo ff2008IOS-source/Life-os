@@ -25,6 +25,8 @@ export async function extractCanvasFile(
   if (bytes.byteLength > 12 * 1024 * 1024) throw Error("file_limit");
   const worker = new Worker(program, {
     eval: true,
+    env: {},
+    execArgv: [],
     workerData: {
       bytes,
       pdf: join(process.cwd(), "node_modules/unpdf/dist/index.mjs"),

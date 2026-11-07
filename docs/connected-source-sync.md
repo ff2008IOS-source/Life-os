@@ -2,7 +2,7 @@
 
 ## Implemented
 
-- Canvas: authorized file download, bounded PDF/DOCX/PPTX extraction in isolated workers, owner-only indexed chunks and page/slide citations. Source refresh and token rotation preserve existing records. Parser dependencies are explicitly traced and a synthetic test runs against the deployment bundle.
+- Canvas: authorized file download, bounded PDF/DOCX/PPTX extraction in isolated workers, owner-only indexed chunks and page/slide citations. Source refresh and token rotation preserve existing records. Owner-approved deadline reviews propagate only to unchanged linked task deadlines; explicit task overrides are preserved. Parser workers receive no server environment variables or launch arguments. Parser dependencies are explicitly traced and a synthetic test runs against the deployment bundle.
 - Assistant: automatic academic lookup and recent explicitly mentioned course context across short follow-ups. Cross-course questions and explicit course switches remain independent. Extracted documents are untrusted reference data; practice material is not current exam coverage.
 - Dedicated Calendar: provider-ID reconciliation, conditional time edits, durable move confirmation, fixed external moves, conflict/deletion holds, explicit review and resume controls. Personal calendars remain read-only. No new automatic provider write permission is enabled.
 - Sheets: stable-ID project-status mappings, read-only registration, hourly/manual incoming checks, three-way conflict review, formula/protected-range guards, four-mode schema and transactional outbound outbox. Outbound modes are blocked in the application and database until separate authorization and conditional-provider verification. No source workbook is edited.
@@ -15,7 +15,7 @@
 - [x] Synthetic browser workflows including mobile sizing, explicit Calendar controls, preserved exports and restricted Sheets settings.
 - [x] Traced deployment bundle extracts a synthetic PDF (the missing package manifest regression is reproduced and covered).
 - [x] Hosted table permissions and personal-calendar read-only flags inspected.
-- [ ] Complete live Canvas file download → text persistence → source retrieval verification after the packaging fix is deployed.
+- [x] Live Canvas file download → text persistence → indexed retrieval: PSYC 100 and GEOG 104 syllabi extracted successfully; source hashes/versions and search hits verified. Historical practice and textless files remain explicitly distinguished.
 - [ ] Owner-authenticated live assistant question with a newly extracted file.
 - [ ] Live dedicated Calendar move/confirmation cycle; provider tests to date use synthetic responses, not personal calendar edits.
 - [ ] Live configured test workbook import. No real workbook has been made writable.
@@ -34,4 +34,4 @@ The current reduced capability safely imports project statuses from an explicitl
 
 ## Recovery
 
-Migrations are additive. Roll code back to the previous Vercel production deployment if needed; retain document, review, mapping and outbox tables. Pause a configured source to stop incoming changes. Never clear a pending Calendar operation by deleting its Google event or by blindly creating a replacement. An unknown move must be confirmed using its saved operation and original calendar identity. No production data restoration or paid infrastructure is part of this increment.
+Migrations are additive. Roll code back to the previous Vercel production deployment if needed; retain document, review, mapping and outbox tables. Pause a configured source to stop incoming changes. Never clear a pending Calendar operation by deleting its Google event or by blindly creating a replacement. An unknown move must be confirmed using its saved operation and original calendar identity. If completed-work history or a later distinct local move has changed, confirmation requires review instead of overwriting that history. No production data restoration or paid infrastructure is part of this increment.

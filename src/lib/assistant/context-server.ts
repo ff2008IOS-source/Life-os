@@ -163,7 +163,7 @@ export async function assistantAcademicContext(
     for (const document of found.data ?? [])
       sources.push({
         id: `canvas:document:${course}:${document.file_id}:${document.page}:${document.chunk_index}`,
-        title: `${document.title} · page/slide ${document.page}`,
+        title: `${document.title} · ${/\.pdf$/i.test(document.title) ? `page ${document.page}` : /\.pptx$/i.test(document.title) ? "retrieved slide text" : "retrieved text"}`,
         text: JSON.stringify({
           excerpt: document.text,
           coverage: /answer|solution|practice|20(?:0\d|1\d|2[0-5])/i.test(
