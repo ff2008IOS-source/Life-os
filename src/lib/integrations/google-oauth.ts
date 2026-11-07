@@ -13,6 +13,10 @@ export const SHEETS_READ_SCOPE =
   "https://www.googleapis.com/auth/spreadsheets.readonly";
 export const SHEETS_WRITE_SCOPE =
   "https://www.googleapis.com/auth/spreadsheets";
+export function hasSheetsReadAccess(scope: string) {
+  const granted = new Set(scope.split(" "));
+  return granted.has(SHEETS_READ_SCOPE) || granted.has(SHEETS_WRITE_SCOPE);
+}
 export const CALLBACK_PATH = "/api/v1/calendar/oauth/callback";
 export const OAUTH_COOKIE = "life-os-google-oauth";
 export function createOAuthAttempt(

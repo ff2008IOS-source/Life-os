@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { ApiError } from "@/lib/auth";
 import { connectionAccess } from "./google-server";
-import { SHEETS_READ_SCOPE } from "./google-oauth";
+import { hasSheetsReadAccess } from "./google-oauth";
 export const CAREER_SHEET_ID = "1xDTpBdZ4FGXdTIcquq_pFXfTxdUy84xOD8vpgRAtgZc";
 export async function sheetRead(
   path: string,
@@ -60,7 +60,7 @@ export async function readCareerSheet(
   connectionId: string,
 ): Promise<SheetSnapshot> {
   const { token, scope } = await connectionAccess(connectionId);
-  if (!scope.split(" ").includes(SHEETS_READ_SCOPE))
+  if (!hasSheetsReadAccess(scope))
     throw new ApiError(
       409,
       "Connect the career spreadsheet to grant its separate read-only permission.",

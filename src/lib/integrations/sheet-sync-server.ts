@@ -3,7 +3,7 @@ import { ApiError } from "../auth";
 import { dbError } from "../http";
 import { boundedFileBody } from "../canvas/file-download";
 import { connectionAccessForUser, integrationAdmin } from "./google-server";
-import { SHEETS_READ_SCOPE } from "./google-oauth";
+import { hasSheetsReadAccess } from "./google-oauth";
 import { gridSchema, locateSheetRecord, type SheetGrid } from "./sheet-sync";
 export async function readSyncSheet(
   user: string,
@@ -14,7 +14,7 @@ export async function readSyncSheet(
   if (!/^[A-Za-z0-9_-]{10,200}$/.test(id))
     throw new ApiError(422, "Invalid spreadsheet identity.");
   const { token, scope } = await connectionAccessForUser(user, connection);
-  if (!scope.split(" ").includes(SHEETS_READ_SCOPE))
+  if (!hasSheetsReadAccess(scope))
     throw new ApiError(
       409,
       "Reconnect Google with the existing read-only Sheets permission.",

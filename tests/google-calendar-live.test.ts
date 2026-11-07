@@ -331,3 +331,11 @@ describe("read-only Google connection security", () => {
     ).toBe(false);
   });
 });
+
+it("preserves read access when Google returns the encompassing Sheets write scope", async () => {
+  const { hasSheetsReadAccess, SHEETS_WRITE_SCOPE, SHEETS_READ_SCOPE } =
+    await import("../src/lib/integrations/google-oauth");
+  expect(hasSheetsReadAccess(SHEETS_WRITE_SCOPE)).toBe(true);
+  expect(hasSheetsReadAccess(SHEETS_READ_SCOPE)).toBe(true);
+  expect(hasSheetsReadAccess("openid email")).toBe(false);
+});
