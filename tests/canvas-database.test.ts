@@ -235,6 +235,56 @@ describe("Canvas atomic ingestion and isolation", () => {
       ).rows[0],
     ).toEqual({ scheduling_mode: "manual", estimated_minutes: null });
   });
+  for (const override of [false, true])
+    it(
+      override
+        ? "preserves an owner-overridden task deadline during Canvas review"
+        : "propagates an approved Canvas deadline to its unchanged linked task",
+      async () => {
+        const a = (
+          await db.query<{ local_id: string }>(
+            "select local_id from canvas_mappings where resource_type='assignment'and canvas_id='10:20'",
+          )
+        ).rows[0].local_id;
+        const native = (
+          await db.query<{ version: number; task_id: string }>(
+            "select version,task_id from assessments where id=$1",
+            [a],
+          )
+        ).rows[0];
+        const next = override ? "2099-12-03T18:00:00Z" : "2099-12-02T18:00:00Z";
+        if (override)
+          await db.query(
+            "update tasks set due_at='2099-12-01T18:00:00Z'where id=$1",
+            [native.task_id],
+          );
+        const record = assignment(10),
+          payload = { ...record.payload, due_at: next };
+        await db.query(
+          "update canvas_records set payload=$1::jsonb where resource_type='assignment'and canvas_id='10:20'",
+          [JSON.stringify(payload)],
+        );
+        await db.query(
+          "select canvas_accept_versioned($1,'assignment','10:20',$2,$3,$4::jsonb,$5::jsonb)",
+          [
+            owner,
+            a,
+            native.version,
+            JSON.stringify({ ...record.normalized, due_at: next }),
+            JSON.stringify(payload),
+          ],
+        );
+        const task = (
+          await db.query<{ due_at: Date }>(
+            "select due_at from tasks where id=$1",
+            [native.task_id],
+          )
+        ).rows[0];
+        expect(new Date(task.due_at).toISOString()).toBe(
+          new Date(override ? "2099-12-01T18:00:00Z" : next).toISOString(),
+        );
+      },
+    );
   it("denies credentials and writes to browser roles; enforces approval and cross-user reads", async () => {
     await db.exec("set role authenticated");
     try {

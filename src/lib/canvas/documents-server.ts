@@ -107,7 +107,10 @@ export async function processCanvasDocuments(
   }
   return { processed, failed };
 }
-export async function canvasDocumentWorker() {
+export async function canvasDocumentWorker(
+  course: string | null = null,
+  file: string | null = null,
+) {
   const db = canvasAdmin();
   const owners = await db
     .from("canvas_connections")
@@ -120,7 +123,9 @@ export async function canvasDocumentWorker() {
     throw Error("Canvas document owner limit exceeded");
   const results = [];
   for (const owner of owners.data ?? [])
-    results.push(await processCanvasDocuments(owner.user_id));
+    results.push(
+      await processCanvasDocuments(owner.user_id, course, file, file ? 1 : 2),
+    );
   return results;
 }
 

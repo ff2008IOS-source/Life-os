@@ -210,3 +210,16 @@ describe("Canvas read-only client and credential boundary", () => {
     ).toBeUndefined();
   });
 });
+
+it("reports a Canvas 406 as a resource failure rather than claiming a network outage", async () => {
+  const transport = vi
+    .fn()
+    .mockResolvedValue(new Response("", { status: 406 }));
+  await expect(
+    new CanvasClient("synthetic", transport).page("courses/1/modules/2/items"),
+  ).rejects.toMatchObject({
+    status: 406,
+    message: expect.stringContaining("through the API"),
+  });
+  expect(transport).toHaveBeenCalledTimes(1);
+});
