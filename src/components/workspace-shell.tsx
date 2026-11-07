@@ -207,9 +207,14 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <Link
           href="/more"
           className={
-            ["/goals", "/insights", "/more", "/settings", "/reviews"].includes(
-              path,
-            )
+            [
+              "/goals",
+              "/assistant",
+              "/insights",
+              "/more",
+              "/settings",
+              "/reviews",
+            ].includes(path)
               ? "active"
               : ""
           }
@@ -315,6 +320,11 @@ export function MorePage() {
         </div>
       </div>
       <div className="more-list">
+        <Link href="/assistant">
+          <BookOpen />
+          Assistant
+          <ArrowUpRight size={14} />
+        </Link>
         <Link href="/goals">
           <Target />
           Goals

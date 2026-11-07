@@ -22,7 +22,21 @@ test("native review snapshots persist and assistant remains disabled without a c
   await expect(
     page.locator("summary").filter({ hasText: "Daily Missed Task Check" }),
   ).toHaveCount(1);
-  await page.goto("/assistant");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("navigation", { name: "Mobile navigation" })
+    .getByRole("link", { name: "More", exact: true })
+    .click();
+  await page
+    .locator(".more-list")
+    .getByRole("link", { name: "Assistant", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/assistant$/);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Mobile navigation" })
+      .getByRole("link", { name: "More", exact: true }),
+  ).toHaveClass("active");
   await expect(
     page.getByRole("heading", { name: "Life OS assistant" }),
   ).toBeVisible();
