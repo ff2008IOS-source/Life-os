@@ -33,13 +33,14 @@ export async function POST(request: Request) {
       "managed_calendar",
       "sheets",
     ] as const;
+    const managedRead = managedCalendarWorker();
     const results = await Promise.allSettled([
       notificationWorker(),
-      runSchedulingAutomation(),
+      managedRead.then(() => runSchedulingAutomation()),
       canvasWorker(),
       personalWorkflowWorker(),
       canvasDocumentWorker(),
-      managedCalendarWorker(),
+      managedRead,
       sheetSyncWorker(),
     ]);
     const response = Object.fromEntries(
