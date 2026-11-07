@@ -44,6 +44,11 @@ it("downloads only authorized file metadata, strips the bearer on CDN redirects 
   ).rejects.toMatchObject({ status: 413 });
 });
 it("blocks arbitrary download hosts, hidden files and oversized metadata without fetching contents", async () => {
+  expect(
+    trustedFileUrl(
+      "https://a27892-3544415.cluster222.canvas-user-content.com/file",
+    ).hostname,
+  ).toBe("a27892-3544415.cluster222.canvas-user-content.com");
   expect(() =>
     trustedFileUrl("https://canvas.sfu.ca.attacker.invalid/file"),
   ).toThrow();
