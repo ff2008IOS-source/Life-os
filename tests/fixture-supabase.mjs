@@ -225,6 +225,28 @@ const server = createServer((req, res) => {
         let where = [];
         for (const [key, val] of url.searchParams) {
           if (["select", "order", "offset", "limit"].includes(key)) continue;
+          // Deliberately bounded PostgREST subset used by the deadline API.
+          // Identifiers are validated and all comparison values parameterized.
+          if (key === "or" && val === "(published.is.null,published.eq.true)") {
+            where.push(
+              `(${quote("published")} is null or ${quote("published")} = ${param(true)})`,
+            );
+            continue;
+          }
+          if (val.startsWith("in.(") || val.startsWith("not.in.(")) {
+            const negative = val.startsWith("not.");
+            const list = val.slice(negative ? 8 : 4, -1).split(",");
+            if (
+              !val.endsWith(")") ||
+              !list.length ||
+              list.some((x) => !/^[a-zA-Z0-9_-]+$/.test(x))
+            )
+              throw Error("Unsupported list filter");
+            where.push(
+              `${quote(key)} ${negative ? "not in" : "in"} (${list.map((x) => param(x)).join(",")})`,
+            );
+            continue;
+          }
           const [op, ...parts] = val.split(".");
           const value = parts.join(".");
           const operator = { eq: "=", gte: ">=", gt: ">", lt: "<", lte: "<=" }[

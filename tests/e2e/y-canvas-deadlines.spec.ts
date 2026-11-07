@@ -41,6 +41,15 @@ test("Canvas deadlines default to upcoming and separate unknown past-due work fr
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
+  // APIRequestContext bypasses page.route: exercise the actual Next.js route
+  // against the RLS-backed synthetic database, not only mocked browser data.
+  for (const view of ["upcoming", "attention", "history"]) {
+    const response = await page.request.get(
+      `/api/canvas/deadlines?view=${view}`,
+    );
+    expect(response.status()).toBe(200);
+    expect((await response.json()).records).toEqual([]);
+  }
   await page.goto("/planner");
   const panel = page.locator("section").filter({
     has: page.getByRole("heading", { name: "Canvas deadlines", exact: true }),
