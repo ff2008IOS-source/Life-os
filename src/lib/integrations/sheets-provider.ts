@@ -12,10 +12,10 @@ export class SheetProviderError extends Error {
   }
 }
 export type RevisionSnapshot = { grid: SheetGrid; revision: string };
-export async function sheetsMcp(
+async function mcpResult(
   token: string,
-  name: "get_spreadsheet" | "update_spreadsheet",
-  args: Record<string, unknown>,
+  method: "tools/call" | "tools/list",
+  params: Record<string, unknown>,
   transport: typeof fetch = fetch,
 ) {
   const id = randomUUID();
@@ -31,8 +31,8 @@ export async function sheetsMcp(
       body: JSON.stringify({
         jsonrpc: "2.0",
         id,
-        method: "tools/call",
-        params: { name, arguments: args },
+        method,
+        params,
       }),
       redirect: "error",
       cache: "no-store",
@@ -120,11 +120,46 @@ export async function sheetsMcp(
         "REVISION_CONFLICT",
         "The spreadsheet revision changed.",
       );
+    if (/agentic|AI-powered agent/i.test(detail))
+      throw new SheetProviderError(
+        "CLIENT_CONFIGURATION",
+        "Google requires this OAuth client to be configured for its MCP service.",
+      );
+    if (/developer preview|allowlist|enroll|preview program/i.test(detail))
+      throw new SheetProviderError(
+        "PREVIEW_ACCESS_REQUIRED",
+        "Google Sheets MCP preview access is required for this account.",
+      );
+    if (
+      /invalid.*(?:argument|param)|required.*(?:field|property)|missing.*(?:field|property)|unknown.*field|validation|schema/i.test(
+        detail,
+      )
+    )
+      throw new SheetProviderError(
+        "TOOL_INPUT_INVALID",
+        "Google rejected the MCP input schema. Check the advertised tool parameters.",
+      );
     throw new SheetProviderError(
       "PROVIDER_REJECTED",
       "Google rejected the bounded spreadsheet operation.",
     );
   }
+  if (!result || typeof result !== "object")
+    throw new SheetProviderError("PROTOCOL", "Google returned no MCP result.");
+  return result;
+}
+export async function sheetsMcp(
+  token: string,
+  name: "get_spreadsheet" | "update_spreadsheet",
+  args: Record<string, unknown>,
+  transport: typeof fetch = fetch,
+) {
+  const result = await mcpResult(
+    token,
+    "tools/call",
+    { name, arguments: args },
+    transport,
+  );
   let data = result?.structuredContent;
   if (!data) {
     try {
@@ -148,11 +183,53 @@ export async function sheetsMcp(
     (data as Record<string, unknown>)
   );
 }
+/** Read-only discovery. Only fixed tool and field names are exposed, never provider content. */
+export async function sheetsCapabilities(
+  token: string,
+  transport: typeof fetch = fetch,
+) {
+  const result = (await mcpResult(token, "tools/list", {}, transport)) as {
+    tools?: {
+      name?: unknown;
+      inputSchema?: {
+        properties?: Record<string, unknown>;
+        required?: unknown;
+      };
+    }[];
+  };
+  if (!Array.isArray(result.tools) || result.tools.length > 100)
+    throw new SheetProviderError(
+      "PROTOCOL",
+      "Google did not return a bounded tool list.",
+    );
+  return result.tools
+    .filter((t) =>
+      ["get_spreadsheet", "update_spreadsheet", "create_spreadsheet"].includes(
+        String(t.name),
+      ),
+    )
+    .map((t) => ({
+      name: String(t.name),
+      fields: Object.keys(t.inputSchema?.properties ?? {})
+        .filter((k) => /^[a-zA-Z_][a-zA-Z0-9_]{0,99}$/.test(k))
+        .slice(0, 30),
+      required: Array.isArray(t.inputSchema?.required)
+        ? t.inputSchema.required
+            .filter(
+              (k): k is string =>
+                typeof k === "string" &&
+                /^[a-zA-Z_][a-zA-Z0-9_]{0,99}$/.test(k),
+            )
+            .slice(0, 30)
+        : [],
+    }));
+}
 export async function readRevisionSheet(
   token: string,
   id: string,
   ranges: string[],
   transport: typeof fetch = fetch,
+  argumentStyle: "camel" | "snake" = "camel",
 ): Promise<RevisionSnapshot> {
   if (
     !/^[A-Za-z0-9_-]{10,200}$/.test(id) ||
@@ -163,7 +240,9 @@ export async function readRevisionSheet(
   const data = await sheetsMcp(
     token,
     "get_spreadsheet",
-    { spreadsheetId: id, includeGridData: true, ranges },
+    argumentStyle === "snake"
+      ? { spreadsheet_id: id, include_grid_data: true, ranges }
+      : { spreadsheetId: id, includeGridData: true, ranges },
     transport,
   );
   const grid = gridSchema.parse(data);
