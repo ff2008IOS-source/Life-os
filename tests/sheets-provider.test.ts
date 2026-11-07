@@ -171,3 +171,85 @@ it("accepts a bounded SSE result and rejects another request identity", async ()
     ),
   ).rejects.toMatchObject({ code: "PROTOCOL" });
 });
+it("discovers advertised fields without returning descriptions or unrelated tool metadata", async () => {
+  const { sheetsCapabilities } =
+    await import("../src/lib/integrations/sheets-provider");
+  const t = vi.fn(async (_u, init) => {
+    const body = JSON.parse(String(init?.body));
+    expect(body.method).toBe("tools/list");
+    return Response.json({
+      id: body.id,
+      result: {
+        tools: [
+          {
+            name: "get_spreadsheet",
+            description: "must not be exposed",
+            inputSchema: {
+              properties: {
+                spreadsheet_id: { type: "string" },
+                include_grid_data: { type: "boolean" },
+                ranges: { type: "array" },
+              },
+              required: ["spreadsheet_id"],
+            },
+          },
+          {
+            name: "unrelated_tool",
+            inputSchema: { properties: { secret: {} } },
+          },
+        ],
+      },
+    });
+  });
+  expect(await sheetsCapabilities("synthetic", t)).toEqual([
+    {
+      name: "get_spreadsheet",
+      fields: ["spreadsheet_id", "include_grid_data", "ranges"],
+      required: ["spreadsheet_id"],
+    },
+  ]);
+});
+it("uses advertised snake-case arguments for the bounded read without sending both schemas", async () => {
+  const t = vi.fn(async (_u, init) => {
+    const body = JSON.parse(String(init?.body));
+    expect(body.params.arguments).toEqual({
+      spreadsheet_id: id,
+      include_grid_data: true,
+      ranges: ["'Test'!A1:C5"],
+    });
+    return response(body);
+  });
+  expect(
+    (await readRevisionSheet("synthetic", id, ["'Test'!A1:C5"], t, "snake"))
+      .revision,
+  ).toBe("r1");
+});
+it("distinguishes invalid tool input and preview restrictions from revision conflicts without exposing raw errors", async () => {
+  const transport = (message: string) =>
+    vi.fn(async (_u, init) => {
+      const body = JSON.parse(String(init?.body));
+      return Response.json({
+        id: body.id,
+        result: { isError: true, content: [{ type: "text", text: message }] },
+      });
+    });
+  await expect(
+    sheetsMcp(
+      "synthetic",
+      "get_spreadsheet",
+      {},
+      transport("Invalid arguments: missing required field spreadsheet_id"),
+    ),
+  ).rejects.toMatchObject({ code: "TOOL_INPUT_INVALID" });
+  await expect(
+    sheetsMcp(
+      "synthetic",
+      "get_spreadsheet",
+      {},
+      transport("Join the Developer Preview program. private details"),
+    ),
+  ).rejects.toMatchObject({
+    code: "PREVIEW_ACCESS_REQUIRED",
+    message: expect.not.stringContaining("private details"),
+  });
+});
