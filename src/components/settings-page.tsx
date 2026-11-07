@@ -1,4 +1,5 @@
 "use client";
+import { SheetSyncPanel } from "./sheet-sync-panel";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -155,6 +156,7 @@ export function SettingsPage({
             </section>
             <GoogleCalendarPanel settings />
             <CareerPanel compact />
+            <SheetSyncPanel />
             <ReservationsPanel />
             <AutomationControl policy={DEFAULT_POLICY} />
             <section className="panel settings-panel">

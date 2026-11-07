@@ -1,3 +1,5 @@
+import { sheetSyncWorker } from "@/lib/integrations/sheet-sync-server";
+import { managedCalendarWorker } from "@/lib/integrations/calendar-sync-service";
 import { canvasDocumentWorker } from "@/lib/canvas/documents-server";
 import { personalWorkflowWorker } from "@/lib/personal-workflows-server";
 import { canvasWorker } from "@/lib/canvas/service";
@@ -28,19 +30,34 @@ export async function POST(request: Request) {
       "canvas",
       "personal_workflows",
       "canvas_documents",
+      "managed_calendar",
+      "sheets",
     ] as const;
+    const managedRead = managedCalendarWorker();
     const results = await Promise.allSettled([
       notificationWorker(),
-      runSchedulingAutomation(),
+      managedRead.then(() => runSchedulingAutomation()),
       canvasWorker(),
       personalWorkflowWorker(),
       canvasDocumentWorker(),
+      managedRead,
+      sheetSyncWorker(),
     ]);
     const response = Object.fromEntries(
       results.map((r, i) => [
         names[i],
         r.status === "fulfilled"
-          ? { status: "completed", result: r.value }
+          ? {
+              status:
+                Array.isArray(r.value) &&
+                r.value.some(
+                  (x) =>
+                    x && typeof x === "object" && "failed" in x && x.failed,
+                )
+                  ? "partial"
+                  : "completed",
+              result: r.value,
+            }
           : {
               status: "failed",
               error: `${names[i]} worker failed. Review its source status and latest successful run.`,

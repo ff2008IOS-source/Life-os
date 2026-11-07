@@ -2,6 +2,7 @@ import { it, expect, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import {
   academicContext,
+  conversationQuestion,
   prioritizeAssistantSources,
   type AcademicCandidate,
 } from "../src/lib/assistant/academic-context";
@@ -137,4 +138,44 @@ it("formats Canvas due dates in Vancouver and excludes practice or makeup items 
   expect(r.focus?.id).toBe("geog");
   expect(r.sources[1].text).toContain("Sunday, Nov 8");
   expect(r.sources[1].text).toContain("not necessarily exam start");
+});
+
+const courses = ["ECON 115", "PSYC 100", "GEOG104"];
+it("keeps an academic course through short follow-ups without requiring a picker", () => {
+  expect(
+    conversationQuestion(
+      "What topics are covered?",
+      "Yes\nTell me more\nThe ECON 115 exam",
+      courses,
+    ),
+  ).toContain("Conversation course: ECON 115");
+  expect(
+    conversationQuestion(
+      "Explain that again",
+      "PSYC 100 memory\nECON 115 inflation",
+      courses,
+    ),
+  ).toContain("PSYC 100");
+});
+it("honors an explicit course switch and global questions instead of sticky course assumptions", () => {
+  expect(conversationQuestion("Teach me PSYC 100", "ECON 115", courses)).toBe(
+    "Teach me PSYC 100",
+  );
+  expect(
+    conversationQuestion("Next exam across all courses", "ECON 115", courses),
+  ).toBe("Next exam across all courses");
+  expect(
+    conversationQuestion(
+      "What career tasks should I do today?",
+      "ECON 115",
+      courses,
+    ),
+  ).toBe("What career tasks should I do today?");
+  expect(
+    conversationQuestion(
+      "Explain it",
+      "Compare ECON 115 and PSYC 100",
+      courses,
+    ),
+  ).toBe("Explain it");
 });

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const [blocks, completions, summary] = await Promise.all([
       db
         .from("work_blocks")
-        .select("id,task_id,start_at,end_at,status,version")
+        .select("id,task_id,start_at,end_at,status,version,provider_event_id")
         .eq("user_id", user.id)
         .eq("status", "planned")
         .order("start_at")

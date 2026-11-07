@@ -66,6 +66,16 @@ const server = createServer((req, res) => {
         res.end(JSON.stringify(value));
       };
       // Test-only synthetic provider confirmation; this server is loopback-only and never deployed.
+      if (
+        url.pathname === "/__fixtures/reservation" &&
+        req.method === "DELETE"
+      ) {
+        await db.query(
+          "delete from work_blocks where user_id=$1 and id=$2 and provider_event_id like 'synthetic%'",
+          [uid, body.id],
+        );
+        return send(200, { ok: true });
+      }
       if (url.pathname === "/__fixtures/reservation" && req.method === "POST") {
         const row = await db.query(
           "insert into work_blocks(id,user_id,task_id,start_at,end_at,status,policy_version,provider_event_id,provider_etag) values($1,$2,$3,$4,$5,'planned',1,$6,'synthetic-etag') returning id,version",
@@ -196,6 +206,10 @@ const server = createServer((req, res) => {
           "career_entries",
           "canvas_deadlines",
           "canvas_records",
+          "sheet_sync_sources",
+          "sheet_sync_mappings",
+          "sheet_sync_outbox",
+          "managed_calendar_state",
           "canvas_documents",
           "canvas_document_chunks",
           "canvas_sync_jobs",

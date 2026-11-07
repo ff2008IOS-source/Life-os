@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { dbError } from "../http";
 import {
   academicContext,
+  conversationQuestion,
   courseCode,
   plainStudyText,
   type AcademicCandidate,
@@ -80,18 +81,22 @@ export async function assistantAcademicContext(
       url: "/areas/academics",
     });
   }
-  const result = academicContext(
-    /\b(it|that|those|this exam|the exam)\b/i.test(question)
-      ? question + " " + previousQuestion
-      : question,
-    candidates,
-  );
+  const selectionQuestion = conversationQuestion(question, previousQuestion, [
+    ...new Set(
+      [
+        ...(courses.data ?? []).map((c) => c.code),
+        ...(canvasCourses.data ?? []).map((c) => c.payload.course_code ?? ""),
+      ].map(courseCode),
+    ),
+  ]);
+  const result = academicContext(selectionQuestion, candidates);
   const sources: AssistantSource[] = [...result.sources];
   const normal = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   const explicit = canvasCourses.data?.find(
     (c) =>
-      normal(question).includes(courseCode(c.payload.course_code ?? "")) &&
-      courseCode(c.payload.course_code ?? "").length >= 4,
+      normal(selectionQuestion).includes(
+        courseCode(c.payload.course_code ?? ""),
+      ) && courseCode(c.payload.course_code ?? "").length >= 4,
   );
   const focus = result.materialFocus;
   const linked = focus

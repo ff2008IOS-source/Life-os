@@ -1,4 +1,5 @@
 "use client";
+import { ManagedCalendarPanel } from "./managed-calendar-panel";
 import { useState } from "react";
 import { Play, ShieldCheck, Clock3, TriangleAlert } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
@@ -48,6 +49,7 @@ export function SchedulingPanel() {
         </div>
       </div>
       <AutomationControl policy={policy} />
+      <ManagedCalendarPanel />
       <section className="panel">
         <div className="panel-heading">
           <div className="panel-title">

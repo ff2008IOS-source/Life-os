@@ -1,4 +1,5 @@
 import "server-only";
+import { schedulingEligible } from "../scheduling-eligibility";
 import { createHash } from "node:crypto";
 import { addDays, format } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";
@@ -15,6 +16,7 @@ export async function liveSchedule(
   policy: Policy,
   forceRefresh = false,
   workerUserId?: string,
+  writerLease?: string,
 ) {
   const { db, user } = await schedulingIdentity(workerUserId);
   const selected = await db
@@ -52,7 +54,7 @@ export async function liveSchedule(
       c.coverage_start > lower ||
       c.coverage_end < upper
     )
-      await syncCalendarForUser(user.id, c.id);
+      await syncCalendarForUser(user.id, c.id, writerLease);
   }
   const events: AvailabilityEvent[] = [];
   for (let page = 0; page < 20; page++) {
@@ -82,14 +84,14 @@ export async function liveSchedule(
     .from("integration_jobs")
     .select("id")
     .eq("user_id", user.id)
-    .eq("job_type", "calendar_reservation")
+    .in("job_type", ["calendar_reservation", "calendar_reschedule"])
     .eq("status", "running")
     .limit(1);
   dbError(pending.error);
   if (pending.data?.length)
     throw new ApiError(
       409,
-      "A reservation needs reconciliation. Use Undo for its recent run before creating another plan.",
+      "A calendar operation needs confirmation. Review pending moves or use Undo for a reservation run before creating another plan.",
     );
   const existing: ExistingBlock[] = [];
   for (let page = 0; page < 20; page++) {
@@ -121,6 +123,14 @@ export async function liveSchedule(
   const workspace = workerUserId
     ? await loadWorkspaceForUser(workerUserId)
     : await loadWorkspace();
+  const held = await db
+    .from("managed_calendar_state")
+    .select("task_id")
+    .eq("user_id", user.id)
+    .eq("planning_hold", true)
+    .limit(1000);
+  dbError(held.error);
+  const heldTasks = new Set((held.data ?? []).map((x) => x.task_id));
   const result = schedule({
     now: new Date().toISOString(),
     policy,
@@ -135,11 +145,11 @@ export async function liveSchedule(
       .map((t) => ({
         ...t,
         area: workspace.areas.find((a) => a.id === t.area_id)?.slug ?? null,
-        eligible:
-          t.scheduling_mode === "eligible" ||
-          !!workspace.projects.find(
-            (p) => p.id === t.project_id && p.status === "active",
-          )?.automation_enabled,
+        eligible: schedulingEligible(
+          t,
+          workspace.projects.find((p) => p.id === t.project_id),
+          heldTasks.has(t.id),
+        ),
       })),
   });
   const revision = createHash("sha256")
@@ -151,6 +161,7 @@ export async function liveSchedule(
         calendars: selected.data.map((c) => c.id),
         events,
         blocks: existing,
+        holds: [...heldTasks].sort(),
         policy,
       }),
     )

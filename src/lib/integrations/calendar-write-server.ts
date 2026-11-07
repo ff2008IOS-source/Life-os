@@ -21,10 +21,10 @@ import { policySchema, type ScheduleResult } from "../scheduler";
 const providerSchema = z
   .object({ id: z.string().min(1), etag: z.string().min(1) })
   .passthrough();
-async function googleWrite(
+export async function googleWrite(
   path: string,
   token: string,
-  method: "GET" | "POST" | "DELETE",
+  method: "GET" | "POST" | "DELETE" | "PATCH",
   body?: unknown,
   etag?: string,
 ) {
@@ -51,7 +51,10 @@ async function googleWrite(
     },
   );
 }
-async function lock<T>(userId: string, work: () => Promise<T>) {
+export async function withCalendarWriteLock<T>(
+  userId: string,
+  work: (lease: string) => Promise<T>,
+) {
   const token = randomUUID();
   if (
     !(await integrationRpc<boolean>("claim_calendar_write", {
@@ -64,7 +67,7 @@ async function lock<T>(userId: string, work: () => Promise<T>) {
       "Another reservation operation is running. Wait a few minutes before trying again.",
     );
   try {
-    return await work();
+    return await work(token);
   } finally {
     await integrationAdmin()
       .from("calendar_write_locks")
@@ -82,7 +85,7 @@ export async function setupDedicatedCalendar(connectionId: string) {
       "Reconnect with permission to create the separate Life OS calendar.",
       "WRITE_PERMISSION_REQUIRED",
     );
-  return lock(user.id, async () => {
+  return withCalendarWriteLock(user.id, async () => {
     const db = integrationAdmin();
     const existing = await db
       .from("calendars")
@@ -164,7 +167,7 @@ export async function setupDedicatedCalendar(connectionId: string) {
     return record.data;
   });
 }
-async function dedicated(userId: string) {
+export async function dedicatedCalendarForUser(userId: string) {
   const c = await integrationAdmin()
     .from("calendars")
     .select("id,connection_id,provider_calendar_id")
@@ -188,9 +191,9 @@ async function dedicated(userId: string) {
 }
 export async function applyReservations(runId: string, workerUserId?: string) {
   const { user } = await schedulingIdentity(workerUserId);
-  return lock(user.id, async () => {
+  return withCalendarWriteLock(user.id, async (writerLease) => {
     const db = integrationAdmin();
-    const calendar = await dedicated(user.id);
+    const calendar = await dedicatedCalendarForUser(user.id);
     const read = await db
       .from("scheduling_runs")
       .select("*")
@@ -210,7 +213,7 @@ export async function applyReservations(runId: string, workerUserId?: string) {
       );
     const proposal = run.proposal as ScheduleResult;
     const policy = policySchema.parse(proposal.policy);
-    const current = await liveSchedule(policy, true, workerUserId);
+    const current = await liveSchedule(policy, true, workerUserId, writerLease);
     if (current.revision !== run.input_revision)
       throw new ApiError(
         409,
@@ -365,9 +368,9 @@ export async function applyReservations(runId: string, workerUserId?: string) {
 }
 export async function undoReservations(runId: string) {
   const { user } = await authorized();
-  return lock(user.id, async () => {
+  return withCalendarWriteLock(user.id, async () => {
     const db = integrationAdmin();
-    const calendar = await dedicated(user.id);
+    const calendar = await dedicatedCalendarForUser(user.id);
     const jobs = await db
       .from("integration_jobs")
       .select("id,payload,status")

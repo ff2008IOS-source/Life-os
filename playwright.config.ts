@@ -9,7 +9,7 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:3000",
     headless: true,
     launchOptions: {
-      executablePath: "/usr/bin/chromium",
+      executablePath: process.env.CI ? undefined : "/usr/bin/chromium",
       args: ["--no-sandbox"],
     },
     trace: "retain-on-failure",

@@ -82,9 +82,22 @@ it("relinks an imported exam to its Canvas course and retrieves scope from a bod
       fetch: async (input) => {
         const u = new URL(String(input));
         if (u.pathname.includes("/rpc/"))
-          return new Response("[]", {
-            headers: { "Content-Type": "application/json" },
-          });
+          return new Response(
+            JSON.stringify([
+              {
+                file_id: "7",
+                chunk_index: 2,
+                page: 3,
+                title: "Current syllabus.pdf",
+                text: "[TEST] Retrieved PDF text: the exam scope is chapters 7 and 8.",
+                extracted_at: "2026-11-07T12:00:00Z",
+                truncated: false,
+              },
+            ]),
+            {
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         calls.push(u);
         let data: unknown[] = [];
         if (u.pathname.endsWith("/courses"))
@@ -154,10 +167,19 @@ it("relinks an imported exam to its Canvas course and retrieves scope from a bod
   expect(
     sources.some((s) => s.text.includes("UNVERIFIED imported record")),
   ).toBe(true);
+  expect(
+    sources.some(
+      (s) =>
+        s.id === "canvas:document:16929:7:3:2" && s.url?.endsWith("/files/7"),
+    ),
+  ).toBe(true);
   const { prepareGroqRequest } = await import("../src/lib/assistant/provider");
   const prompt = prepareGroqRequest(
     "What topics are on my next midterm?",
     sources,
+  );
+  expect(JSON.stringify(prompt.request.messages)).toContain(
+    "[TEST] Retrieved PDF text",
   );
   expect(JSON.stringify(prompt.request.messages)).toContain(
     "covers chapters 7 and 8",

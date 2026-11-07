@@ -22,7 +22,8 @@ export function WorkSessionsPanel({
     [error, setError] = useState(""),
     [page, setPage] = useState(0),
     [visible, setVisible] = useState(8),
-    [selected, setSelected] = useState<WorkBlock | null>(null);
+    [selected, setSelected] = useState<WorkBlock | null>(null),
+    [moving, setMoving] = useState<WorkBlock | null>(null);
   const query = new URLSearchParams({
     page: String(page),
     ...(start ? { start } : {}),
@@ -85,6 +86,15 @@ export function WorkSessionsPanel({
                     –{formatInTimeZone(block.end_at, TIMEZONE, "h:mm a")}
                   </p>
                 </div>
+                {block.provider_event_id && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setMoving(block)}
+                  >
+                    Move session
+                  </Button>
+                )}
                 <Button size="sm" onClick={() => setSelected(block)}>
                   Record work
                 </Button>
@@ -153,6 +163,21 @@ export function WorkSessionsPanel({
         <p role="alert" className="error-message">
           {error}
         </p>
+      )}
+      {moving && (
+        <MoveSessionDialog
+          block={moving}
+          onClose={() => setMoving(null)}
+          onSaved={async () => {
+            await refresh();
+            setState(
+              await calendarRequest<WorkState>(
+                "/api/v1/work/sessions?" + query,
+              ),
+            );
+            setMoving(null);
+          }}
+        />
       )}
       {selected && (
         <CompletionDialog
@@ -288,6 +313,102 @@ function CompletionDialog({
             {busy ? "Recording…" : "Save completed work"}
           </Button>
         </div>
+      </form>
+    </Modal>
+  );
+}
+
+function MoveSessionDialog({
+  block,
+  onClose,
+  onSaved,
+}: {
+  block: WorkBlock;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [requestId] = useState(() => crypto.randomUUID()),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <Modal
+      open
+      onOpenChange={(v) => !v && onClose()}
+      title="Move work session"
+      description="Choose a new time in Vancouver. Life OS checks current calendars, deadlines, breaks and the freeze window before updating only this dedicated-calendar event."
+    >
+      <form
+        className="academic-form"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          setBusy(true);
+          setError("");
+          try {
+            const start = vancouverInputInstant(String(f.get("start"))),
+              end = vancouverInputInstant(String(f.get("end")));
+            if (!start || !end)
+              throw Error("Enter a valid start and end time.");
+            await calendarRequest("/api/v1/calendar/managed/move", {
+              method: "POST",
+              body: JSON.stringify({
+                action: "move",
+                request_id: requestId,
+                block_id: block.id,
+                version: block.version,
+                start_at: start,
+                end_at: end,
+                confirmed: true,
+              }),
+            });
+            await onSaved();
+          } catch (e) {
+            setError(
+              e instanceof Error
+                ? e.message
+                : "The session could not be moved.",
+            );
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label>
+          Start (Vancouver)
+          <input
+            name="start"
+            type="datetime-local"
+            required
+            defaultValue={formatInTimeZone(
+              block.start_at,
+              TIMEZONE,
+              "yyyy-MM-dd'T'HH:mm",
+            )}
+          />
+        </label>
+        <label>
+          End (Vancouver)
+          <input
+            name="end"
+            type="datetime-local"
+            required
+            defaultValue={formatInTimeZone(
+              block.end_at,
+              TIMEZONE,
+              "yyyy-MM-dd'T'HH:mm",
+            )}
+          />
+        </label>
+        {error && (
+          <p className="error-message" role="alert">
+            {error}
+          </p>
+        )}
+        <Button type="submit" disabled={busy}>
+          {busy
+            ? "Checking and confirming…"
+            : "Confirm move in Google Calendar"}
+        </Button>
       </form>
     </Modal>
   );

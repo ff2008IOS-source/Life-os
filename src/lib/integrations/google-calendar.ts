@@ -16,6 +16,10 @@ export const googleEventSchema = z.object({
   etag: z.string().optional(),
   updated: z.iso.datetime({ offset: true }).optional(),
   recurringEventId: z.string().optional(),
+  recurrence: z.array(z.string()).optional(),
+  extendedProperties: z
+    .object({ private: z.record(z.string(), z.string()).optional() })
+    .optional(),
   originalStartTime: eventTime.optional(),
 });
 export type GoogleEvent = z.infer<typeof googleEventSchema>;
