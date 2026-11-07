@@ -1,3 +1,4 @@
+import { sheetsReadinessForUser } from "@/lib/integrations/sheets-readiness-server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authorized, ApiError } from "@/lib/auth";
@@ -53,6 +54,9 @@ export async function POST(request: Request) {
     const input = z
       .discriminatedUnion("action", [
         z
+          .object({ action: z.literal("probe"), connection_id: z.uuid() })
+          .strict(),
+        z
           .object({
             action: z.literal("register"),
             connection_id: z.uuid(),
@@ -93,6 +97,10 @@ export async function POST(request: Request) {
           .strict(),
       ])
       .parse(await readJson(request));
+    if (input.action === "probe")
+      return NextResponse.json(
+        await sheetsReadinessForUser(user.id, input.connection_id),
+      );
     const db = integrationAdmin();
     if (input.action === "register") {
       const grid = await readSyncSheet(

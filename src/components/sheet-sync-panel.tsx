@@ -89,6 +89,67 @@ export function SheetSyncPanel() {
         separate write permission are verified on a test workbook. Your existing
         career workbook remains read-only.
       </p>
+      <Button
+        variant="outline"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            const result = await calendarRequest<{ url: string }>(
+              "/api/v1/calendar/oauth/start",
+              {
+                method: "POST",
+                body: JSON.stringify({ sheets: true, sheets_write: true }),
+              },
+            );
+            window.location.assign(result.url);
+          } catch (e) {
+            setError(
+              e instanceof Error
+                ? e.message
+                : "Google authorization could not start.",
+            );
+            setBusy(false);
+          }
+        }}
+      >
+        Connect Sheets write permission
+      </Button>
+      <Button
+        variant="outline"
+        disabled={busy || !connections.length}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            const r = await calendarRequest<{ message: string }>(
+              "/api/v1/sheets/sync",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  action: "probe",
+                  connection_id: connections[0].id,
+                }),
+              },
+            );
+            setNotice(r.message);
+          } catch (e) {
+            setError(
+              e instanceof Error ? e.message : "Readiness check failed.",
+            );
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Check Sheets readiness
+      </Button>
+      <p className="form-hint">
+        Google requires a consent step before Life OS can edit spreadsheets.
+        Writes remain restricted to approved mappings and verified provider
+        safeguards.
+      </p>
       {state?.sources.map((s) => (
         <div key={s.id} className="stack">
           <strong>{s.title}</strong>

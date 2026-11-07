@@ -133,8 +133,27 @@ export function fileRelevance(
   title: string,
   question: string,
   assessment: string,
+  expectedCourse = "",
 ) {
   const t = title.toLowerCase();
+  const code = (v: string) =>
+    v
+      .match(/\b([a-z]{2,5})\s*(\d{3}[a-z]?)\b/i)
+      ?.slice(1)
+      .join("")
+      .toLowerCase();
+  const courseNumber = (v: string) =>
+    v.match(/\b[a-z]{2,30}\s*(\d{3}[a-z]?)\b/i)?.[1]?.toLowerCase();
+  if (
+    expectedCourse &&
+    ((code(title) &&
+      code(expectedCourse) &&
+      code(title) !== code(expectedCourse)) ||
+      (courseNumber(title) &&
+        courseNumber(expectedCourse) &&
+        courseNumber(title) !== courseNumber(expectedCourse)))
+  )
+    return -1000;
   const words =
     (question + " " + assessment).toLowerCase().match(/[a-z0-9]{3,}/g) ?? [];
   let score = /syllabus|outline/.test(t) ? 12 : 0;
@@ -153,6 +172,7 @@ export async function ensureCanvasDocument(
   course: string,
   question: string,
   assessment: string,
+  expectedCourse = "",
 ) {
   const db = canvasAdmin();
   const seeded = await db.rpc("canvas_seed_documents", { p_user: user });
@@ -166,7 +186,11 @@ export async function ensureCanvasDocument(
   dbError(rows.error);
   const ranked = (rows.data ?? [])
     .filter((d) => !["unsupported", "too_large", "no_text"].includes(d.state))
-    .map((d) => ({ ...d, score: fileRelevance(d.title, question, assessment) }))
+    .map((d) => ({
+      ...d,
+      score: fileRelevance(d.title, question, assessment, expectedCourse),
+    }))
+    .filter((d) => d.score > -1000)
     .sort((a, b) => b.score - a.score);
   const best = ranked[0];
   if (
@@ -176,6 +200,7 @@ export async function ensureCanvasDocument(
   )
     await processCanvasDocuments(user, course, best.canvas_file_id, 1);
   return {
+    preferred_file_id: best?.canvas_file_id ?? null,
     known_files: rows.data?.length ?? 0,
     truncated: (rows.data?.length ?? 0) > 100,
   };

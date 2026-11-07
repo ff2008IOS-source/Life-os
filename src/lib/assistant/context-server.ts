@@ -117,9 +117,22 @@ export async function assistantAcademicContext(
     ) ||
       explicit)
   ) {
-    let extraction = "available";
+    let extraction = "available",
+      preferredFile: string | null = null;
     try {
-      await ensureCanvasDocument(user, course, question, focus?.title ?? "");
+      const chosen = await ensureCanvasDocument(
+        user,
+        course,
+        question,
+        focus?.title ?? "",
+        courseCode(
+          canvasCourses.data?.find((c) => c.canvas_id === course)?.payload
+            .course_code ??
+            focus?.course ??
+            "",
+        ),
+      );
+      preferredFile = chosen.preferred_file_id;
     } catch {
       extraction =
         "File extraction could not complete; existing material remains available.";
@@ -158,6 +171,7 @@ export async function assistantAcademicContext(
     const found = await db.rpc("canvas_search_materials", {
       p_course: course,
       p_query: [...new Set(terms)].join(" OR "),
+      ...(preferredFile ? { p_file: preferredFile } : {}),
     });
     dbError(found.error);
     for (const document of found.data ?? [])
@@ -165,13 +179,13 @@ export async function assistantAcademicContext(
         id: `canvas:document:${course}:${document.file_id}:${document.page}:${document.chunk_index}`,
         title: `${document.title} · ${/\.pdf$/i.test(document.title) ? `page ${document.page}` : /\.pptx$/i.test(document.title) ? "retrieved slide text" : "retrieved text"}`,
         text: JSON.stringify({
-          excerpt: document.text,
           coverage: /answer|solution|practice|20(?:0\d|1\d|2[0-5])/i.test(
             document.title,
           )
             ? "Historical/practice material; does not prove current exam scope"
             : "Retrieved file text; exact current exam scope must be stated explicitly",
           truncated: document.truncated,
+          excerpt: document.text.slice(0, 1000),
         }),
         trust: "untrusted_extracted_document_text",
         retrieved_at: document.extracted_at,

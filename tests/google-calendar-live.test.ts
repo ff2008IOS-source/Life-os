@@ -8,6 +8,7 @@ import {
   authorizationUrl,
   requireReadScopes,
   CALENDAR_SCOPES,
+  SHEETS_WRITE_SCOPE,
 } from "@/lib/integrations/google-oauth";
 import {
   collectWindowEvents,
@@ -140,6 +141,23 @@ describe("read-only Google connection security", () => {
       true,
     );
     expect(() => requireReadScopes("openid email")).toThrow();
+    const write = new URL(
+      authorizationUrl(
+        "client",
+        "https://example.invalid",
+        attempt.state,
+        attempt.challenge,
+        true,
+        false,
+        true,
+      ),
+    );
+    expect(write.searchParams.get("scope")?.split(" ")).toContain(
+      SHEETS_WRITE_SCOPE,
+    );
+    expect(url.searchParams.get("scope")?.split(" ")).not.toContain(
+      SHEETS_WRITE_SCOPE,
+    );
   });
   it("collects every expanded page, deduplicates instances, and rejects failures before persistence", async () => {
     const calls: Record<string, string>[] = [];
