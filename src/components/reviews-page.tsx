@@ -1,6 +1,4 @@
 "use client";
-import { PersonalWorkflowsPanel } from "./personal-workflows-panel";
-import { WorkSessionsPanel } from "./work-sessions-panel";
 import { useState } from "react";
 import { startOfWeek, addDays, format } from "date-fns";
 import { BookOpen, ArrowLeft, ArrowRight, Check, Plus } from "lucide-react";
@@ -46,7 +44,7 @@ const steps = [
       "Choose a few realistic priorities. Saving a review does not create new tasks automatically.",
   },
 ] as const;
-export function ReviewsPage() {
+export function WrittenReviewsPage() {
   const { data, mutate, notify, pending } = useWorkspace();
   const [editing, setEditing] = useState<Review | null | undefined>(undefined);
   const [step, setStep] = useState(0);
@@ -95,6 +93,7 @@ export function ReviewsPage() {
         editing?.id ?? null,
         {
           ...fields,
+          conversation_summary: editing?.conversation_summary ?? "",
           period_start: period,
           period_end: end,
           completed_at: complete
@@ -133,7 +132,7 @@ export function ReviewsPage() {
       <div className="page-heading">
         <div>
           <span className="eyebrow">PAUSE. REFLECT. RESET.</span>
-          <h1>Your weekly review</h1>
+          <h2>Written reviews</h2>
           <p>A clearer next week starts with a little reflection.</p>
         </div>
         {editing === undefined && (
@@ -147,15 +146,6 @@ export function ReviewsPage() {
           </Button>
         )}
       </div>
-      <PersonalWorkflowsPanel />
-      <WorkSessionsPanel
-        compact
-        start={period}
-        end={format(
-          addDays(new Date(periodEnd + "T12:00:00"), 1),
-          "yyyy-MM-dd",
-        )}
-      />
       {editing === undefined ? (
         <section className="panel">
           <div className="panel-heading">

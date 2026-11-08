@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { taskInput, goalInput } from "@/lib/schemas";
+import { taskInput, goalInput, reviewInput } from "@/lib/schemas";
 import { isOverdue, localDate, deadlineInstant } from "@/lib/dates";
 import { goalProgress } from "@/lib/insights";
 import type { Goal } from "@/lib/schemas";
@@ -66,4 +66,17 @@ describe("recorded-data semantics", () => {
       goalProgress({ ...base, progress_type: "milestone" }, []).percent,
     ).toBeNull();
   });
+});
+
+it("preserves review summaries when an older client omits the new field", () => {
+  const input = reviewInput.parse({
+    period_start: "2026-11-02",
+    period_end: "2026-11-08",
+  });
+  expect(input.conversation_summary).toBeUndefined();
+  expect(JSON.stringify(input)).not.toContain("conversation_summary");
+  expect(
+    reviewInput.parse({ ...input, conversation_summary: "" })
+      .conversation_summary,
+  ).toBe("");
 });

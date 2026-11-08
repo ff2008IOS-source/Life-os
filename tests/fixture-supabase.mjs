@@ -185,6 +185,7 @@ const server = createServer((req, res) => {
           "goals",
           "milestones",
           "reviews",
+          "review_chat_links",
           "task_dependencies",
           "goal_tasks",
           "audit_logs",

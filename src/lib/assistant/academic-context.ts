@@ -173,6 +173,7 @@ export function prioritizeAssistantSources(
       question,
     );
   const score = (s: AssistantSource) => {
+    if (s.id.startsWith("review:saved:")) return 135;
     if (s.id.startsWith("history:")) return 75;
     if (s.id === "academics:upcoming")
       return academic ? 130 : career ? 20 : 100;

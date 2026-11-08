@@ -13,6 +13,7 @@ const tables = [
   "recurrence_rules",
   "task_occurrences",
   "reviews",
+  "review_chat_links",
   "audit_logs",
   "data_sources",
   "import_batches",
@@ -79,25 +80,28 @@ export async function GET() {
           "canvas_documents",
           "canvas_document_chunks",
         ].includes(table);
-        const key = documents
-          ? "course_canvas_id"
-          : table === "managed_calendar_state"
-            ? "block_id"
-            : ["canvas_records", "canvas_mappings"].includes(table)
-              ? "canvas_id"
-              : table === "assistant_usage"
-                ? "usage_day"
-                : table === "personal_workflow_settings"
-                  ? "workflow_type"
-                  : table === "canvas_sync_jobs"
-                    ? "job_key"
-                    : ["profiles", "assistant_settings"].includes(table)
-                      ? "user_id"
-                      : table === "goal_tasks"
-                        ? "goal_id"
-                        : table === "task_dependencies"
-                          ? "predecessor_task_id"
-                          : "id";
+        const key =
+          table === "review_chat_links"
+            ? "review_id"
+            : documents
+              ? "course_canvas_id"
+              : table === "managed_calendar_state"
+                ? "block_id"
+                : ["canvas_records", "canvas_mappings"].includes(table)
+                  ? "canvas_id"
+                  : table === "assistant_usage"
+                    ? "usage_day"
+                    : table === "personal_workflow_settings"
+                      ? "workflow_type"
+                      : table === "canvas_sync_jobs"
+                        ? "job_key"
+                        : ["profiles", "assistant_settings"].includes(table)
+                          ? "user_id"
+                          : table === "goal_tasks"
+                            ? "goal_id"
+                            : table === "task_dependencies"
+                              ? "predecessor_task_id"
+                              : "id";
         let query = db
           .from(table)
           .select("*")

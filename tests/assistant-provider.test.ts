@@ -177,3 +177,21 @@ it("guards the exact overconfident midterm and UTC-date failures rather than tru
     ).answer,
   ).toContain("Sunday, Nov 8");
 });
+it("uses a bounded one-question review mode without granting actions", () => {
+  const p = boundedPrompt(
+    "I finished my analysis. What next?",
+    [source],
+    "review",
+  );
+  expect(p.messages[0].content).toContain(
+    "exactly one focused follow-up question",
+  );
+  expect(p.messages[0].content).toContain("suggestions need owner approval");
+  expect(p.messages[0].content).toContain("untrusted data");
+  expect(
+    new TextEncoder().encode(p.messages.map((x) => x.content).join("")).length,
+  ).toBeLessThanOrEqual(4500);
+  expect(boundedPrompt("Q", []).messages[0].content).not.toContain(
+    "weekly accountability",
+  );
+});

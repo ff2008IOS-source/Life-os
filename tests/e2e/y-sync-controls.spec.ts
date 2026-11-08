@@ -127,7 +127,10 @@ test("controlled calendar moves show confirmation and spreadsheet settings keep 
   await expect(
     page.getByRole("heading", { name: "Mapped spreadsheet sync" }),
   ).toBeVisible();
-  await page.getByText("Connect a test workbook", { exact: true }).click();
+  await page
+    .getByText("Connect a test workbook", { exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Register read-only workbook" }),
   ).toBeVisible();

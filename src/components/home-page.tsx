@@ -1,8 +1,15 @@
 "use client";
 import Link from "next/link";
+import { todayPriorities, personalGreeting } from "@/lib/today-priorities";
+import { TaskEditor } from "./task-editor";
+import type { Task } from "@/lib/schemas";
 import { useEffect, useState } from "react";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
-import type { ConnectionState } from "@/lib/integrations/calendar-view";
+import { groupCalendarEvents } from "@/lib/integrations/calendar-layout";
+import type {
+  CalendarEvent,
+  ConnectionState,
+} from "@/lib/integrations/calendar-view";
 import {
   CalendarDays,
   CheckCheck,
@@ -62,7 +69,10 @@ export function HomePage() {
         if (
           selected.some(
             (c) =>
+              c.sync_error ||
               !c.last_synced_at ||
+              Date.now() - new Date(c.last_synced_at).getTime() >
+                26 * 3600000 ||
               !c.coverage_start ||
               !c.coverage_end ||
               localDate(c.coverage_start) > start ||
@@ -78,10 +88,12 @@ export function HomePage() {
           { cache: "no-store" },
         );
         if (!eventsResponse.ok) throw Error();
-        const result = (await eventsResponse.json()) as { events: unknown[] };
+        const result = (await eventsResponse.json()) as {
+          events: CalendarEvent[];
+        };
         if (live)
           setCalendarSummary({
-            count: result.events.length,
+            count: groupCalendarEvents(result.events).length,
             note: "Cached events · next 7 days",
           });
       } catch {
@@ -96,18 +108,18 @@ export function HomePage() {
       live = false;
     };
   }, []);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const now = new Date();
   const summary = taskSummary(data.tasks, now);
-  const priorities = [...summary.active]
-    .sort(
-      (a, b) =>
-        (a.priority_order ?? 100000) - (b.priority_order ?? 100000) ||
-        b.priority - a.priority ||
-        (a.due_date ?? a.due_at ?? "9999").localeCompare(
-          b.due_date ?? b.due_at ?? "9999",
-        ),
-    )
-    .slice(0, 3);
+  const ranked = todayPriorities(data, now);
+  const priorities = ranked.slice(0, 3).map((x) => x.task);
+  const next = ranked.find((x) => !x.blocked);
+  const linkedGoals = next
+    ? data.goalTasks
+        .filter((x) => x.task_id === next.task.id)
+        .flatMap((x) => data.goals.filter((g) => g.id === x.goal_id))
+    : [];
+  const project = data.projects.find((p) => p.id === next?.task.project_id);
   const upcoming = data.milestones
     .filter(
       (m) =>
@@ -188,13 +200,60 @@ export function HomePage() {
         <div>
           <span className="eyebrow">YOUR DAILY COMMAND CENTER</span>
           <h1>A little clarity for today.</h1>
-          <p>Make space for what matters. One next step at a time.</p>
+          <p>{personalGreeting(data.profile.display_name, now)}</p>
         </div>
         <span className="date-chip">
           <CalendarDays size={12} />
           {formatInTimeZone(now, TIMEZONE, "EEE, MMM d")}
         </span>
       </div>
+      <section
+        className="panel next-action"
+        aria-labelledby="next-action-title"
+      >
+        <div className="panel-heading">
+          <h2 id="next-action-title">Next best action</h2>
+          <Link href="/assistant" className="text-link">
+            Talk it through <ArrowRight size={12} />
+          </Link>
+        </div>
+        {next ? (
+          <>
+            <h3>Start: {next.task.title}</h3>
+            <p className="panel-description">
+              {next.reason}. Unfinished dependencies are excluded from this
+              recommendation.
+            </p>
+            <div className="flex-between">
+              <div className="small">
+                {project && (
+                  <Link href="/projects" className="text-link">
+                    Project: {project.name}
+                  </Link>
+                )}
+                {linkedGoals.map((g) => (
+                  <Link
+                    className="badge"
+                    key={g.id}
+                    href={`/goals#goal-${g.id}`}
+                  >
+                    {g.title}
+                  </Link>
+                ))}
+              </div>
+              <Button size="sm" onClick={() => setEditingTask(next.task)}>
+                Open task <ArrowRight size={12} />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <p className="panel-description">
+            {ranked.length
+              ? "Your active tasks have unfinished dependencies. Review them in the planner before starting."
+              : "No active task recorded. Capture a responsibility below when you’re ready."}
+          </p>
+        )}
+      </section>
       <div className="stats-grid">
         {stats.map((s) => (
           <div className={`stat-card ${s.className ?? ""}`} key={s.label}>
@@ -213,7 +272,7 @@ export function HomePage() {
             <div className="panel-heading">
               <div className="panel-title">
                 <Sun />
-                <h2>Today’s priorities</h2>
+                <h2>Today’s Top 3</h2>
                 <span className="count-pill">{priorities.length}</span>
               </div>
               <Link href="/planner" className="text-link">
@@ -222,11 +281,11 @@ export function HomePage() {
               </Link>
             </div>
             <p className="panel-description">
-              A focused shortlist from your active tasks. Reorder to make it
-              yours.
+              Ranked by deadline urgency, then priority and your preferred
+              order. Open a task to check dependencies and linked goals.
             </p>
             {priorities.length ? (
-              <TaskList tasks={priorities} reorder />
+              <TaskList tasks={priorities} />
             ) : (
               <EmptyState
                 compact
@@ -309,7 +368,7 @@ export function HomePage() {
                 const progress = goalProgress(g, data.milestones);
                 return (
                   <Link
-                    href="/goals"
+                    href={`/goals#goal-${g.id}`}
                     className="goal-row"
                     style={{ display: "block" }}
                     key={g.id}
@@ -358,6 +417,9 @@ export function HomePage() {
           </section>
         </div>
       </div>
+      {editingTask && (
+        <TaskEditor task={editingTask} onClose={() => setEditingTask(null)} />
+      )}
     </>
   );
 }
