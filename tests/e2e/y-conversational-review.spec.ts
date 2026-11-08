@@ -62,6 +62,7 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
   await page.goto("/reviews");
   await page
     .getByLabel("Review week starts", { exact: true })
+    .filter({ visible: true })
     .fill("2026-10-19");
   await page.getByRole("button", { name: "Start weekly conversation" }).click();
   await page
@@ -130,9 +131,11 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
   await page.keyboard.press("Escape");
   await page.reload();
   await page.getByRole("button", { name: /Resume week of Oct 19/ }).click();
-  await expect(page.getByLabel("Review summary", { exact: true })).toHaveValue(
-    /You recorded progress/,
-  );
+  await expect(
+    page
+      .getByLabel("Review summary", { exact: true })
+      .filter({ visible: true }),
+  ).toHaveValue(/You recorded progress/);
   for (const viewport of [
     { width: 1280, height: 900 },
     { width: 1024, height: 768 },
