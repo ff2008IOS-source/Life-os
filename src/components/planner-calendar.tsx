@@ -3,7 +3,12 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { addDays, format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { RefreshCw, SlidersHorizontal, CalendarDays } from "lucide-react";
+import {
+  RefreshCw,
+  SlidersHorizontal,
+  CalendarDays,
+  AlertTriangle,
+} from "lucide-react";
 import { useCalendar } from "./use-calendar";
 import { Button } from "./ui/button";
 import { Modal } from "./dialog";
@@ -13,6 +18,11 @@ import {
   layoutDay,
   type EventGroup,
 } from "@/lib/integrations/calendar-layout";
+import {
+  calendarKind,
+  calendarKindLabel,
+  sessionOverlaps,
+} from "@/lib/integrations/calendar-display";
 import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
 export function PlannerCalendar({
@@ -22,6 +32,7 @@ export function PlannerCalendar({
   tasks,
   onTask,
   onDay,
+  onManageSession,
 }: {
   days: Date[];
   view: string;
@@ -29,13 +40,16 @@ export function PlannerCalendar({
   tasks: Task[];
   onTask: (task: Task) => void;
   onDay: (day: Date) => void;
+  onManageSession: () => void;
 }) {
+  const [now] = useState(() => Date.now());
   const from = format(days[0], "yyyy-MM-dd");
   const until = format(addDays(days.at(-1)!, 1), "yyyy-MM-dd");
   const { data, events, error, busy, message, sync } = useCalendar(from, until);
   const [filters, setFilters] = useState(false),
     [hidden, setHidden] = useState<string[]>([]),
     [group, setGroup] = useState(true),
+    [kind, setKind] = useState("all"),
     [details, setDetails] = useState<EventGroup | null>(null),
     [dayDetail, setDayDetail] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -43,8 +57,13 @@ export function PlannerCalendar({
     if (scroller.current) scroller.current.scrollTop = 7 * 36;
   }, [view]);
   const calendars = data?.calendars.filter((c) => c.sync_enabled) ?? [];
+  const allGroups = groupCalendarEvents(events, group);
   const groups = groupCalendarEvents(
-    events.filter((e) => !hidden.includes(e.calendar_id)),
+    events.filter(
+      (e) =>
+        !hidden.includes(e.calendar_id) &&
+        (kind === "all" || calendarKind(e) === kind),
+    ),
     group,
   );
   const name = (id: string) =>
@@ -54,7 +73,9 @@ export function PlannerCalendar({
     "#407BEE";
   const due = (day: string) =>
     tasks.filter(
-      (t) => (t.due_date ?? (t.due_at ? localDate(t.due_at) : null)) === day,
+      (t) =>
+        (kind === "all" || kind === "deadlines") &&
+        (t.due_date ?? (t.due_at ? localDate(t.due_at) : null)) === day,
     );
   const on = (day: string) => groups.filter((g) => eventOnDate(g.event, day));
   const stamps = calendars
@@ -62,6 +83,8 @@ export function PlannerCalendar({
     .filter((s): s is string => !!s)
     .sort();
   const last = stamps.length === calendars.length ? stamps[0] : null;
+  const failed = calendars.filter((c) => c.sync_error).length;
+  const stale = !last || now - Date.parse(last) > 26 * 3600000;
   const selectedDay = format(anchor, "yyyy-MM-dd");
   const coverageMissing = calendars.some(
     (c) =>
@@ -73,12 +96,12 @@ export function PlannerCalendar({
   const eventButton = (g: EventGroup, short = false) => (
     <button
       key={g.id}
-      className="calendar-event-chip"
+      className={`calendar-event-chip ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
       onClick={() => {
         setDayDetail(null);
         setDetails(g);
       }}
-      title={`${g.event.title} · ${eventTimeLabel(g.event)} · ${g.sources.map((s) => name(s.calendar_id)).join(", ")}`}
+      title={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((s) => name(s.calendar_id)).join(", ")}`}
       style={{ borderLeftColor: color(g) }}
     >
       <span>
@@ -116,7 +139,7 @@ export function PlannerCalendar({
         <span className="agenda-row-content">
           <strong>{g.event.title || "Untitled event"}</strong>
           <small>
-            {eventTimeLabel(g.event)} ·{" "}
+            {calendarKindLabel(g.event)} · {eventTimeLabel(g.event)} ·{" "}
             {g.sources.map((s) => name(s.calendar_id)).join(", ")}
           </small>
         </span>
@@ -130,11 +153,13 @@ export function PlannerCalendar({
     <div className="planner-calendar">
       <div className="calendar-status-bar">
         <div className="calendar-status-text">
-          <span className={`status-dot ${last ? "ready" : ""}`} />
+          <span
+            className={`status-dot ${last && !stale && !failed ? "ready" : ""}`}
+          />
           <span>
             {data
               ? calendars.length
-                ? `${calendars.length} calendars · ${last ? "Updated " + formatInTimeZone(last, "America/Vancouver", "h:mm a") : "Sync needed"}`
+                ? `${calendars.length} calendars · ${last ? "Checked " + formatInTimeZone(last, "America/Vancouver", "MMM d, h:mm a") + (stale ? " · stale" : "") : "Sync needed"}`
                 : "No calendars selected"
               : "Loading calendars…"}
           </span>
@@ -160,34 +185,63 @@ export function PlannerCalendar({
           </Button>
         </div>
       </div>
+      {!!calendars.length && (
+        <div className="calendar-source-legend" aria-label="Calendar sources">
+          {calendars.map((c) => (
+            <button
+              key={c.id}
+              aria-pressed={!hidden.includes(c.id)}
+              className={
+                hidden.includes(c.id) ? "source-filter muted" : "source-filter"
+              }
+              onClick={() =>
+                setHidden((old) =>
+                  old.includes(c.id)
+                    ? old.filter((x) => x !== c.id)
+                    : [...old, c.id],
+                )
+              }
+            >
+              <span
+                className="calendar-source-dot"
+                style={{ background: c.color ?? "#407BEE" }}
+              />
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="calendar-kind-legend" aria-label="Event types">
+        {[
+          ["all", "All"],
+          ["commitments", "Commitments"],
+          ["sessions", "Work sessions"],
+          ["deadlines", "Deadlines"],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            title={
+              value === "deadlines"
+                ? "Task deadlines. Canvas deadlines are listed below the calendar."
+                : undefined
+            }
+            aria-pressed={kind === value}
+            onClick={() => setKind(value)}
+          >
+            <span
+              aria-hidden="true"
+              className={`calendar-kind-marker kind-${value}`}
+            />
+            {label}
+          </button>
+        ))}
+      </div>
       {filters && (
         <div className="calendar-filter-panel">
-          <div className="calendar-filter-chips">
-            {calendars.map((c) => (
-              <button
-                key={c.id}
-                aria-pressed={!hidden.includes(c.id)}
-                className={
-                  hidden.includes(c.id)
-                    ? "source-filter muted"
-                    : "source-filter"
-                }
-                onClick={() =>
-                  setHidden((old) =>
-                    old.includes(c.id)
-                      ? old.filter((x) => x !== c.id)
-                      : [...old, c.id],
-                  )
-                }
-              >
-                <span
-                  className="calendar-source-dot"
-                  style={{ background: c.color ?? "#407BEE" }}
-                />
-                {c.name}
-              </button>
-            ))}
-          </div>
+          <p className="small muted">
+            Display filters only. Hidden commitments still constrain scheduling.
+            Overlap warnings include hidden sources.
+          </p>
           <label className="inline-check">
             <input
               type="checkbox"
@@ -209,6 +263,12 @@ export function PlannerCalendar({
       {message && (
         <p className="calendar-inline-alert" role="status">
           {message}
+        </p>
+      )}
+      {!!failed && (
+        <p className="calendar-inline-alert error-message" role="status">
+          {failed} calendar source check{failed === 1 ? "" : "s"} failed. Cached
+          entries may be out of date. Check sync settings.
         </p>
       )}
       {coverageMissing && (
@@ -301,7 +361,9 @@ export function PlannerCalendar({
           {!on(selectedDay).length && !due(selectedDay).length && (
             <p className="calendar-empty">
               <CalendarDays size={24} />
-              No cached commitments for this day.
+              {kind !== "all" || hidden.length
+                ? "No entries match these display filters."
+                : "No cached commitments for this day."}
             </p>
           )}
         </div>
@@ -401,6 +463,7 @@ export function PlannerCalendar({
                 </div>
                 {days.map((d) => {
                   const day = format(d, "yyyy-MM-dd");
+                  const overlaps = sessionOverlaps(allGroups, day);
                   return (
                     <div
                       key={day}
@@ -409,12 +472,13 @@ export function PlannerCalendar({
                       {layoutDay(groups, day).map((g) => (
                         <button
                           key={g.id}
-                          className="time-event"
+                          className={`time-event ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
+                          aria-label={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((s) => name(s.calendar_id)).join(", ")}${overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
                           onClick={() => {
                             setDayDetail(null);
                             setDetails(g);
                           }}
-                          title={`${g.event.title} · ${eventTimeLabel(g.event)}`}
+                          title={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)}${overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
                           style={{
                             top: g.start * 0.6,
                             height: Math.max(20, (g.end - g.start) * 0.6 - 2),
@@ -424,13 +488,17 @@ export function PlannerCalendar({
                             background: `color-mix(in srgb, ${color(g)} 17%, var(--surface))`,
                           }}
                         >
+                          {overlaps.has(g.id) && (
+                            <AlertTriangle
+                              size={12}
+                              className="calendar-overlap-icon"
+                              aria-label="Overlaps a busy entry"
+                            />
+                          )}
                           <strong>{g.event.title || "Untitled event"}</strong>
                           <small>
-                            {formatInTimeZone(
-                              g.event.start_at!,
-                              "America/Vancouver",
-                              "h:mm a",
-                            )}
+                            {g.event.work_session ? "Work · " : ""}
+                            {eventTimeLabel(g.event)}
                             {g.sources.length > 1
                               ? ` · ${g.sources.length} calendars`
                               : ""}
@@ -446,7 +514,10 @@ export function PlannerCalendar({
         </>
       )}
       <div className="calendar-footnote">
-        <span>Google events are read-only · Deadlines don’t reserve time</span>
+        <span>
+          Imported commitments stay protected · Task deadlines don’t reserve
+          time
+        </span>
         <Link href="/settings?section=integrations">Sync settings</Link>
       </div>
       {details && (
@@ -456,10 +527,34 @@ export function PlannerCalendar({
           onOpenChange={(open) => {
             if (!open) setDetails(null);
           }}
-          description="Original Google event details. Calendar writes are disabled."
+          description={
+            details.event.work_session
+              ? "Linked Life OS reservation. Changes use the existing session controls and provider checks."
+              : "Imported commitment. Life OS keeps this source event protected."
+          }
         >
           <div className="event-detail">
-            <span className="badge">Read-only Google event</span>
+            <span className="badge">
+              {details.event.work_session
+                ? calendarKindLabel(details.event)
+                : "Read-only Google event"}
+            </span>
+            {details.event.work_session && (
+              <>
+                <p className="small muted">
+                  Life OS reservation · {details.event.work_session.status}
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDetails(null);
+                    onManageSession();
+                  }}
+                >
+                  Manage work session
+                </Button>
+              </>
+            )}
             <p>
               {details.event.all_day_start ??
                 formatInTimeZone(
@@ -509,7 +604,9 @@ export function PlannerCalendar({
               </button>
             ))}
             {!on(dayDetail).length && !due(dayDetail).length && (
-              <p className="muted">No entries for this day.</p>
+              <p className="muted">
+                No entries match this day and these display filters.
+              </p>
             )}
           </div>
         </Modal>

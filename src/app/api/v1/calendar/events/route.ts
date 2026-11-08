@@ -1,3 +1,5 @@
+import { calendarDisplayEvents } from "@/lib/integrations/calendar-display-server";
+import type { CalendarEvent } from "@/lib/integrations/calendar-view";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { fromZonedTime } from "date-fns-tz";
@@ -23,7 +25,7 @@ export async function GET(request: Request) {
       .eq("sync_enabled", true);
     dbError(error);
     if (!calendars?.length) return NextResponse.json({ events: [] });
-    const events = [];
+    const events: CalendarEvent[] = [];
     const lower = fromZonedTime(
       range.start + "T00:00:00",
       "America/Vancouver",
@@ -52,7 +54,10 @@ export async function GET(request: Request) {
       dbError(result.error);
       events.push(...(result.data ?? []));
       if (!result.data || result.data.length < 500)
-        return NextResponse.json({ events });
+        return NextResponse.json(
+          { events: await calendarDisplayEvents(db, user.id, events) },
+          { headers: { "Cache-Control": "no-store" } },
+        );
     }
     throw Error(
       "Calendar display limit exceeded; no truncated results returned.",
