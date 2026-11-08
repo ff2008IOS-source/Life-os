@@ -45,6 +45,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     .selectOption("completed");
   await page
     .getByText("[TEST] Persistent browser task", { exact: true })
+    .filter({ visible: true })
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
@@ -57,6 +58,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     .selectOption("deleted");
   await page
     .getByText("[TEST] Persistent browser task", { exact: true })
+    .filter({ visible: true })
     .click();
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await expect(page.getByText("Task restored", { exact: true })).toBeVisible();
@@ -223,8 +225,12 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   await page.getByRole("tab", { name: /Tasks/ }).click();
   await page
     .getByText("[TEST] Recurring browser task", { exact: true })
+    .filter({ visible: true })
     .click();
-  await page.getByText(/Recurring occurrences.*optional/).click();
+  await page
+    .getByText(/Recurring occurrences.*optional/)
+    .filter({ visible: true })
+    .click();
   await page
     .getByRole("textbox", { name: "Date-only RRULE" })
     .fill("FREQ=DAILY;COUNT=3");
@@ -235,8 +241,12 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page
     .getByText("[TEST] Recurring browser task", { exact: true })
+    .filter({ visible: true })
     .click();
-  await page.getByText(/Recurring occurrences.*configured/).click();
+  await page
+    .getByText(/Recurring occurrences.*configured/)
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Complete", exact: true }),
   ).toHaveCount(3);
