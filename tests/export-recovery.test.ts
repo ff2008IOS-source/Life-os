@@ -63,6 +63,13 @@ beforeAll(async () => {
       [block],
     );
     await source.exec("reset role");
+    const review = (
+      await source.query<{ id: string }>(
+        "insert into reviews(user_id,period_start,period_end,achievements,conversation_summary)values($1,'2026-11-02','2026-11-08','Owner notes','Reviewed reflection')returning id",
+        [owner],
+      )
+    ).rows[0].id;
+    await source.query("select ensure_review_chat($1,$2)", [owner, review]);
     const tables = await source.query<{ table_name: string }>(
       "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts')",
     );
@@ -84,6 +91,8 @@ describe("offline JSON user-export recovery", () => {
     expect(result.content_matches).toBe(true);
     expect(result.table_counts.tasks).toBe(2);
     expect(result.table_counts.work_completions).toBe(1);
+    expect(result.table_counts.review_chat_links).toBe(1);
+    expect(result.table_counts.assistant_conversations).toBe(1);
     expect(result.table_counts.study_sessions).toBe(1);
     expect(result.table_counts.audit_logs).toBe(
       fixture.records.audit_logs.length,

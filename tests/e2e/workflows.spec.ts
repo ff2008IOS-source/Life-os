@@ -81,6 +81,10 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     page.getByText("Proposed sessions", { exact: true }),
   ).toHaveCount(0);
   await page.goto("/reviews");
+  await page
+    .getByText("Written review form and older reflections", { exact: true })
+    .filter({ visible: true })
+    .click();
   await page.getByRole("button", { name: "Start review", exact: true }).click();
   await page
     .getByRole("textbox", { name: "What moved forward?" })
@@ -90,6 +94,10 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     page.getByText("Review draft saved", { exact: true }),
   ).toBeVisible();
   await page.reload();
+  await page
+    .getByText("Written review form and older reflections", { exact: true })
+    .filter({ visible: true })
+    .click();
   await page.getByRole("button", { name: /Week of/ }).click();
   await expect(
     page.getByRole("textbox", { name: "What moved forward?" }),

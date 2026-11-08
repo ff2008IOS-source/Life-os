@@ -21,10 +21,16 @@ export function TaskEditor({
   task,
   onClose,
   defaultArea,
+  defaultTitle = "",
+  defaultDescription = "",
+  onCreated,
 }: {
   task: Task | null;
   onClose: () => void;
   defaultArea?: string;
+  defaultTitle?: string;
+  defaultDescription?: string;
+  onCreated?: (task: Task) => void;
 }) {
   const { data, mutate, notify, request, refresh, pending } = useWorkspace();
   const [context, setContext] = useState<{
@@ -85,9 +91,15 @@ export function TaskEditor({
         priority_order: task?.priority_order ?? null,
         deleted_at: task?.deleted_at ?? null,
       };
-      await mutate("tasks", task?.id ?? null, values, task?.version);
+      const saved = (await mutate(
+        "tasks",
+        task?.id ?? null,
+        values,
+        task?.version,
+      )) as { data: Task };
       notify(task ? "Task updated" : "Task captured");
-      onClose();
+      if (!task && onCreated) onCreated(saved.data);
+      else onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save task.");
     }
@@ -127,7 +139,7 @@ export function TaskEditor({
           Title
           <input
             name="title"
-            defaultValue={task?.title ?? ""}
+            defaultValue={task?.title ?? defaultTitle}
             required
             maxLength={200}
             autoFocus
@@ -138,7 +150,7 @@ export function TaskEditor({
           Notes
           <textarea
             name="description"
-            defaultValue={task?.description ?? ""}
+            defaultValue={task?.description ?? defaultDescription}
             placeholder="Context, links, or a first step…"
             maxLength={10000}
           />

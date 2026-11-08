@@ -9,7 +9,7 @@ import { HomePage } from "@/components/home-page";
 import { PlannerPage } from "@/components/planner-page";
 import { AreasPage } from "@/components/areas-page";
 import { GoalsPage } from "@/components/goals-page";
-import { ReviewsPage } from "@/components/reviews-page";
+import { ReviewsPage } from "@/components/conversational-reviews-page";
 import { InsightsPage } from "@/components/insights-page";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { SettingsPage } from "@/components/settings-page";

@@ -31,7 +31,14 @@ type Exchange = {
   sources: AssistantSource[];
   error: string | null;
 };
-export function AssistantPage() {
+export function AssistantPage({
+  review,
+  onReply,
+}: {
+  review?: { id: string; period_start: string };
+  onReply?: (reply: AssistantReply) => void;
+} = {}) {
+  const endpoint = "/api/v1/assistant" + (review ? "?review=" + review.id : "");
   const [state, setState] = useState<State | null>(null),
     [conversation, setConversation] = useState<Conversation | null>(null),
     [question, setQuestion] = useState(""),
@@ -86,7 +93,7 @@ export function AssistantPage() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     const refresh = setTimeout(
       () => {
-        void calendarRequest<State>("/api/v1/assistant")
+        void calendarRequest<State>(endpoint)
           .then(setState)
           .catch(() => {});
       },
@@ -96,29 +103,29 @@ export function AssistantPage() {
       clearInterval(timer);
       clearTimeout(refresh);
     };
-  }, [state?.limits?.reason, retryAt]);
+  }, [state?.limits?.reason, retryAt, endpoint]);
   const intent = useRef<{
     id: string;
     question: string;
     conversation: string | null;
     course: string | null;
   } | null>(null);
-  const reload = async () =>
-    setState(await calendarRequest<State>("/api/v1/assistant"));
+  const reload = async () => setState(await calendarRequest<State>(endpoint));
   async function history(id: string) {
-    setExchanges(
-      (
-        await calendarRequest<{ exchanges: Exchange[] }>(
-          `/api/v1/assistant?conversation=${id}`,
-        )
-      ).exchanges,
+    const h = await calendarRequest<{ exchanges: Exchange[] }>(
+      `/api/v1/assistant?conversation=${id}`,
     );
+    setExchanges(h.exchanges);
+    const last = [...h.exchanges]
+      .reverse()
+      .find((e) => e.status === "completed" && e.response);
+    if (last?.response) onReply?.(last.response);
   }
   useEffect(() => {
     let active = true;
     void (async () => {
       try {
-        const d = await calendarRequest<State>("/api/v1/assistant");
+        const d = await calendarRequest<State>(endpoint);
         if (!active) return;
         setState(d);
         const c = d.conversations[0];
@@ -129,6 +136,10 @@ export function AssistantPage() {
           if (active) {
             setConversation(c);
             setExchanges(h.exchanges);
+            const last = [...h.exchanges]
+              .reverse()
+              .find((e) => e.status === "completed" && e.response);
+            if (last?.response) onReply?.(last.response);
           }
         }
       } catch (e) {
@@ -138,7 +149,7 @@ export function AssistantPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [endpoint, onReply]);
   useEffect(() => {
     if (exchanges.length || sending)
       messages.current?.scrollTo({
@@ -177,6 +188,7 @@ export function AssistantPage() {
       }>("/api/v1/assistant", {
         method: "POST",
         body: JSON.stringify({
+          ...(review ? { review_id: review.id } : {}),
           request_id: intent.current.id,
           conversation_id: conversation?.id ?? null,
           course_canvas_id: courseId,
@@ -222,24 +234,30 @@ export function AssistantPage() {
     >
       <div className="assistant-header">
         <div>
-          <h1>Life OS assistant</h1>
-          <p>Your work, courses and goals — connected.</p>
+          {review ? <h2>Weekly conversation</h2> : <h1>Life OS assistant</h1>}
+          <p>
+            {review
+              ? "One question at a time, grounded in your recorded week."
+              : "Your work, courses and goals — connected."}
+          </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={() => {
-            setConversation(null);
-            setExchanges([]);
-            setQuestion("");
-            setError("");
-            intent.current = null;
-          }}
-        >
-          <Plus size={16} />
-          New chat
-        </Button>
+        {!review && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => {
+              setConversation(null);
+              setExchanges([]);
+              setQuestion("");
+              setError("");
+              intent.current = null;
+            }}
+          >
+            <Plus size={16} />
+            New chat
+          </Button>
+        )}
       </div>
       <div className="assistant-tools">
         <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
@@ -430,23 +448,30 @@ export function AssistantPage() {
       >
         {!exchanges.length && !sending && (
           <div className="assistant-welcome">
-            <h2>What’s on your mind?</h2>
+            <h2>
+              {review ? "Let’s review your week." : "What’s on your mind?"}
+            </h2>
             <p>
-              Ask naturally. I’ll look across your saved courses and work for
-              relevant information.
+              {review
+                ? "Start with what moved forward. We’ll explore missed commitments and choose realistic next priorities, one question at a time."
+                : "Ask naturally. I’ll look across your saved courses and work for relevant information."}
             </p>
             <div className="assistant-prompts">
-              {["What’s on my next exam?", "What should I focus on today?"].map(
-                (prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => setQuestion(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ),
-              )}
+              {(review
+                ? [
+                    "Help me review what moved forward this week.",
+                    "Summarize our review and propose next priorities.",
+                  ]
+                : ["What’s on my next exam?", "What should I focus on today?"]
+              ).map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => setQuestion(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
           </div>
         )}

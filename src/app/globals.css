@@ -3590,3 +3590,59 @@ input[type="checkbox"] {
   opacity: 1;
   text-decoration: line-through;
 }
+
+/* Connected Home and weekly review controls share existing compact panels. */
+.next-action {
+  margin-bottom: 20px;
+}
+.next-action h3 {
+  overflow-wrap: anywhere;
+}
+.next-action .flex-between {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.next-action .badge {
+  margin: 4px;
+  white-space: normal;
+}
+.weekly-review-start {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.weekly-review-start label {
+  display: grid;
+  gap: 6px;
+}
+.review-opening {
+  margin: 16px 0;
+  font-weight: 600;
+}
+.review-proposals {
+  display: grid;
+  gap: 12px;
+}
+.review-proposals .setting-line {
+  gap: 12px;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+.written-review-fallback > summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.written-review-fallback .page-heading {
+  margin-top: 24px;
+}
+[id^="goal-"] {
+  scroll-margin-top: 90px;
+}
+@media (max-width: 640px) {
+  .weekly-review-start {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

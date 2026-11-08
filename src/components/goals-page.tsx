@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Target, Flag, ArrowUpRight } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
-import { EmptyState } from "./task-list";
+import { EmptyState, TaskList } from "./task-list";
 import { EntityEditor, type EntityEditorState } from "./entity-editor";
 import { goalProgress } from "@/lib/insights";
 import { friendlyDate } from "@/lib/dates";
@@ -48,7 +48,7 @@ export function GoalsPage() {
             );
             const area = data.areas.find((a) => a.id === g.area_id);
             return (
-              <article className="entity-card" key={g.id}>
+              <article id={`goal-${g.id}`} className="entity-card" key={g.id}>
                 <div className="flex-between full-width">
                   <span className="section-icon">
                     <Target />
@@ -123,6 +123,28 @@ export function GoalsPage() {
                   <Plus size={12} />
                   Add milestone
                 </Button>
+                <details className="full-width">
+                  <summary>
+                    Linked tasks (
+                    {data.goalTasks.filter((x) => x.goal_id === g.id).length})
+                  </summary>
+                  {data.goalTasks.some((x) => x.goal_id === g.id) ? (
+                    <TaskList
+                      tasks={data.tasks.filter(
+                        (t) =>
+                          !t.deleted_at &&
+                          data.goalTasks.some(
+                            (x) => x.goal_id === g.id && x.task_id === t.id,
+                          ),
+                      )}
+                    />
+                  ) : (
+                    <p className="small muted">
+                      Link an existing task to this goal in the task editor.
+                      Completion is recorded once across your workspace.
+                    </p>
+                  )}
+                </details>
                 <div className="card-footer">
                   <span>{friendlyDate(g.target_date)}</span>
                   <Button

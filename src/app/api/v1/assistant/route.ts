@@ -1,3 +1,7 @@
+import {
+  reviewContext,
+  savedReviewContext,
+} from "@/lib/assistant/review-context";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authorized, ApiError } from "@/lib/auth";
@@ -33,6 +37,28 @@ export async function GET(request: Request) {
         { headers: { "Cache-Control": "no-store" } },
       );
     }
+    const reviewId = new URL(request.url).searchParams.get("review");
+    let reviewConversation: string | null = null;
+    if (reviewId) {
+      z.uuid().parse(reviewId);
+      const link = await db
+        .from("review_chat_links")
+        .select("conversation_id")
+        .eq("user_id", user.id)
+        .eq("review_id", reviewId)
+        .maybeSingle();
+      dbError(link.error);
+      reviewConversation = link.data?.conversation_id ?? null;
+    }
+    let conversationRequest = db
+      .from("assistant_conversations")
+      .select("id,title,course_canvas_id,created_at")
+      .eq("user_id", user.id);
+    if (reviewId)
+      conversationRequest = conversationRequest.eq(
+        "id",
+        reviewConversation ?? "00000000-0000-4000-8000-000000000000",
+      );
     const [settings, conversations, usage, courses, limits] = await Promise.all(
       [
         db
@@ -40,12 +66,7 @@ export async function GET(request: Request) {
           .select("enabled,free_plan_confirmed,daily_limit")
           .eq("user_id", user.id)
           .maybeSingle(),
-        db
-          .from("assistant_conversations")
-          .select("id,title,course_canvas_id,created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(30),
+        conversationRequest.order("created_at", { ascending: false }).limit(30),
         db
           .from("assistant_usage")
           .select("requests,reserved_tokens")
@@ -69,7 +90,9 @@ export async function GET(request: Request) {
         configured: !!process.env.GROQ_API_KEY,
         limits: limits.data,
         settings: settings.data,
-        conversations: conversations.data,
+        conversations: reviewId
+          ? conversations.data?.filter((c) => c.id === reviewConversation)
+          : conversations.data,
         usage: usage.data,
         courses: courses.data?.map((c) => ({
           id: c.canvas_id,
@@ -133,6 +156,7 @@ export async function POST(request: Request) {
     userId = user.id;
     const x = z
       .object({
+        review_id: z.uuid().optional(),
         request_id: z.uuid(),
         conversation_id: z.uuid().nullable(),
         course_canvas_id: z.string().regex(/^\d+$/).nullable(),
@@ -147,6 +171,22 @@ export async function POST(request: Request) {
         503,
         "Groq is not configured on this deployment. Core Life OS remains available.",
       );
+    let reviewSources: AssistantSource[] = [];
+    if (x.review_id) {
+      reviewSources = await reviewContext(db, user.id, x.review_id);
+      const linked = await serverAdmin().rpc("ensure_review_chat", {
+        p_user: user.id,
+        p_review: x.review_id,
+      });
+      dbError(linked.error);
+      if (x.conversation_id && x.conversation_id !== linked.data)
+        throw new ApiError(
+          409,
+          "The conversation does not belong to this review.",
+        );
+      x.conversation_id = linked.data;
+      x.course_canvas_id = null;
+    }
     const rate = await db.rpc("assistant_rate_status");
     dbError(rate.error);
     const limits = rate.data as AssistantLimits;
@@ -161,6 +201,13 @@ export async function POST(request: Request) {
     if (!existing.data && limits.reason && limits.reason !== "tokens")
       return limitResponse(limits);
     const sources: AssistantSource[] = [];
+    if (
+      !x.review_id &&
+      /\b(review|debrief|last week|previous week|commitment)\b/i.test(
+        x.question,
+      )
+    )
+      sources.push(...(await savedReviewContext(db, user.id)));
     const history = await db
       .from("assistant_exchanges")
       .select("id,question,response,created_at")
@@ -242,13 +289,21 @@ export async function POST(request: Request) {
     const contextQuestion = /\b(it|that|those)\b/i.test(x.question)
       ? x.question + " " + (history.data?.[0]?.question ?? "")
       : x.question;
-    const ordered = prioritizeAssistantSources(contextQuestion, sources);
+    const ordered = x.review_id
+      ? [
+          reviewSources[0],
+          ...sources.filter((s) => s.id.startsWith("history:")).reverse(),
+          ...reviewSources.slice(1),
+          ...sources.filter((s) => !s.id.startsWith("history:")),
+        ]
+      : prioritizeAssistantSources(contextQuestion, sources);
     let prepared;
     try {
       prepared = prepareGroqRequest(
         x.question,
         ordered,
         existing.data ? 8000 : limits.available_tokens,
+        x.review_id ? "review" : "general",
       );
     } catch (e) {
       if (e instanceof AssistantProviderError && e.retrySeconds)
@@ -298,6 +353,7 @@ export async function POST(request: Request) {
       ordered,
       fetch,
       prepared.budget,
+      x.review_id ? "review" : "general",
     );
     const total =
       result.input_tokens !== null && result.output_tokens !== null
