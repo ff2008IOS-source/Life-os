@@ -90,6 +90,30 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
   await expect(
     page.getByText("Weekly conversation review completed", { exact: true }),
   ).toBeVisible();
+  // A previously loaded written-review client must not erase the new reflection.
+  const current = (
+    await (await page.request.get(`/api/v1/reviews/${reviewId}`)).json()
+  ).data;
+  const legacy = Object.fromEntries(
+    [
+      "period_start",
+      "period_end",
+      "completed_at",
+      "achievements",
+      "obstacles",
+      "missed_commitments",
+      "decisions",
+      "priorities",
+    ].map((k) => [k, current[k]]),
+  );
+  const legacySave = await page.request.patch(`/api/v1/reviews/${reviewId}`, {
+    headers: { Origin: "http://127.0.0.1:3000" },
+    data: { version: current.version, data: legacy },
+  });
+  expect(legacySave.status(), await legacySave.text()).toBe(200);
+  expect((await legacySave.json()).data.conversation_summary).toContain(
+    "You recorded progress",
+  );
   const before = (await (await page.request.get("/api/v1/tasks")).json()).data
     .length;
   await page.getByRole("button", { name: "Draft task", exact: true }).click();

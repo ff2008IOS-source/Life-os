@@ -117,7 +117,7 @@ export const reviewInput = z
     period_start: dateOnly,
     period_end: dateOnly,
     completed_at: z.iso.datetime({ offset: true }).nullable().default(null),
-    conversation_summary: text,
+    conversation_summary: z.string().max(10000).optional(),
     achievements: text,
     obstacles: text,
     missed_commitments: text,
