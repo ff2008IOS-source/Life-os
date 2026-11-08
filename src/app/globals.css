@@ -3646,3 +3646,18 @@ input[type="checkbox"] {
     flex-direction: column;
   }
 }
+.next-action {
+  padding: 20px;
+}
+.next-action .panel-heading {
+  padding: 0;
+  margin-bottom: 14px;
+}
+.next-action .panel-description {
+  padding: 0;
+  margin: 8px 0 16px;
+}
+.weekly-review-start,
+.written-review-fallback {
+  padding: 16px 20px;
+}
