@@ -150,9 +150,13 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
   await page.goto("/assistant/history");
   await page
     .getByLabel("Saved conversations", { exact: true })
+    .filter({ visible: true })
     .selectOption(id);
   await expect(
-    page.getByRole("log", { name: "Archived exchanges" }).locator("article"),
+    page
+      .getByRole("log", { name: "Archived exchanges" })
+      .filter({ visible: true })
+      .locator("article"),
   ).toHaveCount(12);
   await expect(
     page.getByLabel("Your response").filter({ visible: true }),

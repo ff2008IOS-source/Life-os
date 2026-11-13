@@ -1,0 +1,892 @@
+"use client";
+import { useEffect, useState, useRef } from "react";
+import { useWorkspace } from "./workspace-provider";
+import { Button } from "./ui/button";
+import { calendarRequest } from "./use-calendar";
+import {
+  datasetConfig,
+  type DatasetConfig,
+  type Values,
+  type Cells,
+  type Conflicts,
+} from "@/lib/integrations/sheet-ledger-model";
+type Dataset = {
+  id: string;
+  title: string;
+  worksheet_title: string;
+  spreadsheet_id: string;
+  mode: string;
+  outbound_enabled: boolean;
+  automatic_outbound: boolean;
+  test_only: boolean;
+  version: number;
+  config: DatasetConfig;
+  last_read_at: string | null;
+  last_write_at: string | null;
+  last_error: string | null;
+};
+type Row = {
+  id: string;
+  version: number;
+  local_values: Values;
+  remote_cells: Cells;
+  baseline: Cells;
+  conflicts: Conflicts;
+  state: string;
+  row_locator: number;
+};
+type Operation = {
+  id: string;
+  row_id: string;
+  version: number;
+  operation_type: string;
+  status: string;
+  intended: Values;
+  last_error: string | null;
+};
+type State = {
+  datasets: Dataset[];
+  rows?: Row[];
+  next?: string | null;
+  operations?: Operation[];
+  more_operations?: boolean;
+  tests: {
+    id: string;
+    spreadsheet_url: string;
+    status: string;
+    results: Record<string, boolean>;
+    last_error: string | null;
+  }[];
+  runs?: {
+    id: string;
+    status: string;
+    started_at: string;
+    summary: Record<string, number>;
+  }[];
+};
+type Metadata = {
+  properties: { title: string };
+  sheets: {
+    properties: {
+      sheetId: number;
+      title: string;
+      gridProperties: { rowCount: number; columnCount: number };
+    };
+  }[];
+};
+const endpoint = "/api/v1/sheets/tables";
+export function SheetRestPanel() {
+  const { data: workspace } = useWorkspace();
+  const [state, setState] = useState<State | null>(null),
+    [selected, setSelected] = useState(""),
+    [connections, setConnections] = useState<{ id: string }[]>([]),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [meta, setMeta] = useState<Metadata | null>(null),
+    [spreadsheet, setSpreadsheet] = useState(""),
+    [connection, setConnection] = useState(""),
+    [testRequest, setTestRequest] = useState("");
+  const d = state?.datasets.find((d) => d.id === selected);
+  async function load(id = selected, after?: string) {
+    const s = await calendarRequest<State>(
+      endpoint +
+        (id ? "?dataset=" + id + (after ? "&after=" + after : "") : ""),
+    );
+    setState((old) =>
+      after ? { ...s, rows: [...(old?.rows ?? []), ...(s.rows ?? [])] } : s,
+    );
+  }
+  useEffect(() => {
+    let live = true;
+    void Promise.all([
+      calendarRequest<State>(endpoint),
+      calendarRequest<{ connections: { id: string; status: string }[] }>(
+        "/api/v1/calendar/connections",
+      ),
+    ])
+      .then(([s, c]) => {
+        if (live) {
+          setState(s);
+          setConnections(c.connections.filter((x) => x.status === "connected"));
+          setConnection(
+            c.connections.find((x) => x.status === "connected")?.id ?? "",
+          );
+        }
+      })
+      .catch(() => {
+        if (live) setError("Sheets settings could not be loaded.");
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const requests = useRef(new Map<string, string>());
+  async function act(input: unknown) {
+    const body = input as Record<string, unknown>;
+    const intent = JSON.stringify({ ...body, request_id: undefined });
+    if (body.request_id) {
+      if (!requests.current.has(intent))
+        requests.current.set(intent, String(body.request_id));
+      body.request_id = requests.current.get(intent);
+    }
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await calendarRequest<Record<string, unknown>>(endpoint, {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      requests.current.delete(intent);
+      await load();
+      setNotice(
+        "Saved. Only writes marked confirmed in sync history have been verified in Google Sheets.",
+      );
+      return result;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sheets operation failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  function confirmMode(
+    mode: string,
+    outbound = d?.outbound_enabled ?? false,
+    automatic = d?.automatic_outbound ?? false,
+  ) {
+    if (!d) return;
+    if (
+      !window.confirm(
+        outbound
+          ? "Authorize writes to this specific mapped table? Approved fields only. Google Sheets cannot guarantee an atomic compare-and-write; a concurrent external edit can still race the final preflight."
+          : "Save this table’s synchronization settings?",
+      )
+    )
+      return;
+    void act({
+      action: "mode",
+      dataset_id: d.id,
+      version: d.version,
+      mode,
+      outbound_enabled: outbound,
+      automatic_outbound: automatic,
+      confirmed: true,
+    });
+  }
+  return (
+    <section
+      className="panel settings-panel"
+      aria-label="Two-way Google Sheets"
+    >
+      <h2>Google Sheets synchronization</h2>
+      <p className="small muted">
+        Standard Google Sheets API. Tables start import-only. Formula results
+        remain source-owned; missing rows preserve their Life OS history. The
+        shooting chart is excluded.
+      </p>
+      <div className="stack">
+        <label>
+          Connected Google account
+          <select
+            value={connection}
+            onChange={(e) => setConnection(e.target.value)}
+          >
+            {!connections.length && (
+              <option value="">Connect Google first</option>
+            )}
+            {connections.map((c) => (
+              <option key={c.id} value={c.id}>
+                Connected account · {c.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const r = await calendarRequest<{ url: string }>(
+                "/api/v1/calendar/oauth/start",
+                {
+                  method: "POST",
+                  body: JSON.stringify({ sheets: true, sheets_write: true }),
+                },
+              );
+              window.location.assign(r.url);
+            } catch {
+              setError("Google authorization could not start.");
+              setBusy(false);
+            }
+          }}
+        >
+          Authorize Sheets permission
+        </Button>
+      </div>
+      <details>
+        <summary>Verify a disposable workbook</summary>
+        <p className="small muted">
+          Creates a clearly labelled synthetic workbook. Tests imports, approved
+          writes, conflicts, row moves, additions, deletions, formulas,
+          formatting and duplicate prevention. Your existing workbooks are not
+          modified.
+        </p>
+        <Button
+          disabled={busy || !connection}
+          onClick={() => {
+            if (
+              !window.confirm(
+                "Create a disposable Google spreadsheet for synchronization tests?",
+              )
+            )
+              return;
+            const request = testRequest || crypto.randomUUID();
+            setTestRequest(request);
+            void act({
+              action: "create_test",
+              connection_id: connection,
+              request_id: request,
+              confirmed: true,
+            });
+          }}
+        >
+          Create test workbook
+        </Button>
+        {state?.tests.map((t) => (
+          <div className="stack" key={t.id}>
+            <strong>Test: {t.status}</strong>
+            {t.spreadsheet_url && (
+              <a href={t.spreadsheet_url} target="_blank" rel="noreferrer">
+                Open disposable workbook
+              </a>
+            )}
+            <p className="small">
+              {Object.keys(t.results)
+                .filter((k) => t.results[k])
+                .join(" · ")}
+            </p>
+            {t.last_error && <p className="error-message">{t.last_error}</p>}
+            <Button
+              variant="outline"
+              disabled={busy || !["ready"].includes(t.status)}
+              onClick={() =>
+                void act({
+                  action: "verify_test",
+                  test_id: t.id,
+                  confirmed: true,
+                })
+              }
+            >
+              Run live verification
+            </Button>
+          </div>
+        ))}
+      </details>
+      <details>
+        <summary>Connect a table</summary>
+        <form
+          className="stack"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError("");
+            try {
+              setMeta(
+                await calendarRequest<Metadata>(endpoint, {
+                  method: "POST",
+                  body: JSON.stringify({
+                    action: "metadata",
+                    connection_id: connection,
+                    spreadsheet_id: spreadsheet,
+                  }),
+                }),
+              );
+            } catch (e) {
+              setError(
+                e instanceof Error ? e.message : "Metadata read failed.",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <label>
+            Spreadsheet ID
+            <input
+              required
+              value={spreadsheet}
+              onChange={(e) => {
+                setSpreadsheet(e.target.value.trim());
+                setMeta(null);
+              }}
+              minLength={10}
+              maxLength={200}
+            />
+          </label>
+          <Button variant="outline" disabled={busy || !connection}>
+            Inspect worksheets
+          </Button>
+        </form>
+        {meta && (
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              try {
+                const config = datasetConfig.parse({
+                  sheet_id: Number(f.get("sheet")),
+                  header_row: Number(f.get("header")) - 1,
+                  end_row: Number(f.get("end")),
+                  start_column: Number(f.get("start")) - 1,
+                  end_column: Number(f.get("last")),
+                  allow_insert: f.get("insert") === "on",
+                  allow_delete: f.get("delete") === "on",
+                  columns: String(f.get("mapping"))
+                    .split("\n")
+                    .filter(Boolean)
+                    .map((line) => {
+                      const [key, header, type, access] = line
+                        .split("|")
+                        .map((s) => s.trim());
+                      return {
+                        key,
+                        header,
+                        type,
+                        key_part: access === "id",
+                        writable: access === "write",
+                      };
+                    }),
+                });
+                void act({
+                  action: "register",
+                  connection_id: connection,
+                  spreadsheet_id: spreadsheet,
+                  config,
+                  confirmed: true,
+                }).then((r) => {
+                  if (r?.dataset_id) {
+                    setSelected(String(r.dataset_id));
+                    void load(String(r.dataset_id));
+                  }
+                });
+              } catch {
+                setError(
+                  "Check the table range and mapping. Each line needs key | exact header | text/number/integer/boolean | id/read/write, with at least one stable ID.",
+                );
+              }
+            }}
+          >
+            <strong>{meta.properties.title}</strong>
+            <label>
+              Worksheet
+              <select name="sheet">
+                {meta.sheets.map((s) => (
+                  <option
+                    value={s.properties.sheetId}
+                    key={s.properties.sheetId}
+                  >
+                    {s.properties.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Header row (1-based)
+              <input
+                name="header"
+                type="number"
+                min={1}
+                defaultValue={1}
+                required
+              />
+            </label>
+            <label>
+              Last included row
+              <input
+                name="end"
+                type="number"
+                min={3}
+                max={5001}
+                defaultValue={100}
+                required
+              />
+            </label>
+            <label>
+              First column number (A = 1)
+              <input
+                name="start"
+                type="number"
+                min={1}
+                max={200}
+                defaultValue={1}
+                required
+              />
+            </label>
+            <label>
+              Last column number
+              <input
+                name="last"
+                type="number"
+                min={1}
+                max={200}
+                defaultValue={5}
+                required
+              />
+            </label>
+            <label>
+              Field mapping
+              <textarea
+                name="mapping"
+                required
+                rows={4}
+                placeholder={
+                  "id | Record ID | text | id\nstatus | Status | text | write"
+                }
+              />
+            </label>
+            <p className="small muted">
+              One field per line: key | exact source header | type | id, read or
+              write. Identity must remain stable when rows move. Formula columns
+              must use read. Blank rows are used for additions; existing
+              worksheet rows are never shifted or removed.
+            </p>
+            <label>
+              <input type="checkbox" name="insert" /> Allow reviewed additions
+            </label>
+            <label>
+              <input type="checkbox" name="delete" /> Allow reviewed clearing of
+              literal mapped records
+            </label>
+            <Button disabled={busy}>Connect and import</Button>
+          </form>
+        )}
+      </details>
+      <label>
+        Connected tables
+        <select
+          value={selected}
+          disabled={busy}
+          onChange={(e) => {
+            setSelected(e.target.value);
+            void load(e.target.value);
+          }}
+        >
+          <option value="">Choose a table</option>
+          {state?.datasets.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.test_only ? "[TEST] " : ""}
+              {s.title} · {s.worksheet_title}
+            </option>
+          ))}
+        </select>
+      </label>
+      {d && (
+        <div className="stack">
+          <a
+            href={`https://docs.google.com/spreadsheets/d/${d.spreadsheet_id}/edit`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open source spreadsheet
+          </a>
+          <p className="small muted">
+            {d.mode} · Incoming:{" "}
+            {d.last_read_at
+              ? new Date(d.last_read_at).toLocaleString()
+              : "Never"}{" "}
+            · Verified outbound:{" "}
+            {d.last_write_at
+              ? new Date(d.last_write_at).toLocaleString()
+              : "Never"}
+            . Hourly polling is processed by the existing background worker;
+            delays are possible.
+          </p>
+          {d.last_error && (
+            <p role="alert" className="error-message">
+              {d.last_error}
+            </p>
+          )}
+          <label>
+            Direction
+            <select
+              value={d.mode}
+              disabled={busy}
+              onChange={(e) => confirmMode(e.target.value)}
+            >
+              <option value="import_only">Import only</option>
+              <option value="export_only">Export only</option>
+              <option value="two_way">Two-way</option>
+              <option value="paused">Paused</option>
+            </select>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={d.outbound_enabled}
+              disabled={busy}
+              onChange={(e) =>
+                confirmMode(
+                  d.mode,
+                  e.target.checked,
+                  e.target.checked && d.automatic_outbound,
+                )
+              }
+            />{" "}
+            Authorize outbound writes for this table
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={d.automatic_outbound}
+              disabled={busy || !d.outbound_enabled}
+              onChange={(e) => confirmMode(d.mode, true, e.target.checked)}
+            />{" "}
+            Automatically approve future validated edits
+          </label>
+          <Button
+            disabled={busy || d.mode === "paused"}
+            onClick={() => void act({ action: "sync", dataset_id: d.id })}
+          >
+            Sync now
+          </Button>
+          <h3>Records</h3>
+          {!state?.rows?.length && (
+            <p className="small muted">No imported records on this page.</p>
+          )}
+          {state?.rows?.map((r) => (
+            <details key={r.id}>
+              <summary>
+                {String(
+                  r.local_values[
+                    d.config.columns.find((c) => c.key_part)!.key
+                  ] ?? r.id,
+                )}{" "}
+                · {r.state}
+              </summary>
+              <RowEditor
+                key={r.id + ":" + r.version}
+                row={r}
+                config={d.config}
+                busy={busy}
+                save={(values) =>
+                  void act({
+                    action: "edit",
+                    dataset_id: d.id,
+                    row_id: r.id,
+                    version: r.version,
+                    request_id: crypto.randomUUID(),
+                    values,
+                  })
+                }
+              />
+              <details>
+                <summary>Link to an existing project status</summary>
+                <p className="small muted">
+                  This connects future project-status edits in either direction.
+                  First align the current project status and source value; no
+                  project is guessed from its title.
+                </p>
+                <form
+                  className="stack"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    const p = workspace.projects.find(
+                      (p) => p.id === f.get("project"),
+                    );
+                    if (!p) return;
+                    void act({
+                      action: "bind_project",
+                      dataset_id: d.id,
+                      row_id: r.id,
+                      version: r.version,
+                      project_id: p.id,
+                      project_version: p.version,
+                      field: String(f.get("field")),
+                      values_map: Object.fromEntries(
+                        ["active", "paused", "completed", "cancelled"].map(
+                          (k) => [k, String(f.get(k))],
+                        ),
+                      ),
+                      confirmed: true,
+                    });
+                  }}
+                >
+                  <label>
+                    Existing project
+                    <select name="project" required>
+                      {workspace.projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} · {p.status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Status field
+                    <select name="field" required>
+                      {d.config.columns
+                        .filter(
+                          (c) => c.writable && c.type === "text" && !c.key_part,
+                        )
+                        .map((c) => (
+                          <option key={c.key} value={c.key}>
+                            {c.header}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {["active", "paused", "completed", "cancelled"].map((k) => (
+                    <label key={k}>
+                      Sheets value for {k}
+                      <input
+                        name={k}
+                        required
+                        maxLength={100}
+                        defaultValue={k}
+                      />
+                    </label>
+                  ))}
+                  <Button disabled={busy || !workspace.projects.length}>
+                    Confirm project link
+                  </Button>
+                </form>
+              </details>
+              {Object.entries(r.conflicts).map(([key, c]) => (
+                <div key={key} className="stack">
+                  <strong>Conflict: {key}</strong>
+                  <p className="small">
+                    Last confirmed: {String(c.base ?? "empty")} · Life OS:{" "}
+                    {String(c.local ?? "empty")} · Sheets:{" "}
+                    {String(c.remote ?? "empty")}
+                  </p>
+                  {(["remote", "local"] as const).map((keep) => (
+                    <Button
+                      key={keep}
+                      variant="outline"
+                      disabled={
+                        busy ||
+                        (keep === "local" && !r.remote_cells[key]?.writable)
+                      }
+                      onClick={() =>
+                        void act({
+                          action: "resolve",
+                          dataset_id: d.id,
+                          row_id: r.id,
+                          version: r.version,
+                          field: key,
+                          keep,
+                          confirmed: true,
+                        })
+                      }
+                    >
+                      Keep {keep === "remote" ? "Sheets" : "Life OS"} value
+                    </Button>
+                  ))}
+                </div>
+              ))}
+              {d.config.allow_delete && r.state !== "deleted" && (
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Draft clearing this mapped source record? No worksheet rows will be shifted. A separate approval is required.",
+                      )
+                    )
+                      void act({
+                        action: "delete",
+                        dataset_id: d.id,
+                        row_id: r.id,
+                        version: r.version,
+                        request_id: crypto.randomUUID(),
+                        confirmed: true,
+                      });
+                  }}
+                >
+                  Draft deletion
+                </Button>
+              )}
+            </details>
+          ))}
+          {state?.next && (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => void load(d.id, state.next!)}
+            >
+              Load more records
+            </Button>
+          )}
+          {d.config.allow_insert && (
+            <details>
+              <summary>Add a record</summary>
+              <RowEditor
+                key={d.id}
+                config={d.config}
+                busy={busy}
+                save={(values) =>
+                  void act({
+                    action: "insert",
+                    dataset_id: d.id,
+                    request_id: crypto.randomUUID(),
+                    values,
+                  })
+                }
+              />
+            </details>
+          )}
+          <h3>Outgoing changes</h3>
+          {!state?.operations?.length && (
+            <p className="small muted">No pending changes.</p>
+          )}
+          {state?.operations?.map((o) => (
+            <div className="stack" key={o.id}>
+              <strong>
+                {o.operation_type} · {o.status}
+              </strong>
+              <p className="small" style={{ overflowWrap: "anywhere" }}>
+                {JSON.stringify(o.intended)}
+              </p>
+              {o.last_error && <p className="error-message">{o.last_error}</p>}
+              {o.status === "draft" && (
+                <Button
+                  disabled={busy || !d.outbound_enabled}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Approve these exact fields for Google Sheets? Sync now will recheck the source before writing.",
+                      )
+                    )
+                      void act({
+                        action: "approve",
+                        dataset_id: d.id,
+                        operation_id: o.id,
+                        version: o.version,
+                        confirmed: true,
+                      });
+                  }}
+                >
+                  Approve write
+                </Button>
+              )}
+            </div>
+          ))}
+          {state?.more_operations && (
+            <p>
+              More operations are pending. Process these before the next batch.
+            </p>
+          )}
+          <details>
+            <summary>Recent synchronization history</summary>
+            {state?.runs?.map((r) => (
+              <p className="small" key={r.id}>
+                {new Date(r.started_at).toLocaleString()} · {r.status} ·{" "}
+                {JSON.stringify(r.summary)}
+              </p>
+            ))}
+          </details>
+        </div>
+      )}
+      {busy && (
+        <p role="status">Working… Keep this page open during verification.</p>
+      )}
+      {error && (
+        <p role="alert" className="error-message">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="small">
+          {notice}
+        </p>
+      )}
+    </section>
+  );
+}
+function RowEditor({
+  row,
+  config,
+  busy,
+  save,
+}: {
+  row?: Row;
+  config: DatasetConfig;
+  busy: boolean;
+  save: (values: Values) => void;
+}) {
+  return (
+    <form
+      className="stack"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget),
+          values: Values = {};
+        for (const c of config.columns) {
+          if (!c.writable && !(c.key_part && !row)) continue;
+          if (row && (c.key_part || !row.remote_cells[c.key]?.writable))
+            continue;
+          const v = String(f.get(c.key) ?? "");
+          values[c.key] =
+            v === ""
+              ? null
+              : c.type === "number" || c.type === "integer"
+                ? Number(v)
+                : c.type === "boolean"
+                  ? v === "true"
+                  : v;
+        }
+        save(values);
+      }}
+    >
+      {config.columns.map((c) => {
+        const cell = row?.remote_cells[c.key],
+          editable = row
+            ? cell?.writable && !c.key_part
+            : c.writable || c.key_part;
+        return (
+          <label key={c.key}>
+            {c.header}
+            {cell?.formula ? " · Formula (read-only)" : ""}
+            {editable && c.type === "boolean" ? (
+              <select
+                name={c.key}
+                defaultValue={String(row?.local_values[c.key] ?? "")}
+                disabled={busy}
+              >
+                <option value="">Unknown / clear</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            ) : editable ? (
+              <input
+                name={c.key}
+                defaultValue={String(row?.local_values[c.key] ?? "")}
+                disabled={busy}
+                type={
+                  ["number", "integer"].includes(c.type) ? "number" : "text"
+                }
+                step={c.type === "integer" ? 1 : "any"}
+                required={c.key_part}
+              />
+            ) : (
+              <span className="small">
+                {String(row?.local_values[c.key] ?? "Unknown")}
+              </span>
+            )}
+          </label>
+        );
+      })}
+      {(!row ||
+        !["deleted", "source_missing", "conflict"].includes(row.state)) && (
+        <Button disabled={busy}>
+          {row ? "Save pending edit" : "Create pending record"}
+        </Button>
+      )}
+    </form>
+  );
+}

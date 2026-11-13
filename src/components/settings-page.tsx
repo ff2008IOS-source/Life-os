@@ -1,4 +1,5 @@
 "use client";
+import { SheetRestPanel } from "./sheet-rest-panel";
 import { SheetSyncPanel } from "./sheet-sync-panel";
 import Link from "next/link";
 import { ProfilePictureSettings } from "./profile-identity";
@@ -158,7 +159,11 @@ export function SettingsPage({
             </section>
             <GoogleCalendarPanel settings />
             <CareerPanel compact />
-            <SheetSyncPanel />
+            <SheetRestPanel />
+            <details>
+              <summary>Existing project-status imports</summary>
+              <SheetSyncPanel />
+            </details>
             <ReservationsPanel />
             <AutomationControl policy={DEFAULT_POLICY} />
             <section className="panel settings-panel">

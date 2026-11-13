@@ -1,3 +1,4 @@
+import { restSheetsWorker } from "@/lib/integrations/sheet-rest-server";
 import { sheetSyncWorker } from "@/lib/integrations/sheet-sync-server";
 import { managedCalendarWorker } from "@/lib/integrations/calendar-sync-service";
 import { canvasDocumentWorker } from "@/lib/canvas/documents-server";
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       "canvas_documents",
       "managed_calendar",
       "sheets",
+      "sheets_rest",
     ] as const;
     const managedRead = managedCalendarWorker();
     const results = await Promise.allSettled([
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
       canvasDocumentWorker(),
       managedRead,
       sheetSyncWorker(),
+      restSheetsWorker(),
     ]);
     const response = Object.fromEntries(
       results.map((r, i) => [

@@ -84,10 +84,9 @@ export function SheetSyncPanel() {
     <section className="panel settings-panel">
       <h2>Mapped spreadsheet sync</h2>
       <p className="small muted">
-        Project-status import with stable source IDs and conflict review.
-        Outbound writes remain unavailable until provider revision checks and
-        separate write permission are verified on a test workbook. Your existing
-        career workbook remains read-only.
+        Project-status import with stable source IDs and conflict review. This
+        legacy project-status mapping remains import-only. Use the Google Sheets
+        synchronization panel above for REST-based table synchronization.
       </p>
       <Button
         variant="outline"

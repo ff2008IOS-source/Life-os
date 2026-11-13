@@ -89,6 +89,42 @@ beforeAll(async () => {
           readFileSync("public/icon-192.png").toString("base64"),
       ],
     );
+    const connection = (
+      await source.query<{ id: string }>(
+        "insert into calendar_connections(user_id,provider,provider_account_id)values($1,'google','[TEST] Recovery Sheets')returning id",
+        [owner],
+      )
+    ).rows[0].id;
+    const external = (
+      await source.query<{ id: string }>(
+        "insert into data_sources(user_id,provider,source_key)values($1,'google_sheets','syntheticRecoverySheet')returning id",
+        [owner],
+      )
+    ).rows[0].id;
+    const dataset = (
+      await source.query<{ id: string }>(
+        `insert into sheet_rest_datasets(user_id,connection_id,source_id,spreadsheet_id,worksheet_id,title,worksheet_title,config)values($1,$2,$3,'syntheticRecoverySheet',0,'[TEST] Recovery','Table','{}')returning id`,
+        [owner, connection, external],
+      )
+    ).rows[0].id;
+    const row = (
+      await source.query<{ id: string }>(
+        `insert into sheet_rest_rows(user_id,dataset_id,external_key,key_values,local_values)values($1,$2,'stable-test','["record"]','{"status":"active"}')returning id`,
+        [owner, dataset],
+      )
+    ).rows[0].id;
+    await source.query(
+      `insert into sheet_rest_operations(id,user_id,dataset_id,row_id,operation_type,intended,expected_cells)values(gen_random_uuid(),$1,$2,$3,'update','{"status":"completed"}','{}')`,
+      [owner, dataset, row],
+    );
+    await source.query(
+      `insert into sheet_rest_runs(user_id,dataset_id,status,summary)values($1,$2,'completed','{"checked":1}')`,
+      [owner, dataset],
+    );
+    await source.query(
+      `insert into sheet_rest_tests(id,user_id,connection_id,dataset_id,status)values(gen_random_uuid(),$1,$2,$3,'ready')`,
+      [owner, connection, dataset],
+    );
     const tables = await source.query<{ table_name: string }>(
       "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts')",
     );
