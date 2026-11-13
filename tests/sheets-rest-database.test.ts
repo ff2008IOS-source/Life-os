@@ -309,3 +309,40 @@ it("enforces approved project links and makes project edits durable without requ
     ).rows[0],
   ).toEqual({ n: 1 });
 });
+it("keeps local source values intact while a deletion draft waits for owner approval", async () => {
+  const source = (
+    await db.query<{ id: string }>(
+      "select id from sheet_rest_datasets where spreadsheet_id='syntheticProjectSheet'",
+    )
+  ).rows[0].id;
+  await db.query(
+    `update sheet_rest_datasets set config=jsonb_set(config,'{allow_delete}','true')where id=$1`,
+    [source],
+  );
+  const r = (
+    await db.query<{ id: string; version: number }>(
+      `insert into sheet_rest_rows(user_id,dataset_id,external_key,key_values,local_values,baseline,remote_cells)values($1,$2,'delete-draft','["delete-draft"]','{"status":"active"}','{"status":{"value":"active","writable":true}}','{"status":{"value":"active","writable":true}}')returning id,version`,
+      [owner, source],
+    )
+  ).rows[0];
+  await db.query(
+    `select edit_sheet_rest($1,$2,$3,$4,gen_random_uuid(),'delete','{"status":null}',null,null)`,
+    [owner, source, r.id, r.version],
+  );
+  expect(
+    (
+      await db.query(
+        "select local_values,state from sheet_rest_rows where id=$1",
+        [r.id],
+      )
+    ).rows[0],
+  ).toEqual({ local_values: { status: "active" }, state: "pending" });
+  expect(
+    (
+      await db.query(
+        "select status,intended from sheet_rest_operations where row_id=$1",
+        [r.id],
+      )
+    ).rows[0],
+  ).toEqual({ status: "draft", intended: { status: null } });
+});
