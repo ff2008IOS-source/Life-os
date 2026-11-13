@@ -1,6 +1,10 @@
 import "server-only";
 import { connectionAccessForUser, integrationAdmin } from "./google-server";
-import { hasSheetsReadAccess, SHEETS_WRITE_SCOPE } from "./google-oauth";
+import {
+  hasSheetsReadAccess,
+  SHEETS_WRITE_SCOPE,
+  CALENDAR_WRITE_SCOPE,
+} from "./google-oauth";
 import { dbError } from "../http";
 export async function sheetsReadinessForUser(user: string, connection: string) {
   const c = await connectionAccessForUser(user, connection);
@@ -8,6 +12,9 @@ export async function sheetsReadinessForUser(user: string, connection: string) {
   return {
     connection_id: connection,
     write_permission: write,
+    calendar_write_permission: c.scope
+      .split(" ")
+      .includes(CALENDAR_WRITE_SCOPE),
     read_permission: hasSheetsReadAccess(c.scope),
     provider: "Google Sheets REST API v4",
     atomic_conditional_writes: false,

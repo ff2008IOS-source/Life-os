@@ -1,5 +1,6 @@
 import {
   same,
+  validateField,
   type Values,
   type Cells,
   type DatasetConfig,
@@ -51,6 +52,7 @@ export function planRestWrite(snapshot: TableSnapshot, intent: WriteIntent) {
       throw Error(
         "A formula, protected range or unsupported validation prevents this write.",
       );
+    if (intent.operation_type !== "delete") validateField(column, value, cell);
     if (record && !same(cell.value, intent.expected_cells[key]?.value ?? null))
       throw Error("The source changed since approval. Review both values.");
     if (!same(cell.value, value))

@@ -339,3 +339,58 @@ it("preserves read access when Google returns the encompassing Sheets write scop
   expect(hasSheetsReadAccess(SHEETS_READ_SCOPE)).toBe(true);
   expect(hasSheetsReadAccess("openid email")).toBe(false);
 });
+it("preserves dedicated-calendar authorization through refresh and selection, while revoking it on role loss", async () => {
+  const conn = await rpc<string>("google_save_connection", [
+    a,
+    "google-account",
+    "encrypted-synthetic-envelope",
+  ]);
+  const payload = (role = "owner") =>
+    JSON.stringify([
+      {
+        id: "source",
+        name: "[TEST] App calendar",
+        timezone: "America/Vancouver",
+        color: "#123456",
+        access_role: role,
+      },
+      {
+        id: "personal-source",
+        name: "[TEST] Personal",
+        timezone: "America/Vancouver",
+        color: "#123456",
+        access_role: "owner",
+      },
+    ]);
+  await rpc("google_store_calendars", [a, conn, payload()]);
+  await db.query(
+    "update calendars set is_life_os_owned=true,write_enabled=true where id=$1",
+    [calendar],
+  );
+  await rpc("google_store_calendars", [a, conn, payload()]);
+  await rpc("google_select_calendar", [a, calendar, true]);
+  expect(
+    (
+      await db.query(
+        "select is_life_os_owned,write_enabled from calendars where id=$1",
+        [calendar],
+      )
+    ).rows[0],
+  ).toEqual({ is_life_os_owned: true, write_enabled: true });
+  expect(
+    (
+      await db.query(
+        "select is_life_os_owned,write_enabled from calendars where provider_calendar_id='personal-source'",
+      )
+    ).rows[0],
+  ).toEqual({ is_life_os_owned: false, write_enabled: false });
+  await rpc("google_store_calendars", [a, conn, payload("reader")]);
+  expect(
+    (
+      await db.query(
+        "select is_life_os_owned,write_enabled from calendars where id=$1",
+        [calendar],
+      )
+    ).rows[0],
+  ).toEqual({ is_life_os_owned: false, write_enabled: false });
+});
