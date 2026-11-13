@@ -1,6 +1,7 @@
 "use client";
 import { realWorkspace } from "@/lib/real-workspace";
 import Link from "next/link";
+import { AttentionHistory } from "./attention-history";
 import { BriefingPanel } from "./briefing-page";
 import { useBriefing } from "./use-briefing";
 import { todayPriorities, personalGreeting } from "@/lib/today-priorities";
@@ -169,7 +170,7 @@ export function HomePage() {
     },
   ];
   return (
-    <div className="home-experience">
+    <div className="home-experience" id="daily-briefing">
       {needsInit && (
         <div className="notice">
           <Layers3 />
@@ -377,6 +378,8 @@ export function HomePage() {
           </section>
         </div>
       </div>
+      <BriefingPanel controller={briefing} />
+      <AttentionHistory />
     </div>
   );
 }

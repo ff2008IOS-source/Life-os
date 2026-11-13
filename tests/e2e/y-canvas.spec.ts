@@ -66,7 +66,9 @@ test("Canvas connection is private and secure UI handles verification, sync and 
     return route.fulfill({ json: { processed: 5, pending: 0, errors: [] } });
   });
   await page.goto("/canvas-connect");
-  await expect(page.getByText("Not connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".canvas-panel").getByText("Not connected", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Canvas access token")).toHaveAttribute(
     "type",
     "password",
@@ -93,7 +95,9 @@ test("Canvas connection is private and secure UI handles verification, sync and 
   await page.getByLabel("Actual token expiry (Vancouver)").fill(expiry);
   await page.getByRole("button", { name: "Verify and save token" }).click();
   await expect(page.getByLabel("Canvas access token")).toHaveValue("");
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".canvas-panel").getByText("Connected", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Sync now", exact: true }).click();
   await expect(page.getByText(/5 items checked/)).toBeVisible();
   await page

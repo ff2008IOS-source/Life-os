@@ -76,13 +76,14 @@ export function ConnectedCareerRecords() {
   const d = state?.datasets.find((x) => x.id === dataset);
   return (
     <section
+      id="connected-roadmap"
       className="panel settings-panel"
       aria-label="Connected career and project records"
     >
-      <h2>Your connected plans</h2>
+      <h2>Your career roadmap</h2>
       <p className="small muted">Your spreadsheet plans, in one place.</p>
       <label>
-        Career source table
+        Choose a roadmap
         <select
           value={dataset}
           disabled={busy}
@@ -94,7 +95,7 @@ export function ConnectedCareerRecords() {
             setNotice("");
           }}
         >
-          <option value="">Choose a source table</option>
+          <option value="">Choose a spreadsheet</option>
           {state?.datasets
             .filter((x) => !x.test_only)
             .map((x) => (

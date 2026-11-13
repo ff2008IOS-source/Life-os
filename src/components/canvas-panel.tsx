@@ -15,7 +15,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   if (!r.ok) throw Error(d.error?.message ?? "Canvas request failed.");
   return d;
 }
-export function CanvasPanel() {
+export function CanvasPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const [state, setState] = useState<Status | null>(null),
     [token, setToken] = useState(""),
     [expiry, setExpiry] = useState(""),
@@ -84,10 +84,12 @@ export function CanvasPanel() {
   return (
     <section className="panel settings-panel canvas-panel">
       <div className="academic-toolbar">
-        <h1>SFU Canvas</h1>
-        <Link className="text-link" href="/settings?section=integrations">
-          Settings
-        </Link>
+        {embedded ? <h3>Manage connection</h3> : <h1>SFU Canvas</h1>}
+        {!embedded && (
+          <Link className="text-link" href="/settings?section=integrations">
+            Settings
+          </Link>
+        )}
       </div>
       <p className="muted small">
         Your courses, deadlines and grades, connected. Life OS never changes
@@ -433,5 +435,27 @@ function ConflictReview({
       )}
       {error && <span role="alert">{error}</span>}
     </span>
+  );
+}
+
+export function CanvasConnectionSettings({
+  initialOpen = false,
+}: {
+  initialOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(initialOpen);
+  return (
+    <details
+      id="canvas-connection"
+      className="panel settings-panel"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary>
+        <h2>SFU Canvas</h2>
+      </summary>
+      <p className="small muted">Courses, grades, deadlines and materials.</p>
+      {open && <CanvasPanel embedded />}
+    </details>
   );
 }

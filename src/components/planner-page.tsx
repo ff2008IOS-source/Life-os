@@ -21,9 +21,17 @@ import { OccurrencesPanel } from "./occurrences-panel";
 import { SchedulingPanel } from "./scheduling-panel";
 import { CanvasDeadlines } from "./canvas-deadlines";
 import { PlannerCalendar } from "./planner-calendar";
-export function PlannerPage() {
+export function PlannerPage({
+  initialSection,
+}: { initialSection?: string } = {}) {
   const { data } = useWorkspace();
-  const [tab, setTab] = useState("calendar");
+  const [tab, setTab] = useState(
+    ["calendar", "tasks", "inbox", "recurring", "schedule"].includes(
+      initialSection ?? "",
+    )
+      ? initialSection!
+      : "calendar",
+  );
   const [view, setView] = useState("week");
   const [anchor, setAnchor] = useState(
     () => new Date(localDate() + "T12:00:00"),
@@ -206,7 +214,6 @@ export function PlannerPage() {
                   <Inbox />
                   <h2>{tab === "inbox" ? "Your inbox" : "Your tasks"}</h2>
                 </div>
-                <span className="badge">Database records</span>
               </div>
               {(tab === "inbox" ? all.filter((t) => t.status === "inbox") : all)
                 .length ? (

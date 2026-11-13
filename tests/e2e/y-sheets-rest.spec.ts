@@ -159,7 +159,7 @@ test("Sheets table controls preserve formulas, review conflicts and require expl
   const connected = page.getByRole("region", {
     name: "Connected career and project records",
   });
-  await connected.getByLabel("Career source table").selectOption(dataset);
+  await connected.getByLabel("Choose a roadmap").selectOption(dataset);
   await connected.getByText("test-row · pending", { exact: true }).click();
   await expect(
     connected.getByText("Calculated · Formula (read-only)", { exact: false }),

@@ -44,9 +44,9 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   expect(r.status(), await r.text()).toBe(201);
   const task = (await r.json()).data;
   await page.goto("/assistant");
-  await expect(page).toHaveURL(/\/briefing$/);
+  await expect(page).toHaveURL(/\/#daily-briefing$/);
   await expect(
-    page.getByRole("heading", { name: "Recommended Next Action", exact: true }),
+    page.getByRole("heading", { name: "Next best action", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Your question")).toHaveCount(0);
   await expect(
@@ -81,6 +81,10 @@ test("deterministic briefing saves check-ins, performs approved task actions and
     .getByRole("button", { name: "Finish check-in", exact: true })
     .click();
   await page.reload();
+  await page
+    .getByText("View saved responses", { exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page
       .getByText("[TEST] Prepared the verified course material.", {
@@ -113,7 +117,7 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   ).toBe("completed");
   const next = primary.getByRole("button", { name: "Not Now", exact: true });
   if (await next.isVisible()) {
-    const deferredTitle = await primary.getByRole("heading").textContent();
+    const deferredTitle = await primary.locator("h3").textContent();
     const [saved] = await Promise.all([
       page.waitForResponse(
         (r) =>
@@ -154,6 +158,28 @@ test("deterministic briefing saves check-ins, performs approved task actions and
     path: test.info().outputPath("briefing-phone.png"),
     fullPage: true,
   });
+  const checkin = page.getByRole("region", {
+    name: "Daily Check-In",
+    exact: true,
+  });
+  const unavailable = "**/api/v1/briefing?day=2000-01-01";
+  await page.route(unavailable, (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: { message: "Check-in temporarily unavailable." } },
+    }),
+  );
+  await checkin.getByLabel("Check-in date").fill("2000-01-01");
+  await expect(checkin).toContainText("Check-in temporarily unavailable.");
+  await expect(
+    checkin.getByText("[TEST] Prepared the verified course material.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(checkin.getByLabel("Check-in answer")).toHaveCount(0);
+  await page.unroute(unavailable);
+  await checkin.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(checkin.getByLabel("Check-in answer")).toHaveValue("");
 });
 test("profile picture is resized, saved privately, survives refresh and can be removed", async ({
   page,

@@ -79,9 +79,9 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await page.goto("/planner");
   await page.getByRole("tab", { name: "Scheduling preview" }).click();
   await page.getByRole("button", { name: "Generate preview" }).click();
-  await expect(page.locator("p[role=alert]")).toContainText(
-    "Connect and select your calendars before planning",
-  );
+  await expect(
+    page.locator(".error-message[role=alert]").filter({ visible: true }),
+  ).toContainText("Connect and select your calendars before planning");
   await expect(
     page.getByText("Proposed sessions", { exact: true }),
   ).toHaveCount(0);

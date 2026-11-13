@@ -47,6 +47,14 @@ export function PreparedWeeklyReview({
       : "Let’s establish what actually happened this week. What was the most important responsibility you moved forward?";
   return (
     <>
+      {d && (
+        <AssistantPage
+          key={review.id}
+          review={review}
+          onReply={onReply}
+          opening={commitmentOpening || opening}
+        />
+      )}
       {!d ? (
         <section className="panel briefing-card">
           <h2>Preparing your weekly review</h2>
@@ -56,7 +64,8 @@ export function PreparedWeeklyReview({
           )}
         </section>
       ) : (
-        <section className="panel briefing-card weekly-prepared">
+        <details className="panel briefing-card weekly-prepared">
+          <summary>Your week at a glance</summary>
           <span className="eyebrow">YOUR WEEK, PREPARED</span>
           <h2>
             Your week:{" "}
@@ -118,7 +127,9 @@ export function PreparedWeeklyReview({
                             : "Unknown")}
                       </td>
                       <td>
-                        <Link href="/canvas-materials">
+                        <Link
+                          href={`/areas/academics?course=${a.course_id}&assessment=${a.id}#assessment-${a.id}`}
+                        >
                           {a.course} · {a.title}
                         </Link>
                       </td>
@@ -259,15 +270,7 @@ export function PreparedWeeklyReview({
               <p>{review.conversation_summary}</p>
             </details>
           )}
-        </section>
-      )}
-      {d && (
-        <AssistantPage
-          key={review.id}
-          review={review}
-          onReply={onReply}
-          opening={commitmentOpening || opening}
-        />
+        </details>
       )}
     </>
   );

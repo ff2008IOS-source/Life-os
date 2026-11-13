@@ -240,7 +240,7 @@ export function PlannerCalendar({
         <div className="calendar-filter-panel">
           <p className="small muted">
             Display filters only. Hidden commitments still constrain scheduling.
-            Overlap warnings include hidden sources.
+            Conflicts also consider calendars you’ve hidden.
           </p>
           <label className="inline-check">
             <input
@@ -267,8 +267,8 @@ export function PlannerCalendar({
       )}
       {!!failed && (
         <p className="calendar-inline-alert error-message" role="status">
-          {failed} calendar source check{failed === 1 ? "" : "s"} failed. Cached
-          entries may be out of date. Check sync settings.
+          {failed} calendar connection check{failed === 1 ? "" : "s"} failed.
+          Saved entries may be out of date. Check sync settings.
         </p>
       )}
       {coverageMissing && (
@@ -363,7 +363,7 @@ export function PlannerCalendar({
               <CalendarDays size={24} />
               {kind !== "all" || hidden.length
                 ? "No entries match these display filters."
-                : "No cached commitments for this day."}
+                : "No commitments to show for this day."}
             </p>
           )}
         </div>

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import {
-  Bell,
   Home,
   CalendarDays,
   Layers3,
@@ -20,9 +19,6 @@ import {
   BookOpen,
   ArrowUpRight,
   LogOut,
-  Sun,
-  Moon,
-  Monitor,
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
@@ -34,8 +30,6 @@ const navigation = [
   { label: "Planner", href: "/planner", icon: CalendarDays },
   { label: "Life Areas", href: "/areas", icon: Layers3 },
   { label: "Goals", href: "/goals", icon: Target },
-  { label: "Updates", href: "/notifications", icon: Bell },
-  { label: "Briefing", href: "/briefing", icon: BookOpen },
   { label: "Insights", href: "/insights", icon: ChartNoAxesCombined },
 ];
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
@@ -147,7 +141,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               aria-label="Search workspace"
             >
               <Search size={15} />
-              Search your space<kbd>⌘ K</kbd>
+              Find tasks & goals<kbd>⌘ K</kbd>
             </button>
             <span className="top-divider" />
             <Button
@@ -230,7 +224,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         </label>
         <input
           id="workspace-search"
-          placeholder="Search your workspace…"
+          placeholder="Search tasks, projects or goals…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -313,7 +307,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
 export function MorePage() {
   const router = useRouter();
   const { request, notify } = useWorkspace();
-  const { setTheme } = useTheme();
   return (
     <>
       <div className="page-heading">
@@ -324,11 +317,6 @@ export function MorePage() {
         </div>
       </div>
       <div className="more-list">
-        <Link href="/briefing">
-          <BookOpen />
-          Briefing
-          <ArrowUpRight size={14} />
-        </Link>
         <Link href="/goals">
           <Target />
           Goals
@@ -350,26 +338,9 @@ export function MorePage() {
           <ArrowUpRight size={14} />
         </Link>
       </div>
-      <div className="panel settings-panel" style={{ marginTop: 20 }}>
-        <h2>Appearance</h2>
-        <div className="inline" style={{ marginTop: 15 }}>
-          <Button variant="outline" onClick={() => setTheme("light")}>
-            <Sun size={15} />
-            Light
-          </Button>
-          <Button variant="outline" onClick={() => setTheme("dark")}>
-            <Moon size={15} />
-            Dark
-          </Button>
-          <Button variant="outline" onClick={() => setTheme("system")}>
-            <Monitor size={15} />
-            System
-          </Button>
-        </div>
-        <p className="form-hint" style={{ marginTop: 10 }}>
-          Save your account preference in Settings.
-        </p>
-      </div>
+      <Link className="text-link" href="/settings?section=profile">
+        Appearance & preferences <ArrowUpRight size={14} />
+      </Link>
       <Button
         variant="ghost"
         style={{ marginTop: 20 }}

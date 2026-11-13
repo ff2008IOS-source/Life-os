@@ -690,3 +690,115 @@ summary:focus-visible {
   padding: 8px;
   scroll-margin-top: 90px;
 }
+
+/* One daily workspace, with focused secondary views. */
+.home-attention-grid {
+  margin-top: 24px;
+}
+.home-attention-grid > .stack {
+  display: contents;
+}
+.home-attention-grid .briefing-alerts article {
+  border-bottom: 1px solid var(--border);
+  padding-block: 16px;
+}
+.attention-history {
+  margin-top: 20px;
+  padding: 20px 24px;
+}
+.attention-history > .stack {
+  margin-top: 16px;
+}
+.course-tabs {
+  margin-block: 20px;
+}
+.course-materials {
+  min-width: 0;
+}
+.course-materials > * + * {
+  margin-top: 14px;
+}
+.course-overview {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+.course-overview .academic-record-row {
+  text-align: left;
+  gap: 12px;
+}
+.canvas-library-disclosure {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+.canvas-library-disclosure > .course-materials {
+  margin-top: 16px;
+}
+.review-date-options {
+  max-width: 260px;
+}
+.review-date-options label {
+  margin-top: 12px;
+}
+.review-reflection > summary,
+.weekly-prepared > summary {
+  font-weight: 650;
+}
+.review-reflection > h2 {
+  margin-top: 20px;
+}
+.weekly-prepared > .eyebrow {
+  display: block;
+  margin-top: 20px;
+}
+.briefing-primary .briefing-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .home-attention-grid {
+    grid-template-columns: 1fr;
+  }
+  .academic-toolbar select {
+    max-width: 100%;
+  }
+  .course-tabs {
+    flex-wrap: wrap;
+  }
+  .weekly-review-start {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .briefing-primary .briefing-actions {
+    gap: 8px;
+  }
+  .briefing-primary .briefing-actions .button {
+    min-height: 44px;
+  }
+}
+.course-layout {
+  display: grid;
+  gap: 24px;
+}
+.focus-update {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  color: #cee2da;
+  font-size: 11px;
+}
+.focus-update .button-ghost,
+.focus-card .button-ghost {
+  color: #eff7f0;
+}
+.focus-update .button-ghost:hover,
+.focus-card .button-ghost:hover {
+  background: #ffffff12;
+}
+@media (max-width: 600px) {
+  .focus-update {
+    flex-wrap: wrap;
+  }
+}

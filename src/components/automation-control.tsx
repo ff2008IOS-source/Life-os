@@ -1,30 +1,31 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "./ui/button";
 import { calendarRequest } from "./use-calendar";
 import type { Policy } from "@/lib/scheduler";
-type State = {
+export type AutomationState = {
+  policy: Policy;
+  version: number;
   enabled: boolean;
   last_status: string | null;
   last_error: string | null;
 };
-export function AutomationControl({ policy }: { policy: Policy }) {
-  const [state, setState] = useState<State | null>(null),
-    [busy, setBusy] = useState(false),
+export function AutomationControl({
+  policy,
+  state,
+  onSaved,
+}: {
+  policy: Policy;
+  state: AutomationState | null;
+  onSaved: (state: AutomationState) => void;
+}) {
+  const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  useEffect(() => {
-    let live = true;
-    void calendarRequest<State>("/api/v1/schedule/automation")
-      .then((d) => {
-        if (live) setState(d);
-      })
-      .catch((e) => {
-        if (live) setError(e.message);
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
+  const hasDraft =
+    state &&
+    (Object.keys(policy) as (keyof Policy)[]).some(
+      (key) => policy[key] !== state.policy[key],
+    );
   return (
     <section className="panel settings-panel">
       <div className="flex-between">
@@ -32,24 +33,30 @@ export function AutomationControl({ policy }: { policy: Policy }) {
           <h2>Automatic scheduling</h2>
           <p className="muted small">
             {state?.enabled
-              ? "On · checks every 15 minutes"
-              : "Off · preview sessions manually"}
+              ? "On · checks for eligible work automatically"
+              : "Off · plan sessions when you’re ready"}
           </p>
         </div>
         <Button
           size="sm"
           variant={state?.enabled ? "outline" : "default"}
-          disabled={busy || !state}
+          disabled={busy || !state || (!state.enabled && Boolean(hasDraft))}
           onClick={async () => {
             setBusy(true);
             setError("");
             try {
               const next = !state!.enabled;
-              await calendarRequest("/api/v1/schedule/automation", {
-                method: "POST",
-                body: JSON.stringify({ enabled: next, policy }),
-              });
-              setState({ ...state!, enabled: next });
+              const saved = await calendarRequest<AutomationState>(
+                "/api/v1/schedule/automation",
+                {
+                  method: "POST",
+                  body: JSON.stringify({
+                    enabled: next,
+                    version: state!.version,
+                  }),
+                },
+              );
+              onSaved(saved);
             } catch (e) {
               setError(
                 e instanceof Error ? e.message : "Setting could not be saved.",
@@ -62,32 +69,10 @@ export function AutomationControl({ policy }: { policy: Policy }) {
           {busy ? "Saving…" : state?.enabled ? "Turn off" : "Turn on"}
         </Button>
       </div>
-      {state?.enabled && (
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            setError("");
-            try {
-              await calendarRequest("/api/v1/schedule/automation", {
-                method: "POST",
-                body: JSON.stringify({ enabled: true, policy }),
-              });
-            } catch (e) {
-              setError(
-                e instanceof Error
-                  ? e.message
-                  : "Boundaries could not be saved.",
-              );
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Save boundaries
-        </Button>
+      {hasDraft && !state?.enabled && (
+        <p className="form-hint">
+          Save your planning preferences before turning this on.
+        </p>
       )}
       <p className="form-hint">
         Schedules estimated tasks from enabled projects or tasks you mark

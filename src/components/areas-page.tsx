@@ -38,10 +38,12 @@ const descriptions: Record<string, string> = {
 export function AreasPage({
   slug,
   initialCourse,
+  initialView,
   initialAssessment,
 }: {
   slug?: string;
   initialCourse?: string;
+  initialView?: string;
   initialAssessment?: string;
 }) {
   const { data } = useWorkspace();
@@ -157,7 +159,11 @@ export function AreasPage({
           </Button>
         )}
       </div>
-      {slug === "projects" && <ConnectedCareerRecords />}
+      {slug === "projects" && (
+        <Link className="text-link" href="/areas/career#connected-roadmap">
+          Manage linked spreadsheet plans in Career
+        </Link>
+      )}
       <div className="area-metrics">
         <div className="area-summary">
           Active tasks<strong>{active.length}</strong>
@@ -173,14 +179,11 @@ export function AreasPage({
         </div>
       </div>
       <div className="tabs">
-        {[
-          "overview",
-          "tasks",
-          ...(slug === "projects" ? ["projects"] : []),
-        ].map((t) => (
+        {["overview", "tasks"].map((t) => (
           <button
             className={`tab ${tab === t ? "active" : ""}`}
             key={t}
+            aria-pressed={tab === t}
             onClick={() => setTab(t)}
           >
             {t[0].toUpperCase() + t.slice(1)}
@@ -212,7 +215,7 @@ export function AreasPage({
                   <EmptyState
                     icon={Layers3}
                     title="Give your next project a home"
-                    description="Create confirmed projects when you’re ready. No project states have been assumed."
+                    description="Break an idea into a few achievable steps."
                     action={
                       <Button onClick={() => setEditor({ kind: "projects" })}>
                         <Plus size={13} />
@@ -224,10 +227,15 @@ export function AreasPage({
               )}
             </>
           ) : (
-            <div className="dashboard-grid">
+            <div
+              className={
+                slug === "academics" ? "course-layout" : "dashboard-grid"
+              }
+            >
               {slug === "academics" ? (
                 <AcademicsPanel
-                  key={`${initialCourse ?? "all"}:${initialAssessment ?? ""}`}
+                  key={`${initialCourse ?? "all"}:${initialAssessment ?? ""}:${initialView ?? ""}`}
+                  initialView={initialView}
                   initialCourse={initialCourse}
                   initialAssessment={initialAssessment}
                 />

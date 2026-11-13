@@ -116,16 +116,25 @@ export function ReviewsPage() {
         </div>
       </div>
       <section className="panel weekly-review-start">
-        <label>
-          Review week starts
-          <input
-            type="date"
-            value={week}
-            disabled={!!review}
-            onChange={(e) => setWeek(e.target.value)}
-            required
-          />
-        </label>
+        <div>
+          <strong>Week of {friendlyDate(week)}</strong>
+          <p className="small muted">
+            A little perspective, then a realistic plan.
+          </p>
+        </div>
+        <details className="review-date-options">
+          <summary>Change review week</summary>
+          <label>
+            Review week starts
+            <input
+              type="date"
+              value={week}
+              disabled={!!review}
+              onChange={(e) => setWeek(e.target.value)}
+              required
+            />
+          </label>
+        </details>
         {review ? (
           <Button
             variant="outline"
@@ -155,7 +164,11 @@ export function ReviewsPage() {
             commitmentOpening={commitmentOpening}
           />
           <ReviewCommitments review={review} onOpening={setCommitmentOpening} />
-          <section className="panel settings-panel">
+          <details
+            className="panel settings-panel review-reflection"
+            open={candidate ? true : undefined}
+          >
+            <summary>Finish and save your reflection</summary>
             <h2>Your reviewed reflection</h2>
             <p className="small muted">
               Keep what feels useful. Review your reflection before saving it.
@@ -228,7 +241,7 @@ export function ReviewsPage() {
                 ))}
               </div>
             )}
-          </section>
+          </details>
         </>
       ) : (
         <section className="panel settings-panel">

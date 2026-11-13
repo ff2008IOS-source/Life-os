@@ -130,6 +130,9 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
       },
     }),
   );
+  await expect(page.locator(".focus-update")).not.toContainText(
+    /null min|undefined min|NaN min/,
+  );
   for (const theme of ["light", "dark"] as const) {
     const saved = await page.request.patch("/api/v1/profile", {
       headers: origin,

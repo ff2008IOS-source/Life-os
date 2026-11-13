@@ -12,6 +12,7 @@ export function DailyCheckInPanel({
   timezone: string;
 }) {
   const { data: w } = useWorkspace();
+  const [revision, setRevision] = useState(0);
   const [day, setDay] = useState(today),
     [row, setRow] = useState<DailyCheckIn | null>(null),
     [step, setStep] = useState(0),
@@ -52,7 +53,7 @@ export function DailyCheckInPanel({
     return () => {
       live = false;
     };
-  }, [day, timezone]);
+  }, [day, timezone, revision]);
   const fields = ["accomplishments", "obstacles", "follow_up"] as const;
   const questions = [
     "What was the most important thing you accomplished?",
@@ -109,14 +110,29 @@ export function DailyCheckInPanel({
           disabled={saving}
           onChange={(e) => {
             setLoading(true);
+            setRow(null);
+            setStep(0);
+            setError("");
             setDay(e.target.value);
           }}
         />
       </div>
       {error && (
-        <p role="alert" className="error-message">
+        <div role="alert" className="error-message">
           {error}
-        </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLoading(true);
+              setRow(null);
+              setError("");
+              setRevision((v) => v + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </div>
       )}
       {loading ? (
         <p className="muted">Loading your check-in…</p>
@@ -159,32 +175,36 @@ export function DailyCheckInPanel({
                 <p>
                   {row.status === "skipped"
                     ? "Skipped for now. You can return whenever useful."
-                    : "Your responses are saved. Reflection is separate from task completion."}
+                    : "Check-in saved."}
                 </p>
-                <dl className="briefing-reflection">
-                  <dt>Accomplishment</dt>
-                  <dd>{row.accomplishments || "Not recorded"}</dd>
-                  <dt>Obstacles / unfinished work</dt>
-                  <dd>{row.obstacles || "Not recorded"}</dd>
-                  <dt>Next step</dt>
-                  <dd>{row.follow_up || "Not recorded"}</dd>
-                </dl>
-                <Button
-                  variant="outline"
-                  disabled={saving}
-                  onClick={() => setStep(0)}
-                >
-                  Edit responses
-                </Button>
+                {row.accomplishments && (
+                  <p className="small muted">{`Highlight: ${row.accomplishments.slice(0, 140)}${row.accomplishments.length > 140 ? "…" : ""}`}</p>
+                )}
+                <details className="briefing-detail">
+                  <summary>View saved responses</summary>
+                  <dl className="briefing-reflection">
+                    <dt>Accomplishment</dt>
+                    <dd>{row.accomplishments || "Not recorded"}</dd>
+                    <dt>Obstacles / unfinished work</dt>
+                    <dd>{row.obstacles || "Not recorded"}</dd>
+                    <dt>Next step</dt>
+                    <dd>{row.follow_up || "Not recorded"}</dd>
+                  </dl>
+                  <Button
+                    variant="outline"
+                    disabled={saving}
+                    onClick={() => setStep(0)}
+                  >
+                    Edit responses
+                  </Button>
+                </details>
               </>
             )}
             <details className="briefing-detail">
-              <summary>
-                Optional verified links and unfinished commitments
-              </summary>
+              <summary>Link a task or goal</summary>
               <p className="small muted">
-                Choose a record yourself. Saving a reflection never completes it
-                or creates a new task.
+                Keep this reflection with a relevant task or goal. Changes here
+                won’t mark work complete.
               </p>
               <label>
                 Unfinished commitment

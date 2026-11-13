@@ -141,7 +141,7 @@ export function GoalsPage() {
                   ) : (
                     <p className="small muted">
                       Link an existing task to this goal in the task editor.
-                      Completion is recorded once across your workspace.
+                      Updates here also appear in your linked work.
                     </p>
                   )}
                 </details>

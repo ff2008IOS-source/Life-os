@@ -1,4 +1,5 @@
 "use client";
+import { WeeklyInsights } from "./weekly-insights";
 import { realWorkspace } from "@/lib/real-workspace";
 import { WorkSessionsPanel } from "./work-sessions-panel";
 import { useState } from "react";
@@ -79,6 +80,7 @@ export function InsightsPage() {
         start={start}
         end={format(addDays(new Date(end + "T12:00:00"), 1), "yyyy-MM-dd")}
       />
+      <WeeklyInsights />
       <div className="stats-grid">
         {[
           {

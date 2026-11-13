@@ -27,6 +27,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60000,
       env: {
+        SUPABASE_SECRET_KEY: "synthetic-test-server-key",
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54329",
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "synthetic-test-publishable-key",
         LIFE_OS_ALLOWED_EMAIL: "beta@example.invalid",

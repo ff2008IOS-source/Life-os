@@ -61,6 +61,11 @@ test("synthetic reservation → actual completion → academic history and revie
     .getByLabel("Selected course")
     .filter({ visible: true })
     .selectOption(course.id);
+  await page
+    .getByRole("button", { name: "Assessments", exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
   await page.getByRole("button", { name: "Prepare work", exact: true }).click();
   await page.getByLabel("Estimated preparation minutes").fill("60");
   await page

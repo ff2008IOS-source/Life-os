@@ -30,6 +30,10 @@ test("academic forms save unknown term dates, course rules and scores without in
   await page.getByLabel("Course title").fill("[TEST] Confirmed course");
   await page.getByRole("button", { name: "Save record", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Assessments", exact: true })
+    .first()
+    .click();
   await page.getByRole("button", { name: /Add assessment/ }).click();
   await page.getByLabel("Assessment title").fill("[TEST] Unknown score");
   await page.getByRole("button", { name: "Save record", exact: true }).click();
