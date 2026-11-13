@@ -236,7 +236,7 @@ export function SheetRestPanel() {
           Authorize Sheets permission
         </Button>
         <a
-          className="text-link"
+          className="button button-outline"
           href="https://lifeos-beta-ivory.vercel.app/settings?section=integrations"
           target="_blank"
           rel="noreferrer"
