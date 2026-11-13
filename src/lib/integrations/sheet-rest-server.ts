@@ -194,7 +194,8 @@ export async function synchronizeDataset(user: string, id: string) {
       .eq("id", op);
     dbError(r.error);
   };
-  let confirmed = 0;
+  let confirmed = 0,
+    held = 0;
   try {
     const operations = await db
       .from("sheet_rest_operations")
@@ -287,6 +288,7 @@ export async function synchronizeDataset(user: string, id: string) {
           });
           throw e;
         }
+        held++;
         await updateOp(op.id, {
           status: "conflict",
           last_error:
@@ -315,18 +317,28 @@ export async function synchronizeDataset(user: string, id: string) {
       p_hash: snapshot.hash,
     });
     dbError(ingest.error);
+    const blocked = await db
+      .from("sheet_rest_operations")
+      .select("id")
+      .eq("user_id", user)
+      .eq("dataset_id", id)
+      .in("status", ["conflict", "failed", "unknown"])
+      .limit(1);
+    dbError(blocked.error);
+    held = Math.max(held, blocked.data?.length ?? 0);
     const conflicts = records.filter(
       (r) => r.state === "conflict" || r.state === "source_missing",
     ).length;
     const done = await db
       .from("sheet_rest_runs")
       .update({
-        status: conflicts ? "partial" : "completed",
+        status: conflicts || held ? "partial" : "completed",
         summary: {
           checked: records.length,
           changed: ingest.data,
           confirmed,
           conflicts,
+          held_outbound: held > 0,
         },
         finished_at: new Date().toISOString(),
       })
@@ -343,6 +355,7 @@ export async function synchronizeDataset(user: string, id: string) {
       changed: ingest.data,
       confirmed,
       conflicts,
+      held_outbound: held > 0,
     };
   } catch (e) {
     const known = e instanceof SheetsRestError;

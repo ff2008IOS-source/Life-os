@@ -25,7 +25,8 @@ const owner = "11111111-1111-4111-8111-111111111111",
   spreadsheet = "syntheticIntegrationSheet";
 let pg: PGlite,
   dataset: string,
-  loseResponse = false;
+  loseResponse = false,
+  loseBeforeWrite = false;
 type Cell = {
   userEnteredValue?: {
     stringValue?: string;
@@ -208,6 +209,10 @@ beforeAll(async () => {
       const url = new URL(String(input));
       expect(url.hostname).toBe("sheets.googleapis.com");
       if (init.method === "POST") {
+        if (loseBeforeWrite) {
+          loseBeforeWrite = false;
+          throw Error("Synthetic request lost before acknowledgement");
+        }
         const body = JSON.parse(String(init.body));
         for (const item of body.data) {
           const m = /!([A-Z]+)(\d+):/.exec(item.range)!;
@@ -331,4 +336,35 @@ it("holds simultaneous edits for review rather than overwriting Google", async (
   expect(row.conflicts).toMatchObject({
     value: { base: 7, local: 8, remote: 9 },
   });
+});
+
+it("reports nonconverged uncertain writes as partial work requiring review", async () => {
+  const d = await ownedDataset(owner, dataset);
+  const row = (await ledgerRows(d))[0];
+  await pg.query("select resolve_sheet_rest($1,$2,$3,$4,'value','remote')", [
+    owner,
+    dataset,
+    row.id,
+    row.version,
+  ]);
+  const op = await draft(10);
+  loseBeforeWrite = true;
+  await expect(synchronizeDataset(owner, dataset)).rejects.toMatchObject({
+    code: "UNKNOWN_OUTCOME",
+  });
+  await pg.query(
+    "update sheet_rest_operations set next_attempt_at=now()where id=$1",
+    [op],
+  );
+  const result = await synchronizeDataset(owner, dataset);
+  expect(result.held_outbound).toBe(true);
+  expect(
+    (
+      await pg.query(
+        "select status from sheet_rest_runs where dataset_id=$1 order by started_at desc limit 1",
+        [dataset],
+      )
+    ).rows[0],
+  ).toEqual({ status: "partial" });
+  expect(grid[1][1].effectiveValue?.numberValue).toBe(9);
 });

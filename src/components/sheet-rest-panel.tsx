@@ -61,7 +61,7 @@ type State = {
     id: string;
     status: string;
     started_at: string;
-    summary: Record<string, number>;
+    summary: Record<string, number | boolean>;
   }[];
 };
 type Metadata = {

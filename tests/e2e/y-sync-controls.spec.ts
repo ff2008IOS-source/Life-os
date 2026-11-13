@@ -126,6 +126,7 @@ test("controlled calendar moves show confirmation and spreadsheet settings keep 
   await page.goto("/settings?section=integrations");
   await page
     .getByText("Existing project-status imports", { exact: true })
+    .filter({ visible: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Mapped spreadsheet sync" }),
@@ -138,7 +139,9 @@ test("controlled calendar moves show confirmation and spreadsheet settings keep 
     page.getByRole("button", { name: "Register read-only workbook" }),
   ).toBeVisible();
   await expect(
-    page.getByText(/This legacy project-status mapping remains import-only/),
+    page
+      .getByText(/This legacy project-status mapping remains import-only/)
+      .filter({ visible: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(
