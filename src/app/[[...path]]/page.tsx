@@ -20,7 +20,12 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ path?: string[] }>;
-  searchParams: Promise<{ section?: string; google?: string }>;
+  searchParams: Promise<{
+    section?: string;
+    google?: string;
+    course?: string;
+    assessment?: string;
+  }>;
 }) {
   const { path = [] } = await params;
   const query = await searchParams;
@@ -62,7 +67,17 @@ export default async function Page({
         ) : page === "planner" ? (
           <PlannerPage />
         ) : page === "areas" ? (
-          <AreasPage slug={path[1]} />
+          <AreasPage
+            slug={path[1]}
+            initialCourse={
+              typeof query.course === "string" ? query.course : undefined
+            }
+            initialAssessment={
+              typeof query.assessment === "string"
+                ? query.assessment
+                : undefined
+            }
+          />
         ) : page === "goals" ? (
           <GoalsPage />
         ) : page === "reviews" ? (

@@ -19,7 +19,7 @@ test("core screens and task form have no automated WCAG A/AA violations", async 
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  const initialize = page.getByRole("button", { name: /Initialize workspace/ });
+  const initialize = page.getByRole("button", { name: /Set up my space/ });
   if (await initialize.isVisible()) {
     await initialize.click();
     await expect(initialize).toHaveCount(0);

@@ -19,7 +19,7 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  const init = page.getByRole("button", { name: /Initialize workspace/ });
+  const init = page.getByRole("button", { name: /Set up my space/ });
   if (await init.isVisible()) {
     await init.click();
     await expect(init).toHaveCount(0);
@@ -54,7 +54,9 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   ).toHaveCount(0);
   const primary = page.locator(".briefing-primary").filter({ visible: true });
   await expect(primary).toContainText(task.title);
-  await expect(primary).toContainText("Calendar availability unknown");
+  await expect(primary).toContainText(
+    "Update your calendar to check available time",
+  );
   await primary.getByRole("button", { name: "Schedule", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "Enable scheduling eligibility",

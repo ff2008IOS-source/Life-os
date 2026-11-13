@@ -13,7 +13,7 @@ test("synthetic reservation → actual completion → academic history and revie
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  const initialize = page.getByRole("button", { name: /Initialize workspace/ });
+  const initialize = page.getByRole("button", { name: /Set up my space/ });
   if (await initialize.count()) {
     await initialize.click();
     await expect(initialize).toHaveCount(0);
@@ -208,8 +208,8 @@ test("synthetic reservation → actual completion → academic history and revie
   expect(reviewEvidence.items[0].task.status).toBe("completed");
   for (const route of ["/insights", "/reviews"]) {
     await page.goto(route);
-    await expect(page.getByText(/45 reported minutes/)).toBeVisible();
+    await expect(page.getByText(/45 minutes logged/)).toBeVisible();
     await page.reload();
-    await expect(page.getByText(/45 reported minutes/)).toBeVisible();
+    await expect(page.getByText(/45 minutes logged/)).toBeVisible();
   }
 });

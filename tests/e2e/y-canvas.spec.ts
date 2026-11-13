@@ -95,7 +95,7 @@ test("Canvas connection is private and secure UI handles verification, sync and 
   await expect(page.getByLabel("Canvas access token")).toHaveValue("");
   await expect(page.getByText("Connected", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sync now", exact: true }).click();
-  await expect(page.getByText(/5 resource records checked/)).toBeVisible();
+  await expect(page.getByText(/5 items checked/)).toBeVisible();
   await page
     .getByLabel("Canvas access token")
     .fill("synthetic-replacement-token");

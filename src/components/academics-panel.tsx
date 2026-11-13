@@ -24,12 +24,15 @@ const empty: AcademicData = {
   study_topics: [],
   study_sessions: [],
 };
-export function AcademicsPanel() {
+export function AcademicsPanel({
+  initialCourse,
+  initialAssessment,
+}: { initialCourse?: string; initialAssessment?: string } = {}) {
   const [limit, setLimit] = useState(8);
   const [data, setData] = useState<AcademicData>(empty),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
-    [courseId, setCourseId] = useState(""),
+    [courseId, setCourseId] = useState(initialCourse ?? ""),
     [term, setTerm] = useState(""),
     [tab, setTab] = useState("assessments"),
     [edit, setEdit] = useState<{
@@ -61,7 +64,13 @@ export function AcademicsPanel() {
   const courses = data.courses.filter((c) => !term || c.term_id === term);
   const current = courses.find((c) => c.id === courseId) ?? courses[0];
   const selected = current?.id;
-  const assessments = data.assessments.filter((a) => a.course_id === selected),
+  const assessments = data.assessments
+      .filter((a) => a.course_id === selected)
+      .sort(
+        (a, b) =>
+          Number(b.id === initialAssessment) -
+          Number(a.id === initialAssessment),
+      ),
     topics = data.study_topics.filter((a) => a.course_id === selected),
     sessions = data.study_sessions.filter((a) => a.course_id === selected),
     categories = data.grading_categories.filter(
@@ -258,7 +267,15 @@ export function AcademicsPanel() {
             </div>
             <div className="academic-record-list">
               {rows.slice(0, limit).map((row) => (
-                <div key={row.id}>
+                <div
+                  key={row.id}
+                  id={`assessment-${row.id}`}
+                  className={
+                    row.id === initialAssessment
+                      ? "assessment-highlight"
+                      : undefined
+                  }
+                >
                   <button
                     className="academic-record-row"
                     onClick={() => setEdit({ kind, record: row })}

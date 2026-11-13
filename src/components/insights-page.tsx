@@ -171,12 +171,12 @@ export function InsightsPage() {
                 compact
                 icon={ChartNoAxesCombined}
                 title="A pattern will emerge over time"
-                description="No task completions recorded in this range. This does not measure everything you achieved."
+                description="Finish a task to see your progress here."
               />
             )}
             <p className="data-source">
               Source: user-entered task completion timestamps · last 7 days ·
-              America/Vancouver. Counts reflect recorded actions only.
+              America/Vancouver. Based on what you’ve logged in Life OS.
             </p>
           </div>
         </section>
@@ -188,7 +188,7 @@ export function InsightsPage() {
             {data.areas.length ? (
               <table>
                 <caption className="sr-only">
-                  Active and completed recorded tasks by area
+                  Your tasks across life areas
                 </caption>
                 <thead>
                   <tr>

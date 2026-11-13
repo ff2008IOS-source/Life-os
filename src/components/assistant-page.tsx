@@ -632,8 +632,7 @@ export function AssistantPage({
         </p>
       )}
       <p className="assistant-footnote">
-        Uses relevant saved records across your courses. AI can make mistakes;
-        check important details.
+        A little perspective, based on your week. Check important details.
       </p>
     </section>
   );

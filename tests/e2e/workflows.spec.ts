@@ -12,9 +12,9 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /Initialize workspace/ }).click();
+  await page.getByRole("button", { name: /Set up my space/ }).click();
   await expect(
-    page.getByRole("button", { name: /Initialize workspace/ }),
+    page.getByRole("button", { name: /Set up my space/ }),
   ).toHaveCount(0);
   await page
     .getByLabel("Quick capture task title")
@@ -185,7 +185,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  const initialize = page.getByRole("button", { name: /Initialize workspace/ });
+  const initialize = page.getByRole("button", { name: /Set up my space/ });
   if (await initialize.count()) {
     await initialize.click();
     await expect(initialize).toHaveCount(0);

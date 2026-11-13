@@ -75,7 +75,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           <span className="logo">
             <AppLogo />
           </span>
-          Life OS<span className="beta-pill">BETA</span>
+          Life OS
         </Link>
         <nav>
           {navigation.map((n) => (
@@ -116,13 +116,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             <Settings />
             <span>Settings</span>
           </Link>
-          <div className="beta-notice">
-            <strong>
-              <ShieldCheck size={13} />
-              Your private beta
-            </strong>
-            <p>Private workspace. Existing Google calendars stay protected.</p>
-          </div>
           <Link href="/settings" className="account">
             <ProfileAvatar />
             <div>
@@ -154,7 +147,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               aria-label="Search workspace"
             >
               <Search size={15} />
-              Search tasks, projects, goals<kbd>⌘ K</kbd>
+              Search your space<kbd>⌘ K</kbd>
             </button>
             <span className="top-divider" />
             <Button
@@ -177,7 +170,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           {children}
           <div className="footer-note">
             <ShieldCheck size={11} />
-            Private beta · America/Vancouver
+            Your space. Your pace.
           </div>
         </main>
       </div>
@@ -310,9 +303,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               </p>
             )}
           {!query.trim() && (
-            <p className="muted small">
-              Start typing to search your recorded data.
-            </p>
+            <p className="muted small">Find a task, project or goal.</p>
           )}
         </div>
       </Modal>

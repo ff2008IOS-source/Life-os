@@ -182,9 +182,8 @@ export function SheetRestPanel() {
     >
       <h2>Google Sheets synchronization</h2>
       <p className="small muted">
-        Standard Google Sheets API. Tables start import-only. Formula results
-        remain source-owned; missing rows preserve their Life OS history. The
-        shooting chart is excluded.
+        Keep Life OS and your spreadsheets connected. Choose what to sync and
+        when to allow changes.
       </p>
       <div className="stack">
         <label>
@@ -574,7 +573,7 @@ export function SheetRestPanel() {
             Sync now
           </Button>
           <details>
-            <summary>Review mapping after source changes</summary>
+            <summary>Advanced connection settings</summary>
             <p className="small muted">
               Pause this table and disable outbound writes first. Preserve field
               keys, types and identity; update exact headers and bounded ranges

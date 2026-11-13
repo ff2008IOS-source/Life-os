@@ -62,10 +62,10 @@ export function ConnectedCareerRecords() {
       await Promise.all([load(), refresh()]);
       setNotice(
         input.action === "edit"
-          ? "Local change saved. It remains pending until the authorized source write is confirmed."
+          ? "Changes saved. Waiting to sync with Google Sheets."
           : input.action === "bind_project"
-            ? "Project connected. Future mapped status edits use the guarded synchronization outbox."
-            : "Source checked. Review any conflicts before assuming changes are synchronized.",
+            ? "Project connected. Status changes will sync when this connection allows them."
+            : "Spreadsheet checked. Review any changes that need your attention.",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Source operation failed.");
@@ -79,11 +79,8 @@ export function ConnectedCareerRecords() {
       className="panel settings-panel"
       aria-label="Connected career and project records"
     >
-      <h2>Connected career and project records</h2>
-      <p className="small muted">
-        These are the current mapped spreadsheet records. Only approved fields
-        are editable. Formula values stay source-owned.
-      </p>
+      <h2>Your connected plans</h2>
+      <p className="small muted">Your spreadsheet plans, in one place.</p>
       <label>
         Career source table
         <select
@@ -110,7 +107,7 @@ export function ConnectedCareerRecords() {
       {d && (
         <>
           <p className="small">
-            {d.mode.replaceAll("_", " ")} · Last successful read:{" "}
+            {d.mode.replaceAll("_", " ")} · Updated:{" "}
             {d.last_read_at
               ? new Date(d.last_read_at).toLocaleString()
               : "Not yet confirmed"}
@@ -143,7 +140,7 @@ export function ConnectedCareerRecords() {
                   <p className="small">
                     Linked project:{" "}
                     {workspace.projects.find((p) => p.id === link.project_id)
-                      ?.name ?? "Owned project"}
+                      ?.name ?? "Your project"}
                     . Edit its normal project status to queue an authorized
                     source update.
                   </p>
@@ -231,9 +228,7 @@ export function ConnectedCareerRecords() {
                       <label>
                         Source status field
                         <select name="field" required>
-                          <option value="">
-                            Choose a literal status field
-                          </option>
+                          <option value="">Choose a status column</option>
                           {d.config.columns
                             .filter(
                               (c) =>

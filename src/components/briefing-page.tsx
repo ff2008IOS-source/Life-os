@@ -1,7 +1,10 @@
 "use client";
 import Link from "next/link";
+import { consumerReason } from "@/lib/consumer-copy";
 import { useState, useRef } from "react";
 import {
+  Focus,
+  CalendarDays,
   RefreshCw,
   ArrowRight,
   Sun,
@@ -27,14 +30,12 @@ export function BriefingPage() {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">
-            A CLEARER DAY, GROUNDED IN YOUR RECORDS
-          </span>
+          <span className="eyebrow">YOUR DAY, WITH A LITTLE PERSPECTIVE</span>
           <h1>Life OS Briefing</h1>
-          <p>What matters. What needs attention. Your next decision.</p>
+          <p>A clear head for the day ahead.</p>
         </div>
         <Link href="/assistant/history" className="text-link">
-          Saved conversation archive
+          Past conversations
         </Link>
       </div>
       <BriefingPanel controller={state} />
@@ -50,6 +51,30 @@ export function BriefingPanel({
 }) {
   const { data: w, mutate, notify } = useWorkspace();
   const d = c.data;
+  const nextAssessment = d?.assessments
+    .filter((a) => {
+      const day =
+        a.due_date ??
+        (a.due_at
+          ? formatInTimeZone(a.due_at, d.timezone, "yyyy-MM-dd")
+          : null);
+      return (
+        !a.dropped &&
+        !["submitted", "returned", "excused"].includes(a.submission_state) &&
+        day &&
+        day >= d.today &&
+        (!a.due_at || Date.parse(a.due_at) >= Date.parse(d.refreshed_at))
+      );
+    })
+    .sort((a, b) =>
+      (a.due_at ?? a.due_date ?? "").localeCompare(
+        b.due_at ?? b.due_date ?? "",
+      ),
+    )[0];
+  const assessmentHref = nextAssessment
+    ? `/areas/academics?course=${nextAssessment.course_id}&assessment=${nextAssessment.id}#assessment-${nextAssessment.id}`
+    : "/areas/academics";
+
   const [editor, setEditor] = useState<Task | null>(null),
     [complete, setComplete] = useState<Task | null>(null),
     [scheduling, setScheduling] = useState<Task | null>(null),
@@ -161,14 +186,21 @@ export function BriefingPanel({
         key={r.task_id}
       >
         <h3>{r.title}</h3>
-        {index === 0 ? (
-          <ul className="briefing-reasons">
-            {r.reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="small muted">{r.reasons.slice(0, 2).join(" · ")}</p>
+        <p className="small muted">
+          {consumerReason(r.reasons[0])}
+          {r.remaining_minutes !== null
+            ? ` · ${r.remaining_minutes} min ${task?.actual_minutes == null ? "estimated" : "remaining"}`
+            : ""}
+        </p>
+        {index === 0 && (
+          <details className="briefing-detail">
+            <summary>Why this comes first</summary>
+            <ul>
+              {r.reasons.map((reason) => (
+                <li key={reason}>{consumerReason(reason)}</li>
+              ))}
+            </ul>
+          </details>
         )}
         {!!r.goals.length && (
           <div className="briefing-goal-links">
@@ -255,24 +287,33 @@ export function BriefingPanel({
         </div>
       )}
       {!d ? (
-        <section className="panel briefing-card">
+        <section
+          className={
+            compact ? "panel next-action focus-card" : "panel briefing-card"
+          }
+          aria-busy={c.loading}
+        >
           <h2>{compact ? "Next best action" : "Daily Briefing"}</h2>
           <p>
             {c.loading
-              ? "Preparing your recorded day…"
-              : "Briefing data is unavailable. Your tasks remain in the planner."}
+              ? "Getting your day ready…"
+              : "Your briefing couldn’t load. You can still open your planner."}
           </p>
-          <Button
-            variant="outline"
-            onClick={() => void c.reload()}
-            disabled={c.loading}
-          >
-            Retry briefing
-          </Button>
+          {c.loading ? (
+            <div className="focus-skeleton" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          ) : (
+            <Button variant="outline" onClick={() => void c.reload()}>
+              Try again
+            </Button>
+          )}
         </section>
       ) : compact ? (
         <section
-          className="panel next-action"
+          className="panel next-action focus-card"
           aria-labelledby="next-action-title"
         >
           <div className="panel-heading">
@@ -281,17 +322,38 @@ export function BriefingPanel({
               Open your briefing <ArrowRight size={12} />
             </Link>
           </div>
-          <p className="small muted">
-            {d.summary.commitments ?? "Unknown"} calendar commitments ·{" "}
-            {d.summary.approaching_deadlines ?? "Unknown"} approaching academic
-            deadlines · {d.attention.length} items to review
-          </p>
+          <div className="focus-art" aria-hidden="true">
+            <Focus size={42} strokeWidth={1.2} />
+          </div>
           {d.recommendations[0] ? (
             <>
               <h3>{d.recommendations[0].title}</h3>
-              <p className="panel-description">
-                {d.recommendations[0].reasons.join(" · ")}
+              <p className="focus-description">
+                {d.recommendations[0].urgency >= 3
+                  ? "A close deadline makes this a good place to start."
+                  : "A focused step toward what matters to you."}
               </p>
+              <div className="focus-meta">
+                {d.recommendations[0].remaining_minutes !== null && (
+                  <span>
+                    <Clock3 size={14} />
+                    {d.recommendations[0].remaining_minutes} min{" "}
+                    {w.tasks.find((t) => t.id === d.recommendations[0].task_id)
+                      ?.actual_minutes == null
+                      ? "estimated"
+                      : "remaining"}
+                  </span>
+                )}
+                <span>{consumerReason(d.recommendations[0].reasons[0])}</span>
+              </div>
+              <details className="focus-explanation">
+                <summary>Why this comes first</summary>
+                <ul>
+                  {d.recommendations[0].reasons.map((reason) => (
+                    <li key={reason}>{consumerReason(reason)}</li>
+                  ))}
+                </ul>
+              </details>
               <div className="flex-between">
                 <div>
                   {d.recommendations[0].goals.map((g) => (
@@ -324,15 +386,55 @@ export function BriefingPanel({
                 </div>
               </div>
             </>
+          ) : nextAssessment ? (
+            <div className="focus-academic">
+              <span className="focus-overline">
+                COMING UP IN {nextAssessment.course}
+              </span>
+              <h3>{nextAssessment.title}</h3>
+              <p className="focus-description">
+                Make a little room to prepare.
+              </p>
+              <div className="focus-meta">
+                <span>
+                  <CalendarDays size={14} />
+                  {nextAssessment.verification_status === "unverified"
+                    ? "Check the deadline"
+                    : `Due ${nextAssessment.due_at ? formatInTimeZone(nextAssessment.due_at, d.timezone, "EEE, MMM d · h:mm a") : formatInTimeZone(nextAssessment.due_date + "T12:00:00Z", d.timezone, "EEE, MMM d")}`}
+                </span>
+              </div>
+              <Button asChild>
+                <Link href={assessmentHref}>
+                  Plan preparation <ArrowRight size={15} />
+                </Link>
+              </Button>
+            </div>
           ) : (
-            <p className="panel-description">
-              No actionable task is currently recorded. Review upcoming
-              deadlines or capture a task in the planner.
-            </p>
+            <div className="focus-empty">
+              <h3>Your next move starts here.</h3>
+              <p className="focus-description">
+                Add one thing you want to make progress on, or take a look at
+                your week.
+              </p>
+              <Button asChild>
+                <Link href="/planner">
+                  Plan your day <ArrowRight size={15} />
+                </Link>
+              </Button>
+            </div>
           )}
-          <p className="briefing-refresh">
-            Refreshed {formatInTimeZone(d.refreshed_at, d.timezone, "h:mm a")}
-          </p>
+          <div className="focus-footer">
+            <span>
+              {d.summary.commitments == null
+                ? "Calendar needs an update"
+                : `${d.summary.commitments} ${d.summary.commitments === 1 ? "commitment" : "commitments"} today`}
+            </span>
+            {d.attention.length > 0 && (
+              <Link href="/briefing#needs-attention">
+                {d.attention.length} to review <ArrowRight size={12} />
+              </Link>
+            )}
+          </div>
         </section>
       ) : (
         <>
@@ -370,23 +472,21 @@ export function BriefingPanel({
               </div>
               <div>
                 <strong>{d.summary.completed_yesterday}</strong>
-                <span>tasks recorded complete yesterday</span>
+                <span>tasks finished yesterday</span>
               </div>
             </div>
             <p className="briefing-refresh">
-              Last successful data refresh:{" "}
+              Updated{" "}
               {formatInTimeZone(d.refreshed_at, d.timezone, "MMM d, h:mm a")} ·{" "}
-              {d.timezone}. Cached source synchronization is separate.
+              {d.timezone}.
             </p>
             <p className="small muted">
               {d.calendar.reliable
-                ? `${d.calendar.available_minutes} minutes of recorded availability after breaks, protected time and daily scheduling capacity.`
-                : "Availability is unknown until your selected calendars are current."}
+                ? `${d.calendar.available_minutes} minutes available for focused work.`
+                : "Update your calendar to see your free time."}
             </p>
             <details className="briefing-detail">
-              <summary>
-                Today’s recorded commitments and source freshness
-              </summary>
+              <summary>Schedule and connection details</summary>
               <p className="small muted">
                 Oldest selected calendar sync:{" "}
                 {d.calendar.last_source_sync
@@ -411,8 +511,8 @@ export function BriefingPanel({
                 </ul>
               ) : (
                 <p>
-                  No cached commitments are shown; consult connection health
-                  before treating the day as free.
+                  No events to show; check your calendar connection before
+                  treating the day as free.
                 </p>
               )}
             </details>
@@ -428,14 +528,11 @@ export function BriefingPanel({
                   <CheckCircle2 size={18} />
                 </div>
                 {actionCard(0) ?? (
-                  <p>
-                    No unblocked, non-deferred task is recorded. Review upcoming
-                    deadlines or capture a responsibility.
-                  </p>
+                  <p>Choose something to work on in your planner.</p>
                 )}
                 {d.recommendations.length > 1 && (
                   <details className="briefing-detail">
-                    <summary>Alternatives and ranking explanation</summary>
+                    <summary>Other options</summary>
                     {d.recommendations
                       .slice(1)
                       .map((_, i) => actionCard(i + 1))}
@@ -452,7 +549,7 @@ export function BriefingPanel({
             <div className="stack">
               <section className="panel briefing-card">
                 <div className="panel-heading">
-                  <h2>Needs Attention</h2>
+                  <h2 id="needs-attention">Needs Attention</h2>
                   <AlertCircle size={18} />
                 </div>
                 <p className="small muted">
@@ -524,7 +621,7 @@ export function BriefingPanel({
               <details className="panel briefing-card">
                 <summary>Weekly Insights</summary>
                 <div className="panel-heading">
-                  <h2>This week’s recorded progress</h2>
+                  <h2>Your week at a glance</h2>
                   <Clock3 size={18} />
                 </div>
                 <p className="small muted">
@@ -533,22 +630,20 @@ export function BriefingPanel({
                 </p>
                 <ul className="briefing-reasons">
                   <li>
-                    {d.weekly.completed_tasks} tasks recorded complete;{" "}
-                    {d.weekly.completed_on_time} met a recorded deadline,{" "}
+                    {d.weekly.completed_tasks} tasks completed;{" "}
+                    {d.weekly.completed_on_time} met their deadline,{" "}
                     {d.weekly.completed_late} completed after it.
                   </li>
                   <li>
                     {d.source_errors.includes("work")
                       ? "Work history unavailable."
-                      : `${d.weekly.planned_minutes} recorded reservation minutes; ${d.weekly.reported_minutes} minutes of effort reported. These use different time anchors and are not a completion percentage.`}
+                      : `${d.weekly.reported_minutes} minutes logged; ${d.weekly.planned_minutes} minutes planned.`}
                   </li>
-                  <li>
-                    {d.weekly.deferrals} explicit Not Now decisions this week.
-                  </li>
+                  <li>{d.weekly.deferrals} tasks put off this week.</li>
                   <li>
                     {d.source_errors.includes("study")
                       ? "Study history unavailable."
-                      : `${d.weekly.reported_academic_minutes} recorded study minutes. Exposure does not establish mastery.`}
+                      : `${d.weekly.reported_academic_minutes} study minutes logged.`}
                   </li>
                 </ul>
                 {d.weekly.needs_review.length > 0 && (

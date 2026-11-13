@@ -147,19 +147,18 @@ export function ReviewsPage() {
           <p className="small muted">
             Week of {friendlyDate(review.period_start)} ·{" "}
             {review.completed_at ? "Completed review" : "Saved draft"} · Your
-            approved reflection and task commitments stay linked to this week.
+            plans and reflection, together.
           </p>
-          <ReviewCommitments review={review} onOpening={setCommitmentOpening} />
           <PreparedWeeklyReview
             review={review}
             onReply={setCandidate}
             commitmentOpening={commitmentOpening}
           />
+          <ReviewCommitments review={review} onOpening={setCommitmentOpening} />
           <section className="panel settings-panel">
             <h2>Your reviewed reflection</h2>
             <p className="small muted">
-              Edit and approve this reflection before saving. AI suggestions do
-              not update tasks, goals or completion records.
+              Keep what feels useful. Review your reflection before saving it.
             </p>
             {candidate && (
               <Button
@@ -210,8 +209,8 @@ export function ReviewsPage() {
               <div className="review-proposals">
                 <h3>Proposed next actions</h3>
                 <p className="small muted">
-                  Open a draft, confirm its details, then capture it. Goal and
-                  project links use the normal task controls.
+                  Choose an action to turn into a task. You’ll review it before
+                  adding it.
                 </p>
                 {candidate.next_actions.slice(0, 3).map((action, i) => (
                   <div className="setting-line" key={i}>
@@ -271,7 +270,7 @@ export function ReviewsPage() {
         <WrittenReviewsPage />
       </details>
       <details className="panel">
-        <summary>Scheduled checks and prepared snapshots</summary>
+        <summary>Past check-ins and briefings</summary>
         <PersonalWorkflowsPanel />
       </details>
       <WorkSessionsPanel

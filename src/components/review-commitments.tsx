@@ -99,8 +99,7 @@ export function ReviewCommitments({
     >
       <h2>Follow through</h2>
       <p className="small muted">
-        Approved commitments link to your actual tasks. Their current status is
-        shown; no completion is inferred from a passed deadline.
+        The promises you’re carrying into this week.
       </p>
       {state?.items.map((x) => (
         <div className="setting-line" key={x.id}>
@@ -138,7 +137,7 @@ export function ReviewCommitments({
       ))}
       {!state?.items.length && (
         <p className="small muted">
-          No approved task commitments found for this review or carried forward.
+          No commitments yet. Choose a task to make it part of your week.
         </p>
       )}
       {state?.incomplete && (
@@ -148,47 +147,50 @@ export function ReviewCommitments({
         </p>
       )}
       {!review.completed_at && (
-        <form
-          className="stack"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void approve();
-          }}
-        >
-          <label>
-            Task to commit to
-            <select
-              required
-              value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-            >
-              <option value="">Choose an existing unfinished task</option>
-              {data.tasks
-                .filter(
-                  (t) =>
-                    !t.deleted_at &&
-                    t.source_type !== "test" &&
-                    !t.is_example &&
-                    !["completed", "cancelled"].includes(t.status) &&
-                    !state?.items.some((x) => x.task.id === t.id),
-                )
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <Button disabled={!taskId || busy}>Approve commitment</Button>
-          <p className="small muted">
-            Use a proposed action’s Draft task control to capture new work
-            first. Nothing is created from conversation without your approval.
-          </p>
-        </form>
+        <details className="briefing-detail">
+          <summary>Choose priorities for next week</summary>
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void approve();
+            }}
+          >
+            <label>
+              Task to commit to
+              <select
+                required
+                value={taskId}
+                onChange={(e) => setTaskId(e.target.value)}
+              >
+                <option value="">Choose an existing unfinished task</option>
+                {data.tasks
+                  .filter(
+                    (t) =>
+                      !t.deleted_at &&
+                      t.source_type !== "test" &&
+                      !t.is_example &&
+                      !["completed", "cancelled"].includes(t.status) &&
+                      !state?.items.some((x) => x.task.id === t.id),
+                  )
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <Button disabled={!taskId || busy}>Approve commitment</Button>
+            <p className="small muted">
+              Have something new in mind? Draft a task from your review, then
+              choose it here.
+            </p>
+          </form>
+        </details>
       )}
       {state?.snapshot && (
         <details className="briefing-detail">
-          <summary>Facts saved when this review was prepared</summary>
+          <summary>At the start of this review</summary>
           <p className="small">
             Captured {new Date(state.snapshot.captured_at).toLocaleString()}.
             Data as of {new Date(state.snapshot.facts.as_of).toLocaleString()}.

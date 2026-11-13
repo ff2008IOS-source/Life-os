@@ -53,7 +53,7 @@ test("Home recommends feasible work and follows durable task-goal links", async 
   });
   await expect(action).toContainText(next.title);
   await expect(action).not.toContainText(blocked.title);
-  await expect(action).toContainText("actual effort not recorded");
+  await expect(action).toContainText("30 min estimated");
   await action.getByRole("button", { name: "Open task" }).click();
   await expect(
     page.getByRole("dialog").getByLabel("Title", { exact: true }),

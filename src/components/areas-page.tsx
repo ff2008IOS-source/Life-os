@@ -35,7 +35,15 @@ const descriptions: Record<string, string> = {
   finances: "Understand your money, on your terms.",
   wellbeing: "Make room for the things that sustain you.",
 };
-export function AreasPage({ slug }: { slug?: string }) {
+export function AreasPage({
+  slug,
+  initialCourse,
+  initialAssessment,
+}: {
+  slug?: string;
+  initialCourse?: string;
+  initialAssessment?: string;
+}) {
   const { data } = useWorkspace();
   const [editor, setEditor] = useState<EntityEditorState | null>(null);
   const [tab, setTab] = useState("overview");
@@ -218,7 +226,11 @@ export function AreasPage({ slug }: { slug?: string }) {
           ) : (
             <div className="dashboard-grid">
               {slug === "academics" ? (
-                <AcademicsPanel />
+                <AcademicsPanel
+                  key={`${initialCourse ?? "all"}:${initialAssessment ?? ""}`}
+                  initialCourse={initialCourse}
+                  initialAssessment={initialAssessment}
+                />
               ) : slug === "career" ? (
                 <>
                   <ConnectedCareerRecords />
@@ -261,10 +273,10 @@ export function AreasPage({ slug }: { slug?: string }) {
                       slug === "academics"
                         ? "No courses, assessments, grades, or deadlines have been imported. Specialized academic records are a later phase."
                         : slug === "career"
-                          ? "The career spreadsheet remains untouched. Read-only mapping will be verified after Stage B authorization."
+                          ? "Connect your career plans, projects and professional relationships."
                           : slug === "finances"
-                            ? "No financial data recorded. This area is not configured; no account or budget analysis is available."
-                            : "No wellbeing data recorded. This area is not configured; no wellbeing analysis is available."
+                            ? "Keep money-related tasks here. Financial tracking is not set up yet."
+                            : "Make room for your routines and personal priorities."
                     }
                   />
                 </section>

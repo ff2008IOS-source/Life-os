@@ -168,7 +168,7 @@ test("Sheets table controls preserve formulas, review conflicts and require expl
   await connected
     .getByRole("button", { name: "Save pending edit", exact: true })
     .click();
-  await expect(connected.getByRole("status")).toContainText("remains pending");
+  await expect(connected.getByRole("status")).toContainText("Waiting to sync");
   for (const width of [1280, 834, 390]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
