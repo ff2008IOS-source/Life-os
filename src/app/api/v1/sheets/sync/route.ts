@@ -39,7 +39,7 @@ export async function GET() {
         pending: pending.data,
         outbound_available: false,
         outbound_requirement:
-          "Conditional provider writes and separate owner authorization must be verified with a test workbook before outbound activation.",
+          "Legacy mappings remain import-only. Configure REST table synchronization for reviewed outbound updates.",
       },
       { headers: { "Cache-Control": "no-store" } },
     );

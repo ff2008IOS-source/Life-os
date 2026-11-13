@@ -3862,3 +3862,11 @@ input[type="checkbox"] {
 .briefing-card summary {
   min-height: 32px;
 }
+
+/* Settings disclosures remain comfortable touch targets on phone and iPad. */
+.settings-panel details > summary,
+.settings-grid > details > summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+}

@@ -179,6 +179,7 @@ export async function connectionAccess(connectionId: string) {
 export async function connectionAccessForUser(
   userId: string,
   connectionId: string,
+  forceRefresh = false,
 ) {
   const db = integrationAdmin();
   const user = { id: userId };
@@ -205,7 +206,7 @@ export async function connectionAccessForUser(
       ),
     ),
   );
-  if (credential.expires_at < Date.now() + 60000) {
+  if (forceRefresh || credential.expires_at < Date.now() + 60000) {
     const token = await tokenRequest({
       grant_type: "refresh_token",
       refresh_token: credential.refresh_token,
