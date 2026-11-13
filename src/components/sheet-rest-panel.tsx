@@ -76,7 +76,7 @@ type Metadata = {
 };
 const endpoint = "/api/v1/sheets/tables";
 export function SheetRestPanel() {
-  const { data: workspace } = useWorkspace();
+  const { data: workspace, refresh } = useWorkspace();
   const [state, setState] = useState<State | null>(null),
     [selected, setSelected] = useState(""),
     [connections, setConnections] = useState<{ id: string }[]>([]),
@@ -140,6 +140,7 @@ export function SheetRestPanel() {
       });
       requests.current.delete(intent);
       await load();
+      await refresh();
       setNotice(
         "Saved. Only writes marked confirmed in sync history have been verified in Google Sheets.",
       );
