@@ -5,6 +5,7 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   page,
 }) => {
   test.setTimeout(90000);
+  const content = page.getByRole("main");
   const headers = { Origin: "http://127.0.0.1:3000" };
   expect((await page.request.get("/api/canvas/materials")).status()).toBe(401);
   expect(
@@ -49,11 +50,13 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   await expect(
     page.getByRole("tab", { name: "Scheduling preview" }),
   ).toHaveAttribute("aria-selected", "true");
-  await page
+  await content
     .getByText("Adjust planning boundaries", { exact: true })
     .filter({ visible: true })
     .click();
-  await page.getByLabel("Daily cap (minutes)", { exact: true }).fill("120");
+  await page
+    .getByRole("spinbutton", { name: "Daily cap (minutes)", exact: true })
+    .fill("120");
   await expect(
     page.getByRole("button", { name: "Turn on", exact: true }),
   ).toBeDisabled();
@@ -61,7 +64,7 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     .getByRole("button", { name: "Save planning preferences", exact: true })
     .click();
   await expect(
-    page.getByText("Planning preferences saved.", { exact: true }),
+    content.getByText("Planning preferences saved.", { exact: true }),
   ).toBeVisible();
   const saved = await (
     await page.request.get("/api/v1/schedule/automation")
@@ -69,12 +72,12 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   expect(saved.policy.max_daily_minutes).toBe(120);
   expect(saved.enabled).toBe(false);
   await page.reload();
-  await page
+  await content
     .getByText("Adjust planning boundaries", { exact: true })
     .filter({ visible: true })
     .click();
   await expect(
-    page.getByLabel("Daily cap (minutes)", { exact: true }),
+    page.getByRole("spinbutton", { name: "Daily cap (minutes)", exact: true }),
   ).toHaveValue("120");
   const next = await page.request.patch("/api/v1/schedule/automation", {
     headers,
@@ -140,16 +143,20 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   await expect(
     page.getByRole("button", { name: "Materials", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page
+  await content
     .locator(".course-materials .setting-line > summary")
     .filter({ hasText: "[TEST] Linked course" })
     .click();
   await expect(
-    page.getByText("[TEST] Verified course reading", { exact: true }),
+    content.getByText("[TEST] Verified course reading", { exact: true }),
   ).toBeVisible();
 
-  await page.getByText("Browse other Canvas courses", { exact: true }).click();
-  const library = page.locator(".canvas-library-disclosure");
+  await content
+    .getByText("Browse other Canvas courses", { exact: true })
+    .click();
+  const library = content
+    .locator(".canvas-library-disclosure")
+    .filter({ visible: true });
   const unavailable = "**/api/canvas/materials?page=0&course=771201";
   await page.route(unavailable, (route) =>
     route.fulfill({
@@ -158,7 +165,7 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     }),
   );
   await library
-    .getByLabel("Canvas course", { exact: true })
+    .getByRole("combobox", { name: "Canvas course", exact: true })
     .selectOption("771201");
   await expect(library).toContainText("Materials temporarily unavailable.");
   await expect(library.locator(".setting-line")).toHaveCount(0);
@@ -181,9 +188,9 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     title: "[TEST] Unlinked course",
   });
   await page.goto(`/areas/academics?course=${unlinked.id}&view=materials`);
-  await expect(page.getByText(/This course is not linked/)).toBeVisible();
+  await expect(content.getByText(/This course is not linked/)).toBeVisible();
   await expect(
-    page.getByText("[TEST] Verified course reading", { exact: true }),
+    content.getByText("[TEST] Verified course reading", { exact: true }),
   ).toHaveCount(0);
   const reviewCourse = await create("courses", {
     term_id: term.id,
