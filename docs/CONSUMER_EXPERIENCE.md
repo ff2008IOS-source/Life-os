@@ -16,6 +16,6 @@ This increment builds on the connected-execution branch (PR #20). It changes pre
 
 The automated suite has 269 tests and 22 browser workflows, including a new consumer-interface scenario. The browser scenario uses an isolated database and synthetic calendar responses, checks light/dark appearance at desktop (1280), iPad (834) and phone (390) widths, checks phone card alignment, and verifies that an assessment link opens the correct course and record. Screenshots are synthetic fixtures, not production data. Automated WCAG A/AA checks cover the core pages and forms.
 
-TypeScript, lint, formatting, production build, parser tracing and the production-dependency audit are required before release. The full browser suite and targeted Canvas/review/appearance checks were run during development; final CI evidence is linked on the pull request.
+TypeScript, lint, formatting, production build, parser tracing and the production-dependency audit are required before release. The full browser suite and targeted Canvas/review/appearance checks were run during development; final check results and hosted preview evidence are recorded on the pull request.
 
 Actual-device Safari behavior, the signed-in owner's hosted journey and subjective design preference need separate review. Provider integrations were not live-written or reauthorized for this UI work. Notifications, MFA and profile-picture activation remain unchanged. Production promotion is a separate reviewed step.
