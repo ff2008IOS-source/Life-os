@@ -29,55 +29,78 @@ export async function reviewContext(
     nextEnd = format(addDays(new Date(end + "T12:00Z"), 7), "yyyy-MM-dd");
   const instant = (date: string) =>
     fromZonedTime(date + "T00:00:00", "America/Vancouver").toISOString();
-  const [completed, late, previous, assessments, datedAssessments] =
-    await Promise.all([
-      db
-        .from("tasks")
-        .select("id,title,completed_at,actual_minutes")
-        .eq("user_id", user)
-        .is("deleted_at", null)
-        .gte("completed_at", instant(start))
-        .lt("completed_at", instant(end))
-        .order("completed_at", { ascending: false })
-        .limit(8),
-      db
-        .from("tasks")
-        .select("id,title,due_at,due_date,status")
-        .eq("user_id", user)
-        .is("deleted_at", null)
-        .not("status", "in", "(completed,cancelled)")
-        .or(`due_date.lt.${localDate()},due_at.lt.${new Date().toISOString()}`)
-        .order("due_date")
-        .limit(6),
-      db
-        .from("reviews")
-        .select(
-          "period_start,priorities,decisions,missed_commitments,conversation_summary,completed_at",
-        )
-        .eq("user_id", user)
-        .lt("period_start", start)
-        .order("period_start", { ascending: false })
-        .limit(1),
-      db
-        .from("assessments")
-        .select("id,title,due_at,verification_status,submission_state")
-        .eq("user_id", user)
-        .gte("due_at", instant(end))
-        .lt("due_at", instant(nextEnd))
-        .order("due_at")
-        .limit(6),
-      db
-        .from("assessments")
-        .select("id,title,due_date,verification_status,submission_state")
-        .eq("user_id", user)
-        .gte("due_date", end)
-        .lt("due_date", nextEnd)
-        .order("due_date")
-        .limit(6),
-    ]);
-  [completed, late, previous, assessments, datedAssessments].forEach((x) =>
-    dbError(x.error),
-  );
+  const [
+    completed,
+    late,
+    previous,
+    assessments,
+    datedAssessments,
+    results,
+    courses,
+  ] = await Promise.all([
+    db
+      .from("tasks")
+      .select("id,title,completed_at,actual_minutes")
+      .eq("user_id", user)
+      .is("deleted_at", null)
+      .gte("completed_at", instant(start))
+      .lt("completed_at", instant(end))
+      .order("completed_at", { ascending: false })
+      .limit(8),
+    db
+      .from("tasks")
+      .select("id,title,due_at,due_date,status")
+      .eq("user_id", user)
+      .is("deleted_at", null)
+      .not("status", "in", "(completed,cancelled)")
+      .or(`due_date.lt.${localDate()},due_at.lt.${new Date().toISOString()}`)
+      .order("due_date")
+      .limit(6),
+    db
+      .from("reviews")
+      .select(
+        "period_start,priorities,decisions,missed_commitments,conversation_summary,completed_at",
+      )
+      .eq("user_id", user)
+      .lt("period_start", start)
+      .order("period_start", { ascending: false })
+      .limit(1),
+    db
+      .from("assessments")
+      .select("id,title,due_at,verification_status,submission_state")
+      .eq("user_id", user)
+      .gte("due_at", instant(start))
+      .lt("due_at", instant(nextEnd))
+      .order("due_at")
+      .limit(6),
+    db
+      .from("assessments")
+      .select("id,title,due_date,verification_status,submission_state")
+      .eq("user_id", user)
+      .gte("due_date", start)
+      .lt("due_date", nextEnd)
+      .order("due_date")
+      .limit(6),
+    db
+      .from("assessments")
+      .select(
+        "title,course_id,earned_score,maximum_score,score_unit,verification_status,submission_state",
+      )
+      .eq("user_id", user)
+      .not("earned_score", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(4),
+    db.from("courses").select("id,code").eq("user_id", user).limit(100),
+  ]);
+  [
+    completed,
+    late,
+    previous,
+    assessments,
+    datedAssessments,
+    results,
+    courses,
+  ].forEach((x) => dbError(x.error));
   const clean = (
     rows: Record<string, unknown>[] | null,
   ): Record<string, unknown>[] =>
@@ -98,6 +121,10 @@ export async function reviewContext(
           achievements: r.data.achievements.slice(0, 200),
           obstacles: r.data.obstacles.slice(0, 200),
           priorities: r.data.priorities.slice(0, 200),
+          reviewed_reflection: (r.data.conversation_summary ?? "").slice(
+            0,
+            250,
+          ),
         },
       }),
     },
@@ -115,7 +142,7 @@ export async function reviewContext(
         overdue: clean(late.data)
           .slice(0, 3)
           .map((x) => ({ title: x.title, due: x.due_at ?? x.due_date })),
-        next_week_assessments: [
+        review_and_next_week_assessments: [
           ...clean(assessments.data),
           ...clean(datedAssessments.data),
         ]
@@ -126,6 +153,26 @@ export async function reviewContext(
             verification: x.verification_status,
             submission: x.submission_state,
           })),
+      }),
+    },
+    {
+      id: "review:results",
+      title: "Current recorded assessment results",
+      url: "/areas/academics",
+      text: JSON.stringify({
+        coverage:
+          "Current recorded results; return dates unavailable. Missing scores are unknown, not zero. Do not infer complete weighted grades.",
+        results: (results.data ?? []).map((r) => ({
+          course:
+            courses.data?.find((c) => c.id === r.course_id)?.code ??
+            "Unknown course",
+          title: r.title,
+          earned: r.earned_score,
+          maximum: r.maximum_score,
+          unit: r.score_unit,
+          verification: r.verification_status,
+          submission: r.submission_state,
+        })),
       }),
     },
     {

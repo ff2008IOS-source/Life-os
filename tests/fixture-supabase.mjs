@@ -179,6 +179,9 @@ const server = createServer((req, res) => {
         const table = url.pathname.split("/").at(-1);
         const tables = [
           "profiles",
+          "briefing_settings",
+          "briefing_actions",
+          "daily_check_ins",
           "life_areas",
           "tasks",
           "projects",
@@ -253,12 +256,21 @@ const server = createServer((req, res) => {
         };
         let where = [];
         for (const [key, val] of url.searchParams) {
-          if (["select", "order", "offset", "limit"].includes(key)) continue;
+          if (
+            ["select", "order", "offset", "limit", "on_conflict"].includes(key)
+          )
+            continue;
           // Deliberately bounded PostgREST subset used by the deadline API.
           // Identifiers are validated and all comparison values parameterized.
           if (key === "or" && val === "(published.is.null,published.eq.true)") {
             where.push(
               `(${quote("published")} is null or ${quote("published")} = ${param(true)})`,
+            );
+            continue;
+          }
+          if (val === "is.null" || val === "not.is.null") {
+            where.push(
+              `${quote(key)} is ${val.startsWith("not.") ? "not " : ""}null`,
             );
             continue;
           }
@@ -304,7 +316,14 @@ const server = createServer((req, res) => {
           sql = `select * from public.${quote(table)}${condition}${order} limit ${Math.min(limit, 1001)} offset ${offset}`;
         } else if (req.method === "POST") {
           const keys = Object.keys(body);
-          sql = `insert into public.${quote(table)}(${keys.map(quote)}) values(${keys.map((k) => param(body[k]))}) returning *`;
+          let conflict = "";
+          if (
+            table === "briefing_actions" &&
+            url.searchParams.get("on_conflict") === "user_id,id" &&
+            String(req.headers.prefer).includes("resolution=ignore-duplicates")
+          )
+            conflict = " on conflict(user_id,id)do nothing";
+          sql = `insert into public.${quote(table)}(${keys.map(quote)}) values(${keys.map((k) => param(body[k]))})${conflict} returning *`;
         } else if (req.method === "PATCH") {
           const keys = Object.keys(body);
           sql = `update public.${quote(table)} set ${keys.map((k) => quote(k) + " = " + param(body[k])).join(",")}${condition} returning *`;

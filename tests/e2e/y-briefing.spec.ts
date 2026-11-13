@@ -1,0 +1,189 @@
+import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+test("deterministic briefing saves check-ins, performs approved task actions and keeps AI out of the daily flow", async ({
+  page,
+}) => {
+  expect((await page.request.get("/api/v1/briefing")).status()).toBe(401);
+  let aiPosts = 0;
+  page.on("request", (r) => {
+    if (
+      new URL(r.url()).pathname === "/api/v1/assistant" &&
+      r.method() === "POST"
+    )
+      aiPosts++;
+  });
+  await page.goto("/login");
+  await page.getByLabel("Email", { exact: true }).fill("beta@example.invalid");
+  await page.getByLabel("Password", { exact: true }).fill("test-password-only");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "A little clarity for today." }),
+  ).toBeVisible();
+  const init = page.getByRole("button", { name: /Initialize workspace/ });
+  if (await init.isVisible()) {
+    await init.click();
+    await expect(init).toHaveCount(0);
+  }
+  await page.request.post("/api/v1/tasks", {
+    headers: { Origin: "http://127.0.0.1:3000" },
+    data: {
+      title: "[TEST] Briefing alternate",
+      priority: 3,
+      due_date: "2001-01-01",
+    },
+  });
+  const r = await page.request.post("/api/v1/tasks", {
+    headers: { Origin: "http://127.0.0.1:3000" },
+    data: {
+      title: "[TEST] Briefing priority",
+      priority: 4,
+      due_date: "2000-01-01",
+      estimated_minutes: 30,
+    },
+  });
+  expect(r.status(), await r.text()).toBe(201);
+  const task = (await r.json()).data;
+  await page.goto("/assistant");
+  await expect(page).toHaveURL(/\/briefing$/);
+  await expect(
+    page.getByRole("heading", { name: "Recommended Next Action", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Your question")).toHaveCount(0);
+  await expect(
+    page.getByText("Optional AI perspective", { exact: true }),
+  ).toHaveCount(0);
+  const primary = page.locator(".briefing-primary").filter({ visible: true });
+  await expect(primary).toContainText(task.title);
+  await expect(primary).toContainText("Calendar availability unknown");
+  await primary.getByRole("button", { name: "Schedule", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Enable scheduling eligibility",
+  );
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page
+    .getByLabel("Check-in answer")
+    .fill("[TEST] Prepared the verified course material.");
+  await page
+    .getByRole("button", { name: "Save and continue", exact: true })
+    .click();
+  await page
+    .getByLabel("Check-in answer")
+    .fill("[TEST] One commitment needed more time.");
+  await page
+    .getByRole("button", { name: "Save and continue", exact: true })
+    .click();
+  await page
+    .getByLabel("Check-in answer")
+    .fill("[TEST] Confirm a realistic study block.");
+  await page
+    .getByRole("button", { name: "Finish check-in", exact: true })
+    .click();
+  await page.reload();
+  await expect(
+    page
+      .getByText("[TEST] Prepared the verified course material.", {
+        exact: true,
+      })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText("[TEST] One commitment needed more time.", { exact: true })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText("[TEST] Confirm a realistic study block.", { exact: true })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await primary
+    .getByRole("button", { name: "Mark Complete", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm task completion", exact: true })
+    .click();
+  await expect(
+    primary.getByRole("heading", { name: task.title, exact: true }),
+  ).toHaveCount(0);
+  expect(
+    (await (await page.request.get(`/api/v1/tasks/${task.id}`)).json()).data
+      .status,
+  ).toBe("completed");
+  const next = primary.getByRole("button", { name: "Not Now", exact: true });
+  if (await next.isVisible()) {
+    const deferredTitle = await primary.getByRole("heading").textContent();
+    const [saved] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          new URL(r.url()).pathname === "/api/v1/briefing" &&
+          r.request().method() === "POST",
+      ),
+      next.click(),
+    ]);
+    expect(saved.status(), await saved.text()).toBe(200);
+    const snapshot = await (await page.request.get("/api/v1/briefing")).json();
+    expect(snapshot.weekly.deferrals).toBeGreaterThan(0);
+    if (deferredTitle)
+      await expect(
+        primary.getByRole("heading", { name: deferredTitle, exact: true }),
+      ).toHaveCount(0);
+  }
+  expect(aiPosts).toBe(0);
+  for (const viewport of [
+    { width: 1280, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.screenshot({
+    path: test.info().outputPath("briefing-phone.png"),
+    fullPage: true,
+  });
+});
+test("profile picture is resized, saved privately, survives refresh and can be removed", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("Email", { exact: true }).fill("beta@example.invalid");
+  await page.getByLabel("Password", { exact: true }).fill("test-password-only");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "A little clarity for today." }),
+  ).toBeVisible();
+  await page.goto("/settings");
+  await page
+    .getByLabel("Choose profile picture")
+    .filter({ visible: true })
+    .setInputFiles("public/icon-192.png");
+  await expect(
+    page.getByText("Profile picture saved", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Remove picture", exact: true }),
+  ).toBeVisible();
+  const workspace = await (await page.request.get("/api/v1/workspace")).json();
+  expect(workspace.profile.avatar_data_url).toMatch(
+    /^data:image\/jpeg;base64,/,
+  );
+  await page
+    .getByRole("button", { name: "Remove picture", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Remove picture", exact: true }),
+  ).toHaveCount(0);
+  expect((await page.request.get("/icon.svg")).status()).toBe(200);
+});

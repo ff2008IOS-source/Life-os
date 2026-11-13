@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { AppLogo, ProfileAvatar } from "./profile-identity";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
@@ -34,7 +35,7 @@ const navigation = [
   { label: "Life Areas", href: "/areas", icon: Layers3 },
   { label: "Goals", href: "/goals", icon: Target },
   { label: "Updates", href: "/notifications", icon: Bell },
-  { label: "Assistant", href: "/assistant", icon: BookOpen },
+  { label: "Briefing", href: "/briefing", icon: BookOpen },
   { label: "Insights", href: "/insights", icon: ChartNoAxesCombined },
 ];
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
@@ -72,7 +73,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       <aside className="sidebar" aria-label="Main navigation">
         <Link href="/" className="brand">
           <span className="logo">
-            <Layers3 size={20} />
+            <AppLogo />
           </span>
           Life OS<span className="beta-pill">BETA</span>
         </Link>
@@ -123,9 +124,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             <p>Private workspace. Existing Google calendars stay protected.</p>
           </div>
           <Link href="/settings" className="account">
-            <div className="avatar">
-              {data.profile.display_name?.slice(0, 2).toUpperCase() || "ME"}
-            </div>
+            <ProfileAvatar />
             <div>
               <strong>{data.profile.display_name || "Your workspace"}</strong>
               <p>Personal account</p>
@@ -209,7 +208,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           className={
             [
               "/goals",
-              "/assistant",
+              "/assistant/history",
+              "/briefing",
               "/insights",
               "/more",
               "/settings",
@@ -320,9 +320,9 @@ export function MorePage() {
         </div>
       </div>
       <div className="more-list">
-        <Link href="/assistant">
+        <Link href="/briefing">
           <BookOpen />
-          Assistant
+          Briefing
           <ArrowUpRight size={14} />
         </Link>
         <Link href="/goals">

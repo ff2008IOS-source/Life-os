@@ -1,4 +1,5 @@
-import { AssistantPage } from "@/components/assistant-page";
+import { BriefingPage } from "@/components/briefing-page";
+import { ConversationArchive } from "@/components/conversation-archive";
 import { notFound, redirect } from "next/navigation";
 import { loadWorkspace } from "@/lib/services/workspace";
 import { ApiError } from "@/lib/auth";
@@ -28,6 +29,7 @@ export default async function Page({
     ![
       "home",
       "assistant",
+      "briefing",
       "planner",
       "areas",
       "goals",
@@ -37,10 +39,12 @@ export default async function Page({
       "notifications",
       "more",
     ].includes(page) ||
-    path.length > (page === "areas" ? 2 : 1) ||
+    path.length > (page === "areas" || page === "assistant" ? 2 : 1) ||
     (page === "home" && path.length)
   )
     notFound();
+  if (page === "assistant" && !path[1]) redirect("/briefing");
+  if (page === "assistant" && path[1] !== "history") notFound();
   if (!isConfigured()) redirect("/login");
   let data;
   try {
@@ -63,8 +67,10 @@ export default async function Page({
           <GoalsPage />
         ) : page === "reviews" ? (
           <ReviewsPage />
+        ) : page === "briefing" ? (
+          <BriefingPage />
         ) : page === "assistant" ? (
-          <AssistantPage />
+          <ConversationArchive />
         ) : page === "insights" ? (
           <InsightsPage />
         ) : page === "notifications" ? (

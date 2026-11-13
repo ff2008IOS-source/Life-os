@@ -34,9 +34,11 @@ type Exchange = {
 export function AssistantPage({
   review,
   onReply,
+  opening,
 }: {
   review?: { id: string; period_start: string };
   onReply?: (reply: AssistantReply) => void;
+  opening?: string;
 } = {}) {
   const endpoint = "/api/v1/assistant" + (review ? "?review=" + review.id : "");
   const [state, setState] = useState<State | null>(null),
@@ -65,7 +67,9 @@ export function AssistantPage({
         nav && nav.height && nav.top < bottom ? bottom - nav.top : 0;
       const available = Math.max(
         160,
-        bottom - root.getBoundingClientRect().top - inset - 16,
+        root.dataset.review === "true"
+          ? bottom - inset - 100
+          : bottom - root.getBoundingClientRect().top - inset - 16,
       );
       root.style.height = available + "px";
       root.style.minHeight = "0";
@@ -151,6 +155,7 @@ export function AssistantPage({
     };
   }, [endpoint, onReply]);
   useEffect(() => {
+    if (exchanges.length) chat.current?.scrollIntoView({ block: "start" });
     if (exchanges.length || sending)
       messages.current?.scrollTo({
         top: messages.current.scrollHeight,
@@ -170,14 +175,18 @@ export function AssistantPage({
     setSending(question);
     setError("");
     const courseId = conversation?.course_canvas_id ?? null;
+    const sentQuestion =
+      review && !exchanges.length && opening
+        ? `Review question shown by Life OS: ${opening}\nOwner response: ${question}`
+        : question;
     if (
       !intent.current ||
-      intent.current.question !== question ||
+      intent.current.question !== sentQuestion ||
       intent.current.conversation !== (conversation?.id ?? null)
     )
       intent.current = {
         id: crypto.randomUUID(),
-        question,
+        question: sentQuestion,
         conversation: conversation?.id ?? null,
         course: courseId,
       };
@@ -192,7 +201,7 @@ export function AssistantPage({
           request_id: intent.current.id,
           conversation_id: conversation?.id ?? null,
           course_canvas_id: courseId,
-          question,
+          question: sentQuestion,
         }),
       });
       if (d.status === "completed") {
@@ -230,7 +239,8 @@ export function AssistantPage({
     <section
       ref={chat}
       className="assistant-chat"
-      aria-label="Assistant conversation"
+      data-review={review ? "true" : "false"}
+      aria-label={review ? "Weekly review conversation" : "Saved conversation"}
     >
       <div className="assistant-header">
         <div>
@@ -345,7 +355,7 @@ export function AssistantPage({
         <Modal
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
-          title="AI settings"
+          title="AI review settings"
           description="Control your free usage allowance and privacy."
         >
           <div className="assistant-tool-body">
@@ -380,7 +390,7 @@ export function AssistantPage({
                   name="enabled"
                   defaultChecked={state?.settings?.enabled ?? false}
                 />
-                Enable the assistant
+                Enable AI for weekly reviews
               </label>
               <label className="inline-check">
                 <input
@@ -426,7 +436,7 @@ export function AssistantPage({
         <div className="assistant-notice" role="status">
           {!state.configured
             ? "The AI connection is unavailable on this deployment."
-            : "Turn on the assistant to start chatting."}
+            : "Enable AI to continue the guided weekly review."}
           <Button
             variant="outline"
             size="sm"
@@ -451,28 +461,12 @@ export function AssistantPage({
             <h2>
               {review ? "Let’s review your week." : "What’s on your mind?"}
             </h2>
-            <p>
+            <p aria-label={review ? "First review question" : undefined}>
               {review
-                ? "Start with what moved forward. We’ll explore missed commitments and choose realistic next priorities, one question at a time."
+                ? (opening ??
+                  "What was the most important responsibility you moved forward this week?")
                 : "Ask naturally. I’ll look across your saved courses and work for relevant information."}
             </p>
-            <div className="assistant-prompts">
-              {(review
-                ? [
-                    "Help me review what moved forward this week.",
-                    "Summarize our review and propose next priorities.",
-                  ]
-                : ["What’s on my next exam?", "What should I focus on today?"]
-              ).map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => setQuestion(prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
           </div>
         )}
         {exchanges.map((x) => (
@@ -481,7 +475,14 @@ export function AssistantPage({
               className="chat-message chat-user"
               aria-label="Your message"
             >
-              <p>{x.question}</p>
+              <p>
+                {x.question.includes("\nOwner response: ")
+                  ? x.question
+                      .split("\nOwner response: ")
+                      .slice(1)
+                      .join("\nOwner response: ")
+                  : x.question}
+              </p>
             </article>
             <article
               className="chat-message chat-assistant"
@@ -577,7 +578,7 @@ export function AssistantPage({
         }}
       >
         <label className="sr-only" htmlFor="assistant-question">
-          Your question
+          Your response
         </label>
         <textarea
           id="assistant-question"
@@ -585,7 +586,7 @@ export function AssistantPage({
           maxLength={1500}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Message Life OS…"
+          placeholder={review ? "Your response…" : "Message Life OS…"}
           onKeyDown={(e) => {
             if (
               e.key === "Enter" &&
@@ -599,7 +600,7 @@ export function AssistantPage({
         />
         <Button
           type="submit"
-          aria-label="Ask assistant"
+          aria-label="Send review response"
           disabled={
             busy ||
             waiting ||

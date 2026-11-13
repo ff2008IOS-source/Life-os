@@ -131,6 +131,12 @@ export const reviewInput = z
 export const profileInput = z
   .object({
     display_name: z.string().max(100),
+    avatar_data_url: z
+      .string()
+      .max(45000)
+      .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/)
+      .nullable()
+      .optional(),
     theme: z.enum(["dark", "light", "system"]),
     density: z.enum(["comfortable", "compact"]),
   })
@@ -182,6 +188,7 @@ export type Area = {
 };
 export type Profile = {
   display_name: string;
+  avatar_data_url?: string | null;
   timezone: string;
   theme: "dark" | "light" | "system";
   density: "comfortable" | "compact";

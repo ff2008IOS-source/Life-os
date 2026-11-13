@@ -1,6 +1,7 @@
 "use client";
 import { SheetSyncPanel } from "./sheet-sync-panel";
 import Link from "next/link";
+import { ProfilePictureSettings } from "./profile-identity";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
@@ -85,6 +86,7 @@ export function SettingsPage({
       <div className="settings-content">
         <div hidden={section !== "profile"}>
           <div className="settings-grid">
+            <ProfilePictureSettings />
             <section className="panel settings-panel">
               <h2>Your workspace</h2>
               <p>Preferences are saved to your private account.</p>

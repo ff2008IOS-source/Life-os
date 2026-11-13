@@ -49,6 +49,7 @@ export function WorkspaceProvider({
   async function refresh() {
     const next = await request("/api/v1/workspace");
     setData(next as Workspace);
+    window.dispatchEvent(new Event("lifeos:changed"));
   }
   async function mutate(
     entity: string,

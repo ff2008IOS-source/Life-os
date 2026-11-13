@@ -30,6 +30,8 @@ test("core screens and task form have no automated WCAG A/AA violations", async 
     "/areas",
     "/goals",
     "/reviews",
+    "/briefing",
+    "/assistant/history",
     "/insights",
     "/settings",
     "/settings?section=integrations",
