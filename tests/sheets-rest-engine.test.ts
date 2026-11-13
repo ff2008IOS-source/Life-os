@@ -185,3 +185,25 @@ it("refreshes expired credentials once and keeps read-only grants from writing",
     })),
   ).rejects.toMatchObject({ code: "PERMISSION" });
 });
+it("rechecks live dropdown rules even for outbox edits created by a project trigger", () => {
+  const g = grid() as unknown as {
+    sheets: { data: { rowData: { values: unknown[] }[] }[] }[];
+  };
+  (
+    g.sheets[0].data[0].rowData[1].values[1] as Record<string, unknown>
+  ).dataValidation = {
+    condition: {
+      type: "ONE_OF_LIST",
+      values: [{ userEnteredValue: "4" }, { userEnteredValue: "5" }],
+    },
+  };
+  const s = parseRestSnapshot(g, id, config);
+  expect(() =>
+    planRestWrite(s, {
+      operation_type: "update",
+      external_key: s.rows[0].external_key,
+      intended: { value: 6 },
+      expected_cells: s.rows[0].cells,
+    }),
+  ).toThrow("permitted");
+});
