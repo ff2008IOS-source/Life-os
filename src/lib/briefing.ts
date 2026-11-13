@@ -1,3 +1,4 @@
+import { realWorkspace } from "./real-workspace";
 import { z } from "zod";
 import { addDays, format, startOfWeek } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
@@ -72,6 +73,13 @@ export type DailyCheckIn = {
   version: number;
 };
 export type BriefingInput = {
+  sheet_health?: {
+    id: string;
+    title: string;
+    mode: string;
+    last_read_at: string | null;
+    last_error: string | null;
+  }[];
   workspace: Workspace;
   assessments: Assessment[];
   courses: { id: string; code: string; title: string }[];
@@ -137,7 +145,8 @@ export function briefingGreeting(
 const finished = (status: string) =>
   ["completed", "cancelled"].includes(status);
 export function buildBriefing(input: BriefingInput) {
-  const { workspace: w, settings: s } = input,
+  const w = realWorkspace(input.workspace),
+    s = input.settings,
     now = input.now ?? new Date(),
     zone = w.profile.timezone || "America/Vancouver",
     today = briefingDay(now, zone),
@@ -313,6 +322,25 @@ export function buildBriefing(input: BriefingInput) {
       "/settings?section=integrations",
       name,
     );
+  for (const source of input.sheet_health ?? []) {
+    if (source.mode === "paused") continue;
+    if (
+      source.last_error ||
+      !source.last_read_at ||
+      nowMs - Date.parse(source.last_read_at) > 3 * 3600000
+    ) {
+      add(
+        `sheets:${source.id}`,
+        "connection",
+        `Spreadsheet needs attention: ${source.title}`,
+        source.last_error
+          ? "The latest synchronization failed. Your saved records remain available; review source settings before relying on them."
+          : "No successful source refresh within three hours is recorded. Saved values may be stale.",
+        "/settings?section=integrations",
+        `${source.last_read_at}:${source.last_error ?? "stale"}`,
+      );
+    }
+  }
   if (!calendarReliable)
     add(
       "calendar:health",

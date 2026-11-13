@@ -1,4 +1,5 @@
 "use client";
+import { realWorkspace } from "@/lib/real-workspace";
 import Link from "next/link";
 import { BriefingPanel } from "./briefing-page";
 import { useBriefing } from "./use-briefing";
@@ -32,7 +33,8 @@ import { Button } from "./ui/button";
 import { goalProgress, taskSummary } from "@/lib/insights";
 import { TIMEZONE, localDate, friendlyDate } from "@/lib/dates";
 export function HomePage() {
-  const { data, request, refresh, notify, pending } = useWorkspace();
+  const { data: raw, request, refresh, notify, pending } = useWorkspace();
+  const data = realWorkspace(raw);
   const [calendarSummary, setCalendarSummary] = useState<{
     count: number | null;
     note: string;
@@ -113,7 +115,12 @@ export function HomePage() {
   const now = new Date();
   const summary = taskSummary(data.tasks, now);
   const ranked = todayPriorities(data, now);
-  const priorities = ranked.slice(0, 3).map((x) => x.task);
+  const priorities = briefing.data
+    ? briefing.data.recommendations.slice(1, 3).flatMap((x) => {
+        const task = data.tasks.find((t) => t.id === x.task_id);
+        return task ? [task] : [];
+      })
+    : ranked.slice(0, 3).map((x) => x.task);
   const upcoming = data.milestones
     .filter(
       (m) =>
@@ -220,7 +227,7 @@ export function HomePage() {
             <div className="panel-heading">
               <div className="panel-title">
                 <Sun />
-                <h2>Today’s Top 3</h2>
+                <h2>Other next actions</h2>
                 <span className="count-pill">{priorities.length}</span>
               </div>
               <Link href="/planner" className="text-link">
@@ -229,8 +236,9 @@ export function HomePage() {
               </Link>
             </div>
             <p className="panel-description">
-              Ranked by deadline urgency, then priority and your preferred
-              order. Open a task to check dependencies and linked goals.
+              Alternatives to the primary recommendation above. The same
+              briefing rules rank these actions; calendar availability may be
+              unknown.
             </p>
             {priorities.length ? (
               <TaskList tasks={priorities} />
@@ -238,7 +246,7 @@ export function HomePage() {
               <EmptyState
                 compact
                 icon={CheckCheck}
-                title="A fresh start"
+                title="No additional actions recorded"
                 description="Capture what’s on your mind. Your next priorities will appear here."
               />
             )}

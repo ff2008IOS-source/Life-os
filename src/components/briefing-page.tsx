@@ -288,7 +288,7 @@ export function BriefingPanel({
           </p>
           {d.recommendations[0] ? (
             <>
-              <h3>Start: {d.recommendations[0].title}</h3>
+              <h3>{d.recommendations[0].title}</h3>
               <p className="panel-description">
                 {d.recommendations[0].reasons.join(" · ")}
               </p>
@@ -304,12 +304,24 @@ export function BriefingPanel({
                     </Link>
                   ))}
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => open(d.recommendations[0].task_id)}
-                >
-                  Open task <ArrowRight size={12} />
-                </Button>
+                <div className="briefing-actions">
+                  <Button
+                    size="sm"
+                    onClick={() => open(d.recommendations[0].task_id)}
+                  >
+                    Open task <ArrowRight size={12} />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy || !!c.error}
+                    onClick={() =>
+                      void freshTask(d.recommendations[0].task_id, "complete")
+                    }
+                  >
+                    Mark Complete
+                  </Button>
+                </div>
               </div>
             </>
           ) : (
@@ -436,7 +448,6 @@ export function BriefingPanel({
                   never becomes zero.
                 </p>
               </section>
-              <DailyCheckInPanel today={d.today} timezone={d.timezone} />
             </div>
             <div className="stack">
               <section className="panel briefing-card">
@@ -509,9 +520,11 @@ export function BriefingPanel({
                   </details>
                 )}
               </section>
-              <section className="panel briefing-card">
+              <DailyCheckInPanel today={d.today} timezone={d.timezone} />
+              <details className="panel briefing-card">
+                <summary>Weekly Insights</summary>
                 <div className="panel-heading">
-                  <h2>Weekly Insights</h2>
+                  <h2>This week’s recorded progress</h2>
                   <Clock3 size={18} />
                 </div>
                 <p className="small muted">
@@ -561,7 +574,7 @@ export function BriefingPanel({
                 <Link href="/reviews" className="text-link">
                   Open your full weekly review <ArrowRight size={12} />
                 </Link>
-              </section>
+              </details>
             </div>
           </div>
           <details className="panel briefing-card">

@@ -1,6 +1,8 @@
 "use client";
 import { useId, useState } from "react";
 import { format, startOfWeek, addDays } from "date-fns";
+import { ReviewCommitments } from "./review-commitments";
+import { calendarRequest } from "./use-calendar";
 import { PreparedWeeklyReview } from "./prepared-weekly-review";
 import { WrittenReviewsPage } from "./reviews-page";
 import { PersonalWorkflowsPanel } from "./personal-workflows-panel";
@@ -20,6 +22,7 @@ export function ReviewsPage() {
       "yyyy-MM-dd",
     ),
   );
+  const [commitmentOpening, setCommitmentOpening] = useState("");
   const [active, setActive] = useState<string | null>(null),
     [summary, setSummary] = useState(""),
     [checked, setChecked] = useState(false),
@@ -75,6 +78,10 @@ export function ReviewsPage() {
     if (!review) return;
     setError("");
     try {
+      await calendarRequest("/api/v1/reviews/context", {
+        method: "POST",
+        body: JSON.stringify({ action: "capture", review_id: review.id }),
+      });
       await mutate(
         "reviews",
         review.id,
@@ -139,10 +146,15 @@ export function ReviewsPage() {
         <>
           <p className="small muted">
             Week of {friendlyDate(review.period_start)} ·{" "}
-            {review.completed_at ? "Completed review" : "Saved draft"} ·
-            Original conversation and written notes stay separate.
+            {review.completed_at ? "Completed review" : "Saved draft"} · Your
+            approved reflection and task commitments stay linked to this week.
           </p>
-          <PreparedWeeklyReview review={review} onReply={setCandidate} />
+          <ReviewCommitments review={review} onOpening={setCommitmentOpening} />
+          <PreparedWeeklyReview
+            review={review}
+            onReply={setCandidate}
+            commitmentOpening={commitmentOpening}
+          />
           <section className="panel settings-panel">
             <h2>Your reviewed reflection</h2>
             <p className="small muted">
@@ -258,7 +270,10 @@ export function ReviewsPage() {
         </summary>
         <WrittenReviewsPage />
       </details>
-      <PersonalWorkflowsPanel />
+      <details className="panel">
+        <summary>Scheduled checks and prepared snapshots</summary>
+        <PersonalWorkflowsPanel />
+      </details>
       <WorkSessionsPanel
         compact
         start={week}

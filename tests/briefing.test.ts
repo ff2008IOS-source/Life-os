@@ -250,3 +250,23 @@ it("leaves incomplete history explicit and never infers a planned-task denominat
   expect(d.weekly.coverage).toContain("No productivity score");
   expect(d.weekly).not.toHaveProperty("completion_percentage");
 });
+
+it("keeps explicit examples out of recommendations and counts, and reports stale Sheets", () => {
+  const input = base();
+  input.workspace.tasks = [
+    { ...task(1), source_type: "test" },
+    { ...task(2), is_example: true },
+  ];
+  input.sheet_health = [
+    {
+      id: "source",
+      title: "Career source",
+      mode: "two_way",
+      last_read_at: null,
+      last_error: null,
+    },
+  ];
+  const result = buildBriefing(input);
+  expect(result.recommendations).toHaveLength(0);
+  expect(result.attention.some((a) => a.id === "sheets:source")).toBe(true);
+});

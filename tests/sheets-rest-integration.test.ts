@@ -208,6 +208,7 @@ beforeAll(async () => {
     vi.fn(async (input: URL, init: RequestInit) => {
       const url = new URL(String(input));
       expect(url.hostname).toBe("sheets.googleapis.com");
+      const requestedSpreadsheet = url.pathname.split("/")[3];
       if (init.method === "POST") {
         if (loseBeforeWrite) {
           loseBeforeWrite = false;
@@ -225,14 +226,14 @@ beforeAll(async () => {
           throw Error("Synthetic response loss after provider write");
         }
         return Response.json({
-          spreadsheetId: spreadsheet,
+          spreadsheetId: requestedSpreadsheet,
           totalUpdatedCells: body.data.length,
         });
       }
       return Response.json(
         url.searchParams.has("includeGridData")
           ? {
-              spreadsheetId: spreadsheet,
+              spreadsheetId: requestedSpreadsheet,
               properties: { title: "[TEST]" },
               sheets: [
                 {
@@ -242,7 +243,7 @@ beforeAll(async () => {
               ],
             }
           : {
-              spreadsheetId: spreadsheet,
+              spreadsheetId: requestedSpreadsheet,
               properties: { title: "[TEST]" },
               sheets: [
                 {
@@ -367,4 +368,102 @@ it("reports nonconverged uncertain writes as partial work requiring review", asy
     ).rows[0],
   ).toEqual({ status: "partial" });
   expect(grid[1][1].effectiveValue?.numberValue).toBe(9);
+});
+
+it("normal project status → guarded outbox → synthetic provider → same project, with no echo", async () => {
+  const previous = await ownedDataset(owner, dataset),
+    source = await pg.query<{ source_id: string }>(
+      "select source_id from sheet_rest_datasets where id=$1",
+      [dataset],
+    );
+  const config = datasetConfig.parse({
+    ...(previous.config as object),
+    columns: [
+      { key: "id", header: "ID", type: "text", key_part: true },
+      { key: "value", header: "Value", type: "text", writable: true },
+      { key: "formula", header: "Formula", type: "integer" },
+    ],
+  });
+  const linkedDataset = (
+    await pg.query<{ id: string }>(
+      `insert into sheet_rest_datasets(user_id,connection_id,source_id,spreadsheet_id,worksheet_id,title,worksheet_title,config,mode,test_only,outbound_enabled)values($1,$2,$3,$4,0,'[TEST] Project source','Test',$5,'two_way',true,true)returning id`,
+      [
+        owner,
+        previous.connection_id,
+        source.rows[0].source_id,
+        spreadsheet + "Project",
+        JSON.stringify(config),
+      ],
+    )
+  ).rows[0].id;
+  grid[1][1] = value("active");
+  grid[1][2] = {
+    userEnteredValue: { formulaValue: "=LEN(B2)" },
+    effectiveValue: { numberValue: 6 },
+  };
+  await synchronizeDataset(owner, linkedDataset);
+  let row = (await ledgerRows(await ownedDataset(owner, linkedDataset)))[0];
+  const project = (
+    await pg.query<{ id: string }>(
+      "insert into projects(user_id,name)values($1,'Synthetic domain project')returning id",
+      [owner],
+    )
+  ).rows[0].id;
+  await pg.query(
+    "select bind_sheet_rest_project($1,$2,$3,$4,$5,1,'value',$6)",
+    [
+      owner,
+      linkedDataset,
+      row.id,
+      row.version,
+      project,
+      JSON.stringify({
+        active: "active",
+        paused: "paused",
+        completed: "completed",
+        cancelled: "cancelled",
+      }),
+    ],
+  );
+  await pg.exec(
+    `set role authenticated;select set_config('request.jwt.claim.sub','${owner}',false)`,
+  );
+  await pg.query("update projects set status='completed' where id=$1", [
+    project,
+  ]);
+  await pg.exec("reset role");
+  const op = (
+    await pg.query<{ id: string }>(
+      "select id from sheet_rest_operations where dataset_id=$1 and status='draft'",
+      [linkedDataset],
+    )
+  ).rows[0].id;
+  await pg.query("select approve_sheet_rest($1,$2,$3,1)", [
+    owner,
+    linkedDataset,
+    op,
+  ]);
+  await synchronizeDataset(owner, linkedDataset);
+  expect(grid[1][1].effectiveValue?.stringValue).toBe("completed");
+  expect(grid[1][2].userEnteredValue?.formulaValue).toBe("=LEN(B2)");
+  grid[1][1] = value("paused");
+  await synchronizeDataset(owner, linkedDataset);
+  expect(
+    (await pg.query("select status from projects where id=$1", [project]))
+      .rows[0],
+  ).toEqual({ status: "paused" });
+  await synchronizeDataset(owner, linkedDataset);
+  row = (await ledgerRows(await ownedDataset(owner, linkedDataset)))[0];
+  expect(row.local_values.value).toBe("paused");
+  expect(
+    (await ledgerRows(await ownedDataset(owner, linkedDataset))).length,
+  ).toBe(1);
+  expect(
+    (
+      await pg.query(
+        "select count(*)::int n from sheet_rest_operations where dataset_id=$1 and status<>'confirmed'",
+        [linkedDataset],
+      )
+    ).rows[0],
+  ).toEqual({ n: 0 });
 });

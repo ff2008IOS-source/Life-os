@@ -1,4 +1,5 @@
 import "server-only";
+import { reviewCommitments } from "../review-commitments";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays, format } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";
@@ -107,7 +108,28 @@ export async function reviewContext(
     (rows ?? [])
       .filter((x) => !String(x.title ?? "").startsWith("[TEST]"))
       .map((x) => ({ ...x, title: String(x.title ?? "").slice(0, 100) }));
+  const commitments = await reviewCommitments(db, user, start);
   return [
+    ...(commitments.items.length
+      ? [
+          {
+            id: "review:approved_commitments",
+            title: "Owner-approved task commitments",
+            url: "/reviews",
+            text: JSON.stringify({
+              rule: "Current task state, not historical proof. Ask about open carried commitments before adding new work.",
+              incomplete: commitments.incomplete,
+              commitments: commitments.items.slice(0, 12).map((x) => ({
+                task_id: x.task.id,
+                title: x.task.title.slice(0, 100),
+                status: x.task.status,
+                approved_week: x.week,
+                carried: x.carried,
+              })),
+            }),
+          },
+        ]
+      : []),
     {
       id: "review:week",
       title: "Selected weekly review",

@@ -151,4 +151,38 @@ test("Sheets table controls preserve formulas, review conflicts and require expl
         .analyze()
     ).violations,
   ).toEqual([]);
+  // The ordinary Career page uses the same guarded editor, rather than a stale legacy import.
+  await page.request.post("/api/v1/workspace/initialize", {
+    headers: { Origin: "http://127.0.0.1:3000" },
+  });
+  await page.goto("/areas/career");
+  const connected = page.getByRole("region", {
+    name: "Connected career and project records",
+  });
+  await connected.getByLabel("Career source table").selectOption(dataset);
+  await connected.getByText("test-row · pending", { exact: true }).click();
+  await expect(
+    connected.getByText("Calculated · Formula (read-only)", { exact: false }),
+  ).toBeVisible();
+  await connected.getByLabel("Made", { exact: true }).fill("5");
+  await connected
+    .getByRole("button", { name: "Save pending edit", exact: true })
+    .click();
+  await expect(connected.getByRole("status")).toContainText("remains pending");
+  for (const width of [1280, 834, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .include('[aria-label="Connected career and project records"]')
+        .withTags(["wcag2a", "wcag2aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
 });

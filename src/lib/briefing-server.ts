@@ -74,6 +74,7 @@ export async function loadBriefing(week?: string) {
     settings,
     automation,
     canvas,
+    sheetHealth,
   ] = await Promise.all([
     optional(
       "academics",
@@ -215,6 +216,22 @@ export async function loadBriefing(week?: string) {
       [],
     ),
     optional("Canvas", () => canvasStatus(user.id), null),
+    optional(
+      "Sheets",
+      async () => {
+        const result = await db
+          .from("sheet_rest_datasets")
+          .select("id,title,mode,last_read_at,last_error")
+          .eq("user_id", user.id)
+          .eq("test_only", false)
+          .limit(21);
+        dbError(result.error);
+        if ((result.data?.length ?? 0) > 20)
+          throw new ApiError(422, "Source health exceeds the supported limit.");
+        return result.data ?? [];
+      },
+      [],
+    ),
   ]);
   const parsed = briefingSettings.safeParse(settings[0]?.settings ?? {});
   if (!parsed.success)
@@ -229,6 +246,7 @@ export async function loadBriefing(week?: string) {
   );
   const facts = buildBriefing({
     workspace,
+    sheet_health: sheetHealth,
     assessments,
     courses,
     calendars,

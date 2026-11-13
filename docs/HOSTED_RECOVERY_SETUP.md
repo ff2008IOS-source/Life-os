@@ -85,7 +85,9 @@ The workflow:
 
 A nonempty target is rejected. There is no automatic DROP/TRUNCATE/reset or production restore path. If a restore partially succeeds but verification fails, stop and inspect the separate test project; do not weaken checks or point it at production to retry.
 
-This initial beta procedure refuses source Storage objects, Vault secrets, enrolled MFA factors and live integration credentials, which require an expanded key/object recovery procedure. Current checks found none. Do not reuse this procedure after enabling these capabilities until it is extended and tested.
+The encrypted **backup_only** path can retain database-encrypted OAuth and Canvas credential rows inside the encrypted backup. Their encryption keys are separate and must be inventoried privately; ciphertext alone does not restore a connection. Storage objects, Vault secrets and enrolled MFA factors still block this procedure.
+
+The **backup_and_restore** path explicitly refuses both OAuth and Canvas credential rows until provider reconnection and isolated-worker handling are rehearsed. Production now has connected providers, so hosted restoration is **not ready** under this procedure. Never bypass this guard or point a test at production. No separate recovery project existed at the 13 November audit. Local export restoration, including review snapshots and approved commitments, is a separate verification step.
 
 ## 8. Verify actual login in an isolated app preview
 

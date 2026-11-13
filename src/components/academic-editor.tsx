@@ -45,6 +45,17 @@ const definitions: Record<AcademicKind, Field[]> = {
     { key: "title", label: "Course title", required: true },
     { key: "description", label: "Notes", type: "textarea" },
     {
+      key: "inventory_confirmed",
+      label: "I checked that every course assessment is recorded",
+      type: "checkbox",
+    },
+    {
+      key: "grading_rules_confirmed",
+      label:
+        "I checked the grading formula, weights and dropping rules against the course source",
+      type: "checkbox",
+    },
+    {
       key: "grading_method",
       label: "Grading formula",
       options: [
@@ -145,7 +156,7 @@ const definitions: Record<AcademicKind, Field[]> = {
         ["unstudied", "Unstudied"],
         ["practicing", "Practicing"],
         ["needs_review", "Needs review"],
-        ["mastered", "Mastered (confirmed through practice)"],
+        ["mastered", "Mastered (my self-assessment)"],
       ],
     },
     { key: "notes", label: "Practice evidence / next drill", type: "textarea" },

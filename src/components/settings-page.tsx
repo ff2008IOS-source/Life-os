@@ -6,7 +6,7 @@ import { ProfilePictureSettings } from "./profile-identity";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
-import { Download, FileSpreadsheet, LogOut, FlaskConical } from "lucide-react";
+import { Download, LogOut, FlaskConical } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
 import { PasswordForm } from "./password-forms";
@@ -158,30 +158,18 @@ export function SettingsPage({
               </Link>
             </section>
             <GoogleCalendarPanel settings />
-            <CareerPanel compact />
             <SheetRestPanel />
-            <details>
-              <summary>Existing project-status imports</summary>
+            <details className="panel settings-panel">
+              <summary>Legacy imports and migration tools</summary>
+              <p className="small muted">
+                These preserve earlier imported records. Use Google Sheets
+                synchronization above for current mapped two-way tables.
+              </p>
+              <CareerPanel compact />
               <SheetSyncPanel />
             </details>
             <ReservationsPanel />
             <AutomationControl policy={DEFAULT_POLICY} />
-            <section className="panel settings-panel">
-              <h2>Other connected services</h2>
-              <div className="setting-line">
-                <div>
-                  <strong className="inline">
-                    <FileSpreadsheet size={15} />
-                    Career spreadsheet
-                  </strong>
-                  <p>Read-only import. Mapping must be verified.</p>
-                </div>
-                <span className="badge">Read-only import</span>
-              </div>
-              <p className="form-hint" style={{ marginTop: 16 }}>
-                Use the spreadsheet panel to preview and review imports.
-              </p>
-            </section>
           </div>
         </div>
         <div hidden={section !== "privacy"}>
@@ -218,11 +206,19 @@ export function SettingsPage({
                 <div>
                   <strong>Independent backups</strong>
                   <p>
-                    Follow docs/RECOVERY.md. Hosted restoration is not yet
-                    verified.
+                    Encrypted backups and restoration need separate
+                    verification. Hosted recovery is not yet verified. Keep
+                    encryption keys separately from the backup.
                   </p>
                 </div>
-                <span className="badge amber">Setup needed</span>
+                <a
+                  className="text-link"
+                  href="https://github.com/ff2008IOS-source/Life-os/blob/main/docs/HOSTED_RECOVERY_SETUP.md"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Recovery instructions
+                </a>
               </div>
               <Button
                 variant="ghost"

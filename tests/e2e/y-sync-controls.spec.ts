@@ -125,7 +125,7 @@ test("controlled calendar moves show confirmation and spreadsheet settings keep 
   ).toBe(true);
   await page.goto("/settings?section=integrations");
   await page
-    .getByText("Existing project-status imports", { exact: true })
+    .getByText("Legacy imports and migration tools", { exact: true })
     .filter({ visible: true })
     .click();
   await expect(

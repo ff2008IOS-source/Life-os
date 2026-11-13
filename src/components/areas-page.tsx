@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ConnectedCareerRecords } from "./connected-career-records";
 import { AcademicsPanel } from "./academics-panel";
 import { projectSummary } from "@/lib/project-summary";
 import { ContactsPanel } from "./contacts-panel";
@@ -148,6 +149,7 @@ export function AreasPage({ slug }: { slug?: string }) {
           </Button>
         )}
       </div>
+      {slug === "projects" && <ConnectedCareerRecords />}
       <div className="area-metrics">
         <div className="area-summary">
           Active tasks<strong>{active.length}</strong>
@@ -219,7 +221,11 @@ export function AreasPage({ slug }: { slug?: string }) {
                 <AcademicsPanel />
               ) : slug === "career" ? (
                 <>
-                  <CareerPanel />
+                  <ConnectedCareerRecords />
+                  <details className="panel">
+                    <summary>Earlier imported career archive</summary>
+                    <CareerPanel />
+                  </details>
                   <ContactsPanel />
                 </>
               ) : (
@@ -231,8 +237,8 @@ export function AreasPage({ slug }: { slug?: string }) {
                         : slug === "career"
                           ? "Career development"
                           : slug === "finances"
-                            ? "Your financial workspace"
-                            : "Your wellbeing workspace"}
+                            ? "Optional finance area"
+                            : "Optional wellbeing area"}
                     </h2>
                     <span className="badge">
                       {["finances", "wellbeing"].includes(slug)
@@ -257,8 +263,8 @@ export function AreasPage({ slug }: { slug?: string }) {
                         : slug === "career"
                           ? "The career spreadsheet remains untouched. Read-only mapping will be verified after Stage B authorization."
                           : slug === "finances"
-                            ? "No financial data recorded. Accounts, transactions, and budgets will be available in the specialized phase."
-                            : "No wellbeing data recorded. Optional habits and reflections will be available in the specialized phase."
+                            ? "No financial data recorded. This area is not configured; no account or budget analysis is available."
+                            : "No wellbeing data recorded. This area is not configured; no wellbeing analysis is available."
                     }
                   />
                 </section>
@@ -312,7 +318,7 @@ function ProjectCards({
         const done = tasks.filter((t) => t.status === "completed").length;
         const milestones = data.milestones.filter((m) => m.project_id === p.id);
         return (
-          <article className="entity-card" key={p.id}>
+          <article className="entity-card" key={p.id} id={`project-${p.id}`}>
             <div className="flex-between full-width">
               <span className="section-icon">
                 <Layers3 />

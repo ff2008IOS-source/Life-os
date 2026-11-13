@@ -6,6 +6,7 @@ export type GradeAssessment = {
   earned_score: number | null;
   dropped: boolean;
   submission_state: string;
+  verification_status?: string;
 };
 export type GradeCategory = {
   id: string;
@@ -25,6 +26,10 @@ export function academicGrade(
   method: string,
   assessments: GradeAssessment[],
   categories: GradeCategory[] = [],
+  evidence: { inventoryComplete: boolean; rulesVerified: boolean } = {
+    inventoryComplete: false,
+    rulesVerified: false,
+  },
 ): GradeSummary {
   const active = assessments.filter(
     (a) => !a.dropped && a.submission_state !== "excused",
@@ -43,6 +48,16 @@ export function academicGrade(
     missing_scores: active.length - scored.length,
     warnings: [],
   };
+  const finalAllowed =
+    evidence.inventoryComplete &&
+    evidence.rulesVerified &&
+    active.every((a) =>
+      ["verified", "user_confirmed"].includes(a.verification_status ?? ""),
+    );
+  if (!finalAllowed)
+    result.warnings.push(
+      "Overall grade unavailable: confirm the full assessment inventory, grading rules and score sources. Recorded-score averages are not final course grades.",
+    );
   if (!active.length) return result;
   if (method === "unknown") {
     result.warnings.push(
@@ -54,7 +69,7 @@ export function academicGrade(
     const earned = scored.reduce((n, a) => n + a.earned_score!, 0),
       maximum = scored.reduce((n, a) => n + a.maximum_score!, 0);
     result.graded_average = maximum ? (earned / maximum) * 100 : null;
-    if (result.missing_scores === 0)
+    if (finalAllowed && result.missing_scores === 0)
       result.overall_grade = result.graded_average;
     return result;
   }
@@ -73,6 +88,7 @@ export function academicGrade(
     if (Math.abs(total - 100) > 0.001)
       result.warnings.push("Recorded assessment weights do not total 100%.");
     if (
+      finalAllowed &&
       !result.missing_scores &&
       active.every((a) => a.weight !== null) &&
       Math.abs(total - 100) < 0.001
@@ -172,7 +188,7 @@ export function academicGrade(
       result.warnings.push("Category weights do not total 100%.");
       complete = false;
     }
-    if (complete && Math.abs(covered - 100) < 0.001)
+    if (finalAllowed && complete && Math.abs(covered - 100) < 0.001)
       result.overall_grade = weighted;
     return result;
   }

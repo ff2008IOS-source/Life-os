@@ -1,6 +1,6 @@
 # Active work — Google Sheets two-way REST synchronization
 
-The released Briefing/review/profile work is preserved. Current development is on `feature/sheets-two-way-complete`, replacing the preview-only Sheets MCP dependency with standard Google Sheets REST v4.
+Current development is on `feature/trustworthy-connected-workflows`: grade/status integrity, assessment preparation, source-connected domain pages, approved review commitments and snapshots, interface consolidation and recovery verification. Earlier Sheets REST, Calendar, Canvas and profile work is preserved. See `CONNECTED_EXECUTION_RELEASE.md` for evidence and explicit verification limits.
 
 The shooting chart stays excluded. New sources are import-only; real-table outbound activation is separate and requires a successful disposable-workbook verification plus owner approval. Existing legacy project-status imports remain read-only. See [SHEETS_TWO_WAY.md](SHEETS_TWO_WAY.md) for schema, mappings, concurrency limitations, polling, tests and recovery.
 

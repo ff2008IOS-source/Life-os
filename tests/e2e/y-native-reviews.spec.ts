@@ -11,6 +11,10 @@ test("native review snapshots persist and assistant remains disabled without a c
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
   await page.goto("/reviews");
+  await page
+    .getByText("Scheduled checks and prepared snapshots", { exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Personal check-ins" }),
   ).toBeVisible();

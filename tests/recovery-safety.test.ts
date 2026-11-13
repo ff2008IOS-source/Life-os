@@ -11,6 +11,7 @@ import {
   parseDatabaseConnection,
   recoveryConfiguration,
   assertTargetEmpty,
+  assertRecoverableFeatures,
   extractDumpScript,
   LIVE_PROJECT_REF,
 } from "../scripts/recovery/safety.mjs";
@@ -21,6 +22,37 @@ const env = {
   LIFE_OS_BACKUP_PASSPHRASE: "synthetic-test-passphrase-only-32-characters",
 };
 describe("manual hosted recovery target boundaries", () => {
+  it("permits encrypted backups but blocks hosted restoration of live Canvas and OAuth credentials", () => {
+    const manifest = {
+      unsupported: { storage_objects: 0, vault_secrets: 0, mfa_factors: 0 },
+      tables: {
+        "private.oauth_credentials": { count: 1 },
+        "public.canvas_connections": { count: 1 },
+      },
+    };
+    expect(() =>
+      assertRecoverableFeatures(manifest, "backup_only"),
+    ).not.toThrow();
+    expect(() =>
+      assertRecoverableFeatures(manifest, "backup_and_restore"),
+    ).toThrow(/integration credentials/);
+    expect(() =>
+      assertRecoverableFeatures(
+        { ...manifest, tables: { "public.canvas_connections": { count: 1 } } },
+        "backup_and_restore",
+      ),
+    ).toThrow(/integration credentials/);
+    expect(() =>
+      assertRecoverableFeatures(
+        {
+          ...manifest,
+          unsupported: { ...manifest.unsupported, storage_objects: 1 },
+        },
+        "backup_only",
+      ),
+    ).toThrow(/Storage/);
+  });
+
   it("accepts separately stored passwords without URL encoding or shell interpolation", () => {
     const password = 'synthetic-"-$()-@-#-password';
     const result = parseDatabaseConnection(

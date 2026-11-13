@@ -1,4 +1,5 @@
 "use client";
+import { AssessmentPreparation } from "./assessment-preparation";
 import { formatInTimeZone } from "date-fns-tz";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, BookOpen } from "lucide-react";
@@ -70,6 +71,10 @@ export function AcademicsPanel() {
     String(current?.grading_method ?? "unknown"),
     assessments as unknown as GradeAssessment[],
     categories as unknown as GradeCategory[],
+    {
+      inventoryComplete: current?.inventory_confirmed === true,
+      rulesVerified: current?.grading_rules_confirmed === true,
+    },
   );
   const kind: AcademicKind =
     tab === "topics"
@@ -253,58 +258,62 @@ export function AcademicsPanel() {
             </div>
             <div className="academic-record-list">
               {rows.slice(0, limit).map((row) => (
-                <button
-                  className="academic-record-row"
-                  key={row.id}
-                  onClick={() => setEdit({ kind, record: row })}
-                >
-                  <div>
-                    <strong>
-                      {String(
-                        row.title ??
-                          row.name ??
-                          (row.start_at
-                            ? formatInTimeZone(
-                                String(row.start_at),
-                                "America/Vancouver",
-                                "MMM d, h:mm a",
-                              )
-                            : "Study session"),
-                      )}
-                    </strong>
-                    <small>
+                <div key={row.id}>
+                  <button
+                    className="academic-record-row"
+                    onClick={() => setEdit({ kind, record: row })}
+                  >
+                    <div>
+                      <strong>
+                        {String(
+                          row.title ??
+                            row.name ??
+                            (row.start_at
+                              ? formatInTimeZone(
+                                  String(row.start_at),
+                                  "America/Vancouver",
+                                  "MMM d, h:mm a",
+                                )
+                              : "Study session"),
+                        )}
+                      </strong>
+                      <small>
+                        {tab === "assessments"
+                          ? `${row.submission_state ?? "unknown"} · ${row.due_date ?? (row.due_at ? String(row.due_at).slice(0, 10) : "No confirmed deadline")}`
+                          : tab === "topics"
+                            ? String(row.mastery ?? "unstudied")
+                            : tab === "categories"
+                              ? String(row.aggregation ?? "unknown")
+                              : String(row.notes ?? "")}
+                      </small>
+                    </div>
+                    <span>
                       {tab === "assessments"
-                        ? `${row.submission_state ?? "unknown"} · ${row.due_date ?? (row.due_at ? String(row.due_at).slice(0, 10) : "No confirmed deadline")}`
-                        : tab === "topics"
-                          ? String(row.mastery ?? "unstudied")
-                          : tab === "categories"
-                            ? String(row.aggregation ?? "unknown")
-                            : String(row.notes ?? "")}
-                    </small>
-                  </div>
-                  <span>
-                    {tab === "assessments"
-                      ? row.earned_score === null
-                        ? "Score unknown"
-                        : `${row.earned_score} / ${row.maximum_score}${row.score_unit === "percent" ? "%" : ""}`
-                      : tab === "categories"
-                        ? row.weight === null
-                          ? "Weight unknown"
-                          : `${row.weight}%`
-                        : tab === "sessions"
-                          ? row.actual_minutes
-                            ? `${row.actual_minutes} min`
-                            : "Duration not recorded"
-                          : ""}
-                  </span>
-                  {tab === "assessments" && (
-                    <span className="badge">
-                      {String(
-                        row.verification_status ?? "unverified",
-                      ).replaceAll("_", " ")}
+                        ? row.earned_score === null
+                          ? "Score unknown"
+                          : `${row.earned_score} / ${row.maximum_score}${row.score_unit === "percent" ? "%" : ""}`
+                        : tab === "categories"
+                          ? row.weight === null
+                            ? "Weight unknown"
+                            : `${row.weight}%`
+                          : tab === "sessions"
+                            ? row.actual_minutes
+                              ? `${row.actual_minutes} min`
+                              : "Duration not recorded"
+                            : ""}
                     </span>
+                    {tab === "assessments" && (
+                      <span className="badge">
+                        {String(
+                          row.verification_status ?? "unverified",
+                        ).replaceAll("_", " ")}
+                      </span>
+                    )}
+                  </button>
+                  {tab === "assessments" && (
+                    <AssessmentPreparation assessment={row} onSaved={refresh} />
                   )}
-                </button>
+                </div>
               ))}
               {rows.length > limit && (
                 <Button

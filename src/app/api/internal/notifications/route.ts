@@ -1,3 +1,4 @@
+import { workerOutcome } from "@/lib/worker-outcome";
 import { restSheetsWorker } from "@/lib/integrations/sheet-rest-server";
 import { sheetSyncWorker } from "@/lib/integrations/sheet-sync-server";
 import { managedCalendarWorker } from "@/lib/integrations/calendar-sync-service";
@@ -51,14 +52,7 @@ export async function POST(request: Request) {
         names[i],
         r.status === "fulfilled"
           ? {
-              status:
-                Array.isArray(r.value) &&
-                r.value.some(
-                  (x) =>
-                    x && typeof x === "object" && "failed" in x && x.failed,
-                )
-                  ? "partial"
-                  : "completed",
+              status: workerOutcome(r.value),
               result: r.value,
             }
           : {

@@ -154,6 +154,7 @@ const server = createServer((req, res) => {
           const fn = url.pathname.split("/").at(-1);
           if (
             ![
+              "prepare_assessment",
               "complete_work_session",
               "work_progress_summary",
               "prepare_my_workflow",
@@ -189,6 +190,7 @@ const server = createServer((req, res) => {
           "milestones",
           "reviews",
           "review_chat_links",
+          "review_snapshots",
           "task_dependencies",
           "goal_tasks",
           "audit_logs",

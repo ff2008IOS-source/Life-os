@@ -1,4 +1,5 @@
 "use client";
+import { realWorkspace } from "@/lib/real-workspace";
 import { WorkSessionsPanel } from "./work-sessions-panel";
 import { useState } from "react";
 import { addDays, format } from "date-fns";
@@ -7,7 +8,8 @@ import { useWorkspace } from "./workspace-provider";
 import { EmptyState } from "./task-list";
 import { localDate, isOverdue } from "@/lib/dates";
 export function InsightsPage() {
-  const { data } = useWorkspace();
+  const { data: raw } = useWorkspace();
+  const data = realWorkspace(raw);
   const [range, setRange] = useState("week");
   const end = localDate();
   const start = format(

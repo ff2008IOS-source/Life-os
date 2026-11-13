@@ -33,9 +33,12 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   ).toBeVisible();
   await page
     .getByRole("button", {
-      name: "Complete [TEST] Persistent browser task",
+      name: "Mark Complete",
       exact: true,
     })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm task completion", exact: true })
     .click();
   await expect(page.getByText("Task completed", { exact: true })).toBeVisible();
   await page.goto("/planner");
@@ -273,6 +276,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
     source_type,
     source_key,
     recurrence_rule_id,
+    is_example,
     ...values
   } = t;
   void user_id;
@@ -282,6 +286,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   void source_type;
   void source_key;
   void recurrence_rule_id;
+  void is_example;
   const changed = await page.request.patch(`/api/v1/tasks/${id}`, {
     headers: origin,
     data: { version, data: { ...values, description: "[TEST] Changed once" } },

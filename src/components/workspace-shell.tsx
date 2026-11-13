@@ -154,7 +154,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               aria-label="Search workspace"
             >
               <Search size={15} />
-              Search anything<kbd>⌘ K</kbd>
+              Search tasks, projects, goals<kbd>⌘ K</kbd>
             </button>
             <span className="top-divider" />
             <Button
@@ -271,7 +271,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               .map((p) => (
                 <Link
                   className="search-result"
-                  href="/areas/projects"
+                  href={`/areas/projects#project-${p.id}`}
                   key={p.id}
                   onClick={() => setSearch(false)}
                 >
@@ -288,7 +288,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               .map((g) => (
                 <Link
                   className="search-result"
-                  href="/goals"
+                  href={`/goals#goal-${g.id}`}
                   key={g.id}
                   onClick={() => setSearch(false)}
                 >
@@ -296,6 +296,19 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                   <small>Goal</small>
                 </Link>
               ))}
+          {query.trim() &&
+            ![
+              ...data.tasks.filter((t) => !t.deleted_at).map((t) => t.title),
+              ...data.projects.map((p) => p.name),
+              ...data.goals.map((g) => g.title),
+            ].some((title) =>
+              title.toLowerCase().includes(query.toLowerCase()),
+            ) && (
+              <p className="muted small" role="status">
+                No matching tasks, projects or goals. Course materials and
+                source records are available in their own sections.
+              </p>
+            )}
           {!query.trim() && (
             <p className="muted small">
               Start typing to search your recorded data.

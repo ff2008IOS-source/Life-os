@@ -10,7 +10,9 @@ import type { AssistantReply } from "@/lib/assistant/provider";
 export function PreparedWeeklyReview({
   review,
   onReply,
+  commitmentOpening,
 }: {
+  commitmentOpening?: string;
   review: Review;
   onReply: (r: AssistantReply) => void;
 }) {
@@ -251,7 +253,7 @@ export function PreparedWeeklyReview({
           key={review.id}
           review={review}
           onReply={onReply}
-          opening={opening}
+          opening={commitmentOpening || opening}
         />
       )}
     </>
