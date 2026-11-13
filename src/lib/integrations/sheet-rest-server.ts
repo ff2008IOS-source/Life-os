@@ -269,7 +269,12 @@ export async function synchronizeDataset(user: string, id: string) {
       } catch (e) {
         if (e instanceof SheetsRestError) {
           await updateOp(op.id, {
-            status: e.code === "UNKNOWN_OUTCOME" ? "unknown" : "approved",
+            status:
+              e.code === "UNKNOWN_OUTCOME"
+                ? "unknown"
+                : e.retryable
+                  ? "approved"
+                  : "failed",
             last_error: e.message,
             next_attempt_at: new Date(
               Date.now() +
@@ -387,6 +392,7 @@ export async function restSheetsWorker() {
     .from("sheet_rest_datasets")
     .select("id,user_id")
     .neq("mode", "paused")
+    .eq("test_only", false)
     .lte("next_sync_at", new Date().toISOString())
     .order("next_sync_at")
     .limit(1);

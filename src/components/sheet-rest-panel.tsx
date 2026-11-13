@@ -215,6 +215,17 @@ export function SheetRestPanel() {
                   body: JSON.stringify({ sheets: true, sheets_write: true }),
                 },
               );
+              const redirect = new URL(r.url).searchParams.get("redirect_uri");
+              if (
+                redirect &&
+                new URL(redirect).origin !== window.location.origin
+              ) {
+                setError(
+                  "Google consent must be completed on the primary Life OS site. Open the link below, use its Connect Sheets write permission control, then return to this preview.",
+                );
+                setBusy(false);
+                return;
+              }
               window.location.assign(r.url);
             } catch {
               setError("Google authorization could not start.");
@@ -224,6 +235,14 @@ export function SheetRestPanel() {
         >
           Authorize Sheets permission
         </Button>
+        <a
+          className="text-link"
+          href="https://lifeos-beta-ivory.vercel.app/settings?section=integrations"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open primary Life OS integration settings
+        </a>
       </div>
       <details>
         <summary>Verify a disposable workbook</summary>
