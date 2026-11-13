@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
+import { BriefingPanel } from "./briefing-page";
+import { useBriefing } from "./use-briefing";
 import { todayPriorities, personalGreeting } from "@/lib/today-priorities";
-import { TaskEditor } from "./task-editor";
-import type { Task } from "@/lib/schemas";
+
 import { useEffect, useState } from "react";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
 import { groupCalendarEvents } from "@/lib/integrations/calendar-layout";
@@ -108,18 +109,11 @@ export function HomePage() {
       live = false;
     };
   }, []);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const briefing = useBriefing();
   const now = new Date();
   const summary = taskSummary(data.tasks, now);
   const ranked = todayPriorities(data, now);
   const priorities = ranked.slice(0, 3).map((x) => x.task);
-  const next = ranked.find((x) => !x.blocked);
-  const linkedGoals = next
-    ? data.goalTasks
-        .filter((x) => x.task_id === next.task.id)
-        .flatMap((x) => data.goals.filter((g) => g.id === x.goal_id))
-    : [];
-  const project = data.projects.find((p) => p.id === next?.task.project_id);
   const upcoming = data.milestones
     .filter(
       (m) =>
@@ -207,53 +201,7 @@ export function HomePage() {
           {formatInTimeZone(now, TIMEZONE, "EEE, MMM d")}
         </span>
       </div>
-      <section
-        className="panel next-action"
-        aria-labelledby="next-action-title"
-      >
-        <div className="panel-heading">
-          <h2 id="next-action-title">Next best action</h2>
-          <Link href="/assistant" className="text-link">
-            Talk it through <ArrowRight size={12} />
-          </Link>
-        </div>
-        {next ? (
-          <>
-            <h3>Start: {next.task.title}</h3>
-            <p className="panel-description">
-              {next.reason}. Unfinished dependencies are excluded from this
-              recommendation.
-            </p>
-            <div className="flex-between">
-              <div className="small">
-                {project && (
-                  <Link href="/projects" className="text-link">
-                    Project: {project.name}
-                  </Link>
-                )}
-                {linkedGoals.map((g) => (
-                  <Link
-                    className="badge"
-                    key={g.id}
-                    href={`/goals#goal-${g.id}`}
-                  >
-                    {g.title}
-                  </Link>
-                ))}
-              </div>
-              <Button size="sm" onClick={() => setEditingTask(next.task)}>
-                Open task <ArrowRight size={12} />
-              </Button>
-            </div>
-          </>
-        ) : (
-          <p className="panel-description">
-            {ranked.length
-              ? "Your active tasks have unfinished dependencies. Review them in the planner before starting."
-              : "No active task recorded. Capture a responsibility below when you’re ready."}
-          </p>
-        )}
-      </section>
+      <BriefingPanel controller={briefing} compact />
       <div className="stats-grid">
         {stats.map((s) => (
           <div className={`stat-card ${s.className ?? ""}`} key={s.label}>
@@ -417,9 +365,6 @@ export function HomePage() {
           </section>
         </div>
       </div>
-      {editingTask && (
-        <TaskEditor task={editingTask} onClose={() => setEditingTask(null)} />
-      )}
     </>
   );
 }

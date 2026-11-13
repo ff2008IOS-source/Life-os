@@ -29,21 +29,24 @@ test("native review snapshots persist and assistant remains disabled without a c
     .click();
   await page
     .locator(".more-list")
-    .getByRole("link", { name: "Assistant", exact: true })
+    .getByRole("link", { name: "Briefing", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/assistant$/);
+  await expect(page).toHaveURL(/\/briefing$/);
   await expect(
     page
       .getByRole("navigation", { name: "Mobile navigation" })
       .getByRole("link", { name: "More", exact: true }),
   ).toHaveClass("active");
   await expect(
-    page.getByRole("heading", { name: "Life OS assistant" }),
+    page.getByRole("heading", { name: "Life OS Briefing" }),
   ).toBeVisible();
-  await page.getByLabel("Your question").fill("What is due?");
+  await expect(page.getByLabel("Your question")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Ask assistant" }),
-  ).toBeDisabled();
+    page.getByRole("heading", { name: "Daily Briefing", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Recommended Next Action", exact: true }),
+  ).toBeVisible();
   for (const viewport of [
     { width: 1280, height: 900 },
     { width: 1024, height: 768 },

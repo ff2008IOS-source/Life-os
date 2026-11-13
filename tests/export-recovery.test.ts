@@ -70,6 +70,25 @@ beforeAll(async () => {
       )
     ).rows[0].id;
     await source.query("select ensure_review_chat($1,$2)", [owner, review]);
+    await source.query(
+      "insert into daily_check_ins(user_id,day,accomplishments)values($1,'2026-11-12','[TEST] Recovery check-in')",
+      [owner],
+    );
+    await source.query("insert into briefing_settings(user_id)values($1)", [
+      owner,
+    ]);
+    await source.query(
+      "insert into briefing_actions(user_id,id,kind,task_id,item_key,fingerprint)values($1,gen_random_uuid(),'defer',$2::uuid,'task:'||($2::uuid)::text,'1')",
+      [owner, task],
+    );
+    await source.query(
+      "update profiles set avatar_data_url=$2 where user_id=$1",
+      [
+        owner,
+        "data:image/png;base64," +
+          readFileSync("public/icon-192.png").toString("base64"),
+      ],
+    );
     const tables = await source.query<{ table_name: string }>(
       "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts')",
     );
@@ -91,6 +110,9 @@ describe("offline JSON user-export recovery", () => {
     expect(result.content_matches).toBe(true);
     expect(result.table_counts.tasks).toBe(2);
     expect(result.table_counts.work_completions).toBe(1);
+    expect(result.table_counts.daily_check_ins).toBe(1);
+    expect(result.table_counts.briefing_settings).toBe(1);
+    expect(result.table_counts.briefing_actions).toBe(1);
     expect(result.table_counts.review_chat_links).toBe(1);
     expect(result.table_counts.assistant_conversations).toBe(1);
     expect(result.table_counts.study_sessions).toBe(1);

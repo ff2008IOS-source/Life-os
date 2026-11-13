@@ -164,6 +164,11 @@ export async function POST(request: Request) {
       })
       .strict()
       .parse(await readJson(request));
+    if (!x.review_id)
+      throw new ApiError(
+        422,
+        "AI is available inside the weekly review. Saved history remains in your archive.",
+      );
     if (new TextEncoder().encode(x.question).length > 1500)
       throw new ApiError(422, "Keep this request within 1,500 UTF-8 bytes.");
     if (!process.env.GROQ_API_KEY)

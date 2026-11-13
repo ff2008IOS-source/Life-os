@@ -1,3 +1,4 @@
+import { validProfileImage } from "@/lib/profile-image";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authorized, ApiError } from "@/lib/auth";
@@ -11,6 +12,14 @@ export async function PATCH(request: Request) {
       .object({ version: z.number().int().positive(), data: profileInput })
       .strict()
       .parse(await readJson(request));
+    if (
+      body.data.avatar_data_url &&
+      !validProfileImage(body.data.avatar_data_url)
+    )
+      throw new ApiError(
+        422,
+        "Choose a valid PNG, JPEG or WebP profile image under 32 KB after resizing.",
+      );
     const { data, error } = await db
       .from("profiles")
       .update(body.data)

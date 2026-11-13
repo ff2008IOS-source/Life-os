@@ -66,9 +66,9 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
     .fill("2026-10-19");
   await page.getByRole("button", { name: "Start weekly conversation" }).click();
   await page
-    .getByLabel("Your question")
+    .getByLabel("Your response")
     .fill("I finished the analysis but missed one commitment.");
-  await page.getByRole("button", { name: "Ask assistant" }).click();
+  await page.getByRole("button", { name: "Send review response" }).click();
   await expect(page.getByLabel("Assistant reply")).toContainText(
     "What got in the way",
   );
@@ -147,7 +147,7 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await expect(page.getByLabel("Your question")).toBeVisible();
+    await expect(page.getByLabel("Your response")).toBeVisible();
   }
   expect(
     (

@@ -1,7 +1,7 @@
 "use client";
 import { useId, useState } from "react";
 import { format, startOfWeek, addDays } from "date-fns";
-import { AssistantPage } from "./assistant-page";
+import { PreparedWeeklyReview } from "./prepared-weekly-review";
 import { WrittenReviewsPage } from "./reviews-page";
 import { PersonalWorkflowsPanel } from "./personal-workflows-panel";
 import { WorkSessionsPanel } from "./work-sessions-panel";
@@ -142,14 +142,7 @@ export function ReviewsPage() {
             {review.completed_at ? "Completed review" : "Saved draft"} ·
             Original conversation and written notes stay separate.
           </p>
-          <p className="review-opening">
-            What moved forward during this review week?
-          </p>
-          <AssistantPage
-            key={review.id}
-            review={review}
-            onReply={setCandidate}
-          />
+          <PreparedWeeklyReview review={review} onReply={setCandidate} />
           <section className="panel settings-panel">
             <h2>Your reviewed reflection</h2>
             <p className="small muted">

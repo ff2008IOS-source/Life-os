@@ -71,20 +71,29 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  await page.goto("/assistant");
+  await page.goto("/reviews");
+  await page
+    .getByLabel("Review week starts", { exact: true })
+    .filter({ visible: true })
+    .fill("2026-10-05");
+  await page
+    .getByRole("button", { name: "Start weekly conversation", exact: true })
+    .click();
+  await expect(page.getByLabel("First review question")).toBeVisible();
   await expect(page.getByLabel("Course context")).toHaveCount(0);
-  await page.getByLabel("Your question").fill("What's on my next exam?");
-  await page.getByRole("button", { name: "Ask assistant" }).click();
+  await page.getByLabel("Your response").fill("What's on my next exam?");
+  await page.getByRole("button", { name: "Send review response" }).click();
   await expect(page.getByLabel("Assistant reply")).toContainText(
     "ECON 115 Exam 2",
   );
   await expect(
     page.getByText("Additional coverage is unconfirmed."),
   ).not.toBeVisible();
-  await page.getByLabel("Your question").fill("Help me study for it");
-  await page.getByLabel("Your question").press("Enter");
+  await page.getByLabel("Your response").fill("Help me study for it");
+  await page.getByLabel("Your response").press("Enter");
   await expect(page.getByLabel("Assistant reply")).toHaveCount(2);
   await page.reload();
+  await page.getByRole("button", { name: /Resume week of Oct 5/ }).click();
   await expect(page.getByLabel("Assistant reply")).toHaveCount(2);
   await expect(page.getByLabel("Your message").first()).toContainText(
     "What's on my next exam?",
@@ -117,18 +126,19 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
       error: null,
     });
   await page.reload();
+  await page.getByRole("button", { name: /Resume week of Oct 5/ }).click();
   await expect(page.getByLabel("Assistant reply")).toHaveCount(12);
   await page.getByRole("log", { name: "Messages" }).evaluate((element) => {
     element.scrollTop = 0;
   });
-  await expect(page.getByLabel("Your question")).toBeInViewport();
+  await expect(page.getByLabel("Your response")).toBeInViewport();
   expect(
     await page
       .getByRole("log", { name: "Messages" })
       .evaluate((element) => element.scrollHeight > element.clientHeight),
   ).toBe(true);
   await page.setViewportSize({ width: 390, height: 500 });
-  await expect(page.getByLabel("Your question")).toBeInViewport();
+  await expect(page.getByLabel("Your response")).toBeInViewport();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     (await page.locator(".assistant-composer:visible").boundingBox())!.height,
@@ -137,6 +147,16 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
     path: test.info().outputPath("assistant-chat-phone.png"),
     fullPage: true,
   });
+  await page.goto("/assistant/history");
+  await page
+    .getByLabel("Saved conversations", { exact: true })
+    .selectOption(id);
+  await expect(
+    page.getByRole("log", { name: "Archived exchanges" }).locator("article"),
+  ).toHaveCount(12);
+  await expect(
+    page.getByLabel("Your response").filter({ visible: true }),
+  ).toHaveCount(0);
   expect(
     (
       await new AxeBuilder({ page })

@@ -45,20 +45,28 @@ test("provider cooldown keeps the draft, explains the exact pause, refreshes sta
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  await page.goto("/assistant");
-  await page.getByLabel("Your question").fill("What is my next midterm?");
-  await page.getByRole("button", { name: "Ask assistant" }).click();
+  await page.goto("/reviews");
+  await page
+    .getByLabel("Review week starts", { exact: true })
+    .filter({ visible: true })
+    .fill("2026-10-12");
+  await page
+    .getByRole("button", { name: "Start weekly conversation", exact: true })
+    .click();
+  await expect(page.getByLabel("First review question")).toBeVisible();
+  await page.getByLabel("Your response").fill("What is my next midterm?");
+  await page.getByRole("button", { name: "Send review response" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Try again in" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Your question")).toHaveValue(
+  await expect(page.getByLabel("Your response")).toHaveValue(
     "What is my next midterm?",
   );
   await expect(
-    page.getByRole("button", { name: "Ask assistant" }),
+    page.getByRole("button", { name: "Send review response" }),
   ).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Ask assistant" })).toBeEnabled(
-    { timeout: 7000 },
-  );
+  await expect(
+    page.getByRole("button", { name: "Send review response" }),
+  ).toBeEnabled({ timeout: 7000 });
   expect(posts).toBe(1);
 });
