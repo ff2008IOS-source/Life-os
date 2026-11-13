@@ -35,6 +35,15 @@ import { statusValues } from "@/lib/integrations/sheet-sync";
 const inputSchema = z.discriminatedUnion("action", [
   z
     .object({
+      action: z.literal("configure"),
+      ...base,
+      version: z.number().int(),
+      config: datasetConfig,
+      ...confirmed,
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal("bind_project"),
       ...base,
       row_id: id,
@@ -301,6 +310,56 @@ export async function POST(request: Request) {
       });
       dbError(r.error);
       return NextResponse.json({ linked: true });
+    }
+    if (input.action === "configure") {
+      if (d.mode !== "paused" || d.outbound_enabled)
+        throw new ApiError(
+          409,
+          "Pause this table and disable outbound writes before reviewing its mapping.",
+        );
+      const previous = datasetConfig.parse(d.config),
+        next = input.config;
+      const shape = (c: typeof next) =>
+        JSON.stringify(
+          c.columns
+            .map((v) => ({ key: v.key, type: v.type, key_part: v.key_part }))
+            .sort((a, b) => a.key.localeCompare(b.key)),
+        );
+      if (
+        previous.sheet_id !== next.sheet_id ||
+        shape(previous) !== shape(next)
+      )
+        throw new ApiError(
+          422,
+          "Preserve the worksheet, field keys, types and stable identity. Header names and bounded ranges can be revalidated without duplicating history.",
+        );
+      const metadata = await withRestSheetsAccess(
+        user.id,
+        d.connection_id,
+        false,
+        (token) => readRestMetadata(token, d.spreadsheet_id),
+      );
+      const sheet = metadata.sheets.find(
+        (s) => s.properties.sheetId === next.sheet_id,
+      );
+      if (
+        !sheet ||
+        next.end_row > sheet.properties.gridProperties.rowCount ||
+        next.end_column > sheet.properties.gridProperties.columnCount
+      )
+        throw new ApiError(422, "The selected range exceeds this worksheet.");
+      const result = await db
+        .from("sheet_rest_datasets")
+        .update({ config: next, last_error: null, last_error_code: null })
+        .eq("user_id", user.id)
+        .eq("id", d.id)
+        .eq("version", input.version)
+        .or("lease_until.is.null,lease_until.lt." + new Date().toISOString())
+        .select("id");
+      dbError(result.error);
+      if (!result.data?.length)
+        throw new ApiError(409, "Mapping changed while it was reviewed.");
+      return NextResponse.json({ saved: true });
     }
     if (input.action === "sync")
       return NextResponse.json(await synchronizeDataset(user.id, d.id));

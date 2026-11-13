@@ -571,6 +571,52 @@ export function SheetRestPanel() {
           >
             Sync now
           </Button>
+          <details>
+            <summary>Review mapping after source changes</summary>
+            <p className="small muted">
+              Pause this table and disable outbound writes first. Preserve field
+              keys, types and identity; update exact headers and bounded ranges
+              when the worksheet changes.
+            </p>
+            <form
+              className="stack"
+              onSubmit={(e) => {
+                e.preventDefault();
+                try {
+                  const config = datasetConfig.parse(
+                    JSON.parse(
+                      String(new FormData(e.currentTarget).get("config")),
+                    ),
+                  );
+                  void act({
+                    action: "configure",
+                    dataset_id: d.id,
+                    version: d.version,
+                    config,
+                    confirmed: true,
+                  });
+                } catch {
+                  setError("Enter a valid mapping configuration.");
+                }
+              }}
+            >
+              <label>
+                Mapping configuration
+                <textarea
+                  name="config"
+                  rows={8}
+                  defaultValue={JSON.stringify(d.config, null, 2)}
+                  key={d.id + ":" + d.version}
+                  required
+                />
+              </label>
+              <Button
+                disabled={busy || d.mode !== "paused" || d.outbound_enabled}
+              >
+                Save reviewed mapping
+              </Button>
+            </form>
+          </details>
           <h3>Records</h3>
           {!state?.rows?.length && (
             <p className="small muted">No imported records on this page.</p>
