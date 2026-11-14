@@ -802,3 +802,8 @@ summary:focus-visible {
     flex-wrap: wrap;
   }
 }
+
+/* Keep form text fully readable while the backdrop fades in. */
+.dialog-content {
+  animation: none;
+}
