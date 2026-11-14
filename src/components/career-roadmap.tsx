@@ -79,7 +79,10 @@ export function CareerRoadmap() {
       <div className="roadmap-sections">
         {sections.map((section) => (
           <section className="roadmap-section" key={section.dataset.id}>
-            <h3>{section.dataset.worksheet_title}</h3>
+            <h3>
+              {section.dataset.title.split(" · ").at(-1) ||
+                section.dataset.worksheet_title}
+            </h3>
             {section.error && <p role="alert">{section.error}</p>}
             {section.dataset.last_error && (
               <p className="notice">

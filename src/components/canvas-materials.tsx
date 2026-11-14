@@ -195,6 +195,11 @@ export function CanvasMaterials({
             open={Boolean(query) || folder.title.includes("Syllabus")}
           >
             <summary>
+              <FolderClosed
+                size={16}
+                className="material-folder-icon"
+                aria-hidden="true"
+              />
               <span>{folder.title}</span>
               <span className="badge">{folder.records.length}</span>
               {folder.suggested && <small>Suggested group</small>}
