@@ -1,4 +1,5 @@
 "use client";
+import { isExample } from "@/lib/real-workspace";
 import { useState } from "react";
 import { Check, Flag, Plus, Inbox, ArrowUp, ArrowDown } from "lucide-react";
 import type { Task } from "@/lib/schemas";
@@ -80,11 +81,21 @@ export function QuickCapture({ areaId }: { areaId?: string }) {
 export function TaskList({
   tasks,
   reorder = false,
+  completedExpanded = false,
 }: {
   tasks: Task[];
   reorder?: boolean;
+  completedExpanded?: boolean;
 }) {
   const { data, mutate, notify, pending, request, refresh } = useWorkspace();
+  tasks = tasks.filter((t) => !isExample(t));
+  const completed = tasks.filter(
+    (t) => t.status === "completed" && !t.deleted_at,
+  );
+  const active = tasks.filter(
+    (t) => t.status !== "completed" || !!t.deleted_at,
+  );
+  const displayed = active;
   const [visible, setVisible] = useState(8);
   const [editing, setEditing] = useState<Task | null>(null);
   const [error, setError] = useState("");
@@ -114,9 +125,9 @@ export function TaskList({
     }
   }
   async function move(task: Task, direction: number) {
-    const index = tasks.findIndex((t) => t.id === task.id);
-    if (index + direction < 0 || index + direction >= tasks.length) return;
-    const ordered = [...tasks];
+    const index = active.findIndex((t) => t.id === task.id);
+    if (index + direction < 0 || index + direction >= active.length) return;
+    const ordered = [...active];
     [ordered[index], ordered[index + direction]] = [
       ordered[index + direction],
       ordered[index],
@@ -139,86 +150,94 @@ export function TaskList({
     }
   }
 
+  const renderTask = (task: Task, i: number) => {
+    const area = data.areas.find((a) => a.id === task.area_id);
+    return (
+      <div
+        key={task.id}
+        className={`task-row ${task.status === "completed" ? "task-completed" : ""}`}
+      >
+        <button
+          className={`task-check ${task.status === "completed" ? "checked" : ""}`}
+          disabled={pending || !!task.deleted_at || !!task.recurrence_rule_id}
+          aria-label={`${task.status === "completed" ? "Reopen" : "Complete"} ${task.title}`}
+          onClick={() => complete(task)}
+        >
+          {task.status === "completed" && <Check size={12} />}
+        </button>
+        <button className="task-main" onClick={() => setEditing(task)}>
+          <span className="task-title">{task.title}</span>
+          <span className="task-meta">
+            {area && (
+              <>
+                <span className="area-dot" style={{ background: area.color }} />
+                {area.name}
+                <span>·</span>
+              </>
+            )}
+            {task.estimated_minutes
+              ? `${task.estimated_minutes} min`
+              : task.status.replaceAll("_", " ")}
+            {task.scheduling_mode === "eligible" && (
+              <>
+                <span>·</span>
+                <span>Ready to schedule</span>
+              </>
+            )}
+          </span>
+        </button>
+        {task.priority >= 3 && <Flag className="priority-flag" />}
+        <span className={`task-due ${isOverdue(task) ? "overdue" : ""}`}>
+          {task.deleted_at
+            ? "Deleted"
+            : friendlyDate(task.due_date ?? task.due_at)}
+        </span>
+        {reorder && task.status !== "completed" && (
+          <div className="inline">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Move ${task.title} up`}
+              disabled={i === 0 || pending}
+              onClick={() => move(task, -1)}
+            >
+              <ArrowUp size={12} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Move ${task.title} down`}
+              disabled={i === active.length - 1 || pending}
+              onClick={() => move(task, 1)}
+            >
+              <ArrowDown size={12} />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
   return (
     <>
-      {tasks.slice(0, visible).map((task, i) => {
-        const area = data.areas.find((a) => a.id === task.area_id);
-        return (
-          <div
-            key={task.id}
-            className={`task-row ${task.status === "completed" ? "task-completed" : ""}`}
-          >
-            <button
-              className={`task-check ${task.status === "completed" ? "checked" : ""}`}
-              disabled={
-                pending || !!task.deleted_at || !!task.recurrence_rule_id
-              }
-              aria-label={`${task.status === "completed" ? "Reopen" : "Complete"} ${task.title}`}
-              onClick={() => complete(task)}
-            >
-              {task.status === "completed" && <Check size={12} />}
-            </button>
-            <button className="task-main" onClick={() => setEditing(task)}>
-              <span className="task-title">{task.title}</span>
-              <span className="task-meta">
-                {area && (
-                  <>
-                    <span
-                      className="area-dot"
-                      style={{ background: area.color }}
-                    />
-                    {area.name}
-                    <span>·</span>
-                  </>
-                )}
-                {task.estimated_minutes
-                  ? `${task.estimated_minutes} min`
-                  : task.status.replaceAll("_", " ")}
-                {task.scheduling_mode === "eligible" && (
-                  <>
-                    <span>·</span>
-                    <span>Preview eligible</span>
-                  </>
-                )}
-              </span>
-            </button>
-            {task.priority >= 3 && <Flag className="priority-flag" />}
-            <span className={`task-due ${isOverdue(task) ? "overdue" : ""}`}>
-              {task.deleted_at
-                ? "Deleted"
-                : friendlyDate(task.due_date ?? task.due_at)}
-            </span>
-            {reorder && (
-              <div className="inline">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Move ${task.title} up`}
-                  disabled={i === 0 || pending}
-                  onClick={() => move(task, -1)}
-                >
-                  <ArrowUp size={12} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Move ${task.title} down`}
-                  disabled={i === tasks.length - 1 || pending}
-                  onClick={() => move(task, 1)}
-                >
-                  <ArrowDown size={12} />
-                </Button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-      {tasks.length > 8 && (
+      {active.slice(0, visible).map(renderTask)}
+      {completed.length > 0 && (
+        <details
+          className="completed-collection"
+          open={completedExpanded || undefined}
+        >
+          <summary>
+            <Check size={14} />
+            Completed ({completed.length})
+          </summary>
+          {completed.map(renderTask)}
+        </details>
+      )}
+      {displayed.length > 8 && (
         <div className="list-pagination">
           <span>
-            {Math.min(visible, tasks.length)} of {tasks.length} tasks
+            {Math.min(visible, displayed.length)} of {displayed.length} tasks
           </span>
-          {visible < tasks.length ? (
+          {visible < displayed.length ? (
             <Button
               variant="ghost"
               size="sm"

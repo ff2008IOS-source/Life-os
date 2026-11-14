@@ -33,6 +33,8 @@ export async function PATCH(request: Request, { params }: Context) {
         "This record changed. Refresh first.",
         "VERSION_CONFLICT",
       );
+    if (entity === "projects" && (current.deleted_at || current.archived_at))
+      throw new ApiError(409, "Restore this project before editing it.");
     if (
       entity === "tasks" &&
       current.recurrence_rule_id &&
@@ -77,15 +79,21 @@ export async function DELETE(request: Request, { params }: Context) {
     checkMutation(request);
     const { entity, id } = await params;
     z.uuid().parse(id);
-    if (entity !== "tasks")
-      throw new ApiError(405, "Only recoverable task deletion is available.");
+    if (!["tasks", "projects"].includes(entity))
+      throw new ApiError(
+        405,
+        "Recoverable deletion is available for tasks and projects.",
+      );
     const { version } = z
       .object({ version: z.number().int().positive() })
       .parse(await readJson(request));
     const { db, user } = await authorized();
     const { data, error } = await db
-      .from("tasks")
-      .update({ deleted_at: new Date().toISOString() })
+      .from(entity)
+      .update({
+        deleted_at: new Date().toISOString(),
+        ...(entity === "projects" ? { automation_enabled: false } : {}),
+      })
       .eq("id", id)
       .eq("user_id", user.id)
       .eq("version", version)

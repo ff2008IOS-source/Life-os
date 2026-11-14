@@ -1,6 +1,8 @@
 "use client";
+import { visibleArea } from "@/lib/visible-areas";
+import { realWorkspace } from "@/lib/real-workspace";
 import { WorkSessionsPanel } from "./work-sessions-panel";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   addDays,
   addMonths,
@@ -24,7 +26,8 @@ import { PlannerCalendar } from "./planner-calendar";
 export function PlannerPage({
   initialSection,
 }: { initialSection?: string } = {}) {
-  const { data } = useWorkspace();
+  const { data: raw } = useWorkspace();
+  const data = realWorkspace(raw);
   const [tab, setTab] = useState(
     ["calendar", "tasks", "inbox", "recurring", "schedule"].includes(
       initialSection ?? "",
@@ -32,7 +35,31 @@ export function PlannerPage({
       ? initialSection!
       : "calendar",
   );
-  const [view, setView] = useState("week");
+  const [view, setCalendarView] = useState("week");
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      try {
+        const saved = localStorage.getItem("lifeos:v1:calendar-view");
+        setCalendarView(
+          ["day", "week", "month", "agenda"].includes(saved ?? "")
+            ? saved!
+            : window.matchMedia("(max-width: 700px)").matches
+              ? "agenda"
+              : "week",
+        );
+      } catch {
+        /* Optional preference. */
+      }
+    });
+  }, []);
+  function setView(next: string) {
+    setCalendarView(next);
+    try {
+      localStorage.setItem("lifeos:v1:calendar-view", next);
+    } catch {
+      /* Optional preference. */
+    }
+  }
   const [anchor, setAnchor] = useState(
     () => new Date(localDate() + "T12:00:00"),
   );
@@ -127,7 +154,7 @@ export function PlannerPage({
                 onChange={(e) => setArea(e.target.value)}
               >
                 <option value="">All life areas</option>
-                {data.areas.map((a) => (
+                {data.areas.filter(visibleArea).map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>
@@ -218,6 +245,7 @@ export function PlannerPage({
               {(tab === "inbox" ? all.filter((t) => t.status === "inbox") : all)
                 .length ? (
                 <TaskList
+                  completedExpanded={status === "completed"}
                   tasks={
                     tab === "inbox"
                       ? all.filter((t) => t.status === "inbox")

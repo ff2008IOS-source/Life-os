@@ -1,4 +1,11 @@
 "use client";
+import { SyllabusReference } from "./syllabus-reference";
+import { AssessmentTable } from "./assessment-table";
+import {
+  standingLabel,
+  assessmentResult,
+  possibleAssessmentDuplicates,
+} from "@/lib/academic-display";
 import { CanvasMaterials } from "./canvas-materials";
 import { AssessmentPreparation } from "./assessment-preparation";
 import { formatInTimeZone } from "date-fns-tz";
@@ -44,6 +51,7 @@ export function AcademicsPanel({
         ? initialView!
         : "overview",
   );
+  const [syllabusOpen, setSyllabusOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [data, setData] = useState<AcademicData>(empty),
     [error, setError] = useState(""),
@@ -101,6 +109,16 @@ export function AcademicsPanel({
       rulesVerified: current?.grading_rules_confirmed === true,
     },
   );
+  const standingSupported =
+    current?.grading_rules_confirmed === true &&
+    possibleAssessmentDuplicates(assessments).length === 0 &&
+    assessments
+      .filter((a) => !a.dropped && typeof a.earned_score === "number")
+      .every((a) =>
+        ["verified", "user_confirmed"].includes(String(a.verification_status)),
+      );
+  const weightSupported =
+    standingSupported && current?.grading_method === "assessment_weights";
   const kind: AcademicKind =
     tab === "topics"
       ? "study_topics"
@@ -265,34 +283,106 @@ export function AcademicsPanel({
               <>
                 <div className="academic-score-grid">
                   <div>
-                    <span>Recorded-score average</span>
+                    <span>
+                      {standingLabel(summary, standingSupported).title}
+                    </span>
                     <strong>
-                      {summary.graded_average === null
-                        ? "—"
-                        : summary.graded_average.toFixed(1) + "%"}
+                      {standingLabel(summary, standingSupported).value}
                     </strong>
-                    <small>Only graded work under the selected formula</small>
+                    <small>
+                      {summary.overall_grade !== null
+                        ? "All confirmed assessments"
+                        : summary.graded_average !== null && standingSupported
+                          ? "Based on graded work so far"
+                          : "Recorded assessment results"}
+                    </small>
                   </div>
                   <div>
-                    <span>Overall course grade</span>
+                    <span>Graded course weight</span>
                     <strong>
-                      {summary.overall_grade === null
-                        ? "Incomplete"
-                        : summary.overall_grade.toFixed(1) + "%"}
+                      {summary.graded_weight !== null && weightSupported
+                        ? `${Number(summary.graded_weight.toFixed(1))}%`
+                        : "To confirm"}
                     </strong>
-                    <small>Requires complete scores and grading rules</small>
+                    <small>
+                      {summary.graded_weight !== null && weightSupported
+                        ? "Weight represented by current results"
+                        : "Check syllabus grading rules"}
+                    </small>
                   </div>
                   <div>
-                    <span>Unknown scores</span>
+                    <span>Results pending</span>
                     <strong>{summary.missing_scores}</strong>
-                    <small>{summary.known_scores} recorded scores</small>
+                    <small>
+                      Of {summary.known_scores + summary.missing_scores}{" "}
+                      included assessments
+                    </small>
                   </div>
                 </div>
-                {summary.warnings.length > 0 && (
-                  <p className="muted small academic-note">
-                    {[...new Set(summary.warnings)].join(" ")}
-                  </p>
+                {view === "overview" && summary.known_scores > 0 && (
+                  <section className="course-results">
+                    <h3>Recorded results</h3>
+                    {assessments
+                      .filter((a) => typeof a.earned_score === "number")
+                      .slice(0, 3)
+                      .map((a) => (
+                        <button
+                          className="academic-record-row"
+                          key={a.id}
+                          onClick={() => {
+                            setView("assessments");
+                            setTab("assessments");
+                          }}
+                        >
+                          <strong>{String(a.title)}</strong>
+                          <span className="assessment-result">
+                            {assessmentResult(a)}
+                          </span>
+                        </button>
+                      ))}
+                  </section>
                 )}
+                <details
+                  className="briefing-detail"
+                  onToggle={(e) => setSyllabusOpen(e.currentTarget.open)}
+                >
+                  <summary>Grading details & syllabus</summary>
+                  <p className="small">
+                    {current.grading_rules_confirmed === true
+                      ? "Grading rules confirmed."
+                      : "Confirm the syllabus grading rules to calculate your current standing."}{" "}
+                    Missing results are left out, never counted as zero.
+                  </p>
+                  {summary.warnings.length > 0 && (
+                    <p className="small muted">
+                      {[...new Set(summary.warnings)].join(" ")}
+                    </p>
+                  )}
+                  {syllabusOpen && selected && (
+                    <SyllabusReference key={selected} course={selected} />
+                  )}
+                  <div className="inline">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setView("materials");
+                      }}
+                    >
+                      Open syllabus & materials
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setView("assessments");
+                        setTab("categories");
+                      }}
+                    >
+                      Review grading rules
+                    </Button>
+                  </div>
+                </details>
                 {view === "overview" ? (
                   <div className="course-overview">
                     <h3>Assessments to review</h3>
@@ -387,97 +477,104 @@ export function AcademicsPanel({
                               : "category"}
                       </Button>
                     </div>
-                    <div className="academic-record-list">
-                      {rows.slice(0, limit).map((row) => (
-                        <div
-                          key={row.id}
-                          id={`assessment-${row.id}`}
-                          className={
-                            row.id === initialAssessment
-                              ? "assessment-highlight"
-                              : undefined
-                          }
-                        >
-                          <button
-                            className="academic-record-row"
-                            onClick={() => setEdit({ kind, record: row })}
+                    {tab === "assessments" ? (
+                      <AssessmentTable
+                        rows={assessments}
+                        initialAssessment={initialAssessment}
+                        onEdit={(record) =>
+                          setEdit({ kind: "assessments", record })
+                        }
+                        onSaved={refresh}
+                      />
+                    ) : (
+                      <div className="academic-record-list">
+                        {rows.slice(0, limit).map((row) => (
+                          <div
+                            key={row.id}
+                            id={`assessment-${row.id}`}
+                            className={
+                              row.id === initialAssessment
+                                ? "assessment-highlight"
+                                : undefined
+                            }
                           >
-                            <div>
-                              <strong>
-                                {String(
-                                  row.title ??
-                                    row.name ??
-                                    (row.start_at
-                                      ? formatInTimeZone(
-                                          String(row.start_at),
-                                          "America/Vancouver",
-                                          "MMM d, h:mm a",
-                                        )
-                                      : "Study session"),
-                                )}
-                              </strong>
-                              <small>
+                            <button
+                              className="academic-record-row"
+                              onClick={() => setEdit({ kind, record: row })}
+                            >
+                              <div>
+                                <strong>
+                                  {String(
+                                    row.title ??
+                                      row.name ??
+                                      (row.start_at
+                                        ? formatInTimeZone(
+                                            String(row.start_at),
+                                            "America/Vancouver",
+                                            "MMM d, h:mm a",
+                                          )
+                                        : "Study session"),
+                                  )}
+                                </strong>
+                                <small>
+                                  {tab === "assessments"
+                                    ? `${row.submission_state ?? "unknown"} · ${row.due_date ?? (row.due_at ? String(row.due_at).slice(0, 10) : "No confirmed deadline")}`
+                                    : tab === "topics"
+                                      ? String(row.mastery ?? "unstudied")
+                                      : tab === "categories"
+                                        ? String(row.aggregation ?? "unknown")
+                                        : String(row.notes ?? "")}
+                                </small>
+                              </div>
+                              <span>
                                 {tab === "assessments"
-                                  ? `${row.submission_state ?? "unknown"} · ${row.due_date ?? (row.due_at ? String(row.due_at).slice(0, 10) : "No confirmed deadline")}`
-                                  : tab === "topics"
-                                    ? String(row.mastery ?? "unstudied")
-                                    : tab === "categories"
-                                      ? String(row.aggregation ?? "unknown")
-                                      : String(row.notes ?? "")}
-                              </small>
-                            </div>
-                            <span>
-                              {tab === "assessments"
-                                ? row.earned_score === null
-                                  ? "Score unknown"
-                                  : `${row.earned_score} / ${row.maximum_score}${row.score_unit === "percent" ? "%" : ""}`
-                                : tab === "categories"
-                                  ? row.weight === null
-                                    ? "Weight unknown"
-                                    : `${row.weight}%`
-                                  : tab === "sessions"
-                                    ? row.actual_minutes
-                                      ? `${row.actual_minutes} min`
-                                      : "Duration not recorded"
-                                    : ""}
-                            </span>
-                            {tab === "assessments" && (
-                              <span className="badge">
-                                {String(
-                                  row.verification_status ?? "unverified",
-                                ).replaceAll("_", " ")}
+                                  ? row.earned_score === null
+                                    ? "Score unknown"
+                                    : `${row.earned_score} / ${row.maximum_score}${row.score_unit === "percent" ? "%" : ""}`
+                                  : tab === "categories"
+                                    ? row.weight === null
+                                      ? "Weight unknown"
+                                      : `${row.weight}%`
+                                    : tab === "sessions"
+                                      ? row.actual_minutes
+                                        ? `${row.actual_minutes} min`
+                                        : "Duration not recorded"
+                                      : ""}
                               </span>
+                              {tab === "assessments" && (
+                                <span className="badge">
+                                  {String(
+                                    row.verification_status ?? "unverified",
+                                  ).replaceAll("_", " ")}
+                                </span>
+                              )}
+                            </button>
+                            {tab === "assessments" && (
+                              <AssessmentPreparation
+                                assessment={row}
+                                onSaved={refresh}
+                              />
                             )}
-                          </button>
-                          {tab === "assessments" && (
-                            <AssessmentPreparation
-                              assessment={row}
-                              onSaved={refresh}
-                            />
-                          )}
-                        </div>
-                      ))}
-                      {rows.length > limit && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setLimit((n) => n + 8)}
-                        >
-                          Show more records ({rows.length - limit} remaining)
-                        </Button>
-                      )}
-                      {!rows.length && (
-                        <p className="academic-note muted small">
-                          No records in this section yet.
-                        </p>
-                      )}
-                    </div>
+                          </div>
+                        ))}
+                        {rows.length > limit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setLimit((n) => n + 8)}
+                          >
+                            Show more records ({rows.length - limit} remaining)
+                          </Button>
+                        )}
+                        {!rows.length && (
+                          <p className="academic-note muted small">
+                            No records in this section yet.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
-                <p className="academic-note muted small">
-                  Study mastery is separate from earned grades. Blank scores
-                  never count as zero.
-                </p>
               </>
             )}
           </>

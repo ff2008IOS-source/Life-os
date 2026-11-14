@@ -6,6 +6,16 @@ export async function GET(request: Request) {
   try {
     const { db, user } = await authorized();
     const now = Date.now();
+    const search = z
+      .string()
+      .trim()
+      .max(150)
+      .parse(new URL(request.url).searchParams.get("search") ?? "");
+    const course = z
+      .string()
+      .trim()
+      .max(100)
+      .parse(new URL(request.url).searchParams.get("course") ?? "");
     const view = z
       .enum(["upcoming", "attention", "history"])
       .parse(new URL(request.url).searchParams.get("view") ?? "upcoming");
@@ -22,6 +32,12 @@ export async function GET(request: Request) {
       )
       .eq("user_id", user.id)
       .or("published.is.null,published.eq.true");
+    if (search)
+      query = query.ilike(
+        "title",
+        "%" + search.replace(/[\\%_]/g, "\\$&") + "%",
+      );
+    if (course) query = query.eq("course_code", course);
     if (view === "history")
       query = query
         .in("submission_state", ["submitted", "graded", "excused"])
@@ -39,9 +55,33 @@ export async function GET(request: Request) {
     }
     const r = await query.order("canvas_id").range(page * 6, page * 6 + 6);
     dbError(r.error);
+    const records = r.data?.slice(0, 6) ?? [];
+    const grades = records.length
+      ? await db
+          .from("assessments")
+          .select("source_key,earned_score,maximum_score,notes")
+          .eq("user_id", user.id)
+          .in(
+            "source_key",
+            records.map((row) => `canvas:${row.canvas_id}`),
+          )
+          .limit(50)
+      : { data: [], error: null };
+    dbError(grades.error);
     return NextResponse.json(
       {
-        records: r.data?.slice(0, 6) ?? [],
+        records: records.map((row) => {
+          const matches =
+            grades.data?.filter(
+              (grade) => grade.source_key === `canvas:${row.canvas_id}`,
+            ) ?? [];
+          const grade = matches.length === 1 ? matches[0] : null;
+          return {
+            ...row,
+            earned_score: grade?.earned_score ?? null,
+            maximum_score: grade?.maximum_score ?? null,
+          };
+        }),
         view,
         has_more: (r.data?.length ?? 0) > 6,
       },

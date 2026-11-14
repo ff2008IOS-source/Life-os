@@ -323,7 +323,7 @@ const server = createServer((req, res) => {
             if (
               !val.endsWith(")") ||
               !list.length ||
-              list.some((x) => !/^[a-zA-Z0-9_-]+$/.test(x))
+              list.some((x) => !/^[a-zA-Z0-9_:-]+$/.test(x))
             )
               throw Error("Unsupported list filter");
             where.push(
@@ -333,9 +333,14 @@ const server = createServer((req, res) => {
           }
           const [op, ...parts] = val.split(".");
           const value = parts.join(".");
-          const operator = { eq: "=", gte: ">=", gt: ">", lt: "<", lte: "<=" }[
-            op
-          ];
+          const operator = {
+            ilike: "ilike",
+            eq: "=",
+            gte: ">=",
+            gt: ">",
+            lt: "<",
+            lte: "<=",
+          }[op];
           if (!operator) throw Error("Unsupported filter");
           where.push(`${quote(key)} ${operator} ${param(value)}`);
         }

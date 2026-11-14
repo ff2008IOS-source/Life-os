@@ -140,6 +140,7 @@ test("dense schedules stay bounded on iPad and iPhone and calendar source contro
   ).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/planner");
+  await page.getByRole("button", { name: "Week", exact: true }).click();
   await expect(page.locator(".mobile-week-picker:visible")).toBeVisible();
   expect(
     await page.evaluate(

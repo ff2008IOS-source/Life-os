@@ -1,4 +1,6 @@
 "use client";
+import { visibleArea, availableProject } from "@/lib/visible-areas";
+import { DateField } from "./date-field";
 import { useState } from "react";
 import type { Project, Goal, Milestone } from "@/lib/schemas";
 import { useWorkspace } from "./workspace-provider";
@@ -23,7 +25,39 @@ export function EntityEditor({
   state: EntityEditorState;
   onClose: () => void;
 }) {
-  const { data, mutate, notify, pending } = useWorkspace();
+  const { data, mutate, notify, pending, request, refresh } = useWorkspace();
+  const [removing, setRemoving] = useState(false);
+  const [working, setWorking] = useState(false);
+  async function lifecycle(action: "delete" | "archive") {
+    if (!state.record || state.kind !== "projects") return;
+    setWorking(true);
+    setError("");
+    try {
+      await request(
+        action === "delete"
+          ? `/api/v1/projects/${state.record.id}`
+          : `/api/v1/projects/${state.record.id}/lifecycle`,
+        {
+          method: action === "delete" ? "DELETE" : "POST",
+          body: JSON.stringify({
+            version: state.record.version,
+            ...(action === "archive" ? { action } : {}),
+          }),
+        },
+      );
+      await refresh();
+      notify(
+        action === "delete"
+          ? "Project moved to Recently deleted"
+          : "Project archived",
+      );
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to update project");
+    } finally {
+      setWorking(false);
+    }
+  }
   const [error, setError] = useState("");
   const rec = state.record;
   const goal: Partial<Goal> | undefined =
@@ -35,6 +69,7 @@ export function EntityEditor({
   const [progress, setProgress] = useState(goal?.progress_type ?? "milestone");
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (working) return;
     const f = new FormData(e.currentTarget);
     const value = (k: string) => f.get(k) || null;
     let values: unknown;
@@ -138,11 +173,17 @@ export function EntityEditor({
                 defaultValue={project?.area_id ?? goal?.area_id ?? ""}
               >
                 <option value="">No area</option>
-                {data.areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
+                {data.areas
+                  .filter(
+                    (a) =>
+                      visibleArea(a) ||
+                      a.id === (project?.area_id ?? goal?.area_id),
+                  )
+                  .map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
               </select>
             </label>
           </>
@@ -170,11 +211,21 @@ export function EntityEditor({
                 defaultValue={milestone?.project_id ?? state.projectId ?? ""}
               >
                 <option value="">No project</option>
-                {data.projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+                {data.projects
+                  .filter(
+                    (p) =>
+                      availableProject(p) ||
+                      p.id ===
+                        (milestone?.project_id ??
+                          (state.kind === "milestones"
+                            ? state.projectId
+                            : undefined)),
+                  )
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
               </select>
             </label>
           </div>
@@ -205,14 +256,11 @@ export function EntityEditor({
               )}
             </select>
           </label>
-          <label>
-            Target date
-            <input
-              name="target_date"
-              type="date"
-              defaultValue={rec?.target_date ?? ""}
-            />
-          </label>
+          <DateField
+            name="target_date"
+            label="Target date"
+            defaultValue={rec?.target_date}
+          />
         </div>
         {state.kind === "goals" && (
           <>
@@ -297,11 +345,51 @@ export function EntityEditor({
             {error}
           </p>
         )}
+        {state.kind === "projects" && rec && (
+          <section className="project-lifecycle">
+            <div className="inline">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending || working}
+                onClick={() => void lifecycle("archive")}
+              >
+                Archive project
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={pending || working}
+                onClick={() => setRemoving(!removing)}
+              >
+                Delete project
+              </Button>
+            </div>
+            {removing && (
+              <div className="notice">
+                <p>
+                  Move this project to Recently deleted? You can restore it
+                  later. Linked tasks, milestones, history, spreadsheet records
+                  and calendar events stay intact. Automatic scheduling stops
+                  for this project.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={working}
+                  onClick={() => void lifecycle("delete")}
+                >
+                  Confirm delete project
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
         <div className="dialog-actions">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" disabled={pending || working}>
             {pending ? "Saving…" : `Save ${noun}`}
           </Button>
         </div>

@@ -1,4 +1,5 @@
 "use client";
+import { visibleArea, availableProject } from "@/lib/visible-areas";
 import Link from "next/link";
 import { AppLogo, ProfileAvatar } from "./profile-identity";
 import { usePathname, useRouter } from "next/navigation";
@@ -89,7 +90,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         </nav>
         <p className="sidebar-label">YOUR LIFE AREAS</p>
         <nav aria-label="Life areas">
-          {[...data.areas]
+          {data.areas
+            .filter(visibleArea)
             .sort((a, b) => a.sort_order - b.sort_order)
             .map((a) => (
               <Link className="area-link" href={`/areas/${a.slug}`} key={a.id}>
@@ -253,6 +255,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               ))}
           {query.trim() &&
             data.projects
+              .filter(availableProject)
               .filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
               .slice(0, 6)
               .map((p) => (

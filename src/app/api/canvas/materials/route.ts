@@ -17,12 +17,16 @@ export async function GET(request: Request) {
         local_course: z.uuid().nullable(),
         page: z.coerce.number().int().min(0).max(1000),
         context: z.boolean(),
+        library: z.boolean(),
+        syllabus: z.boolean(),
       })
       .parse({
         course: params.get("course"),
         local_course: params.get("local_course"),
         page: params.get("page") ?? 0,
         context: params.get("context") === "true",
+        library: params.get("library") === "true",
+        syllabus: params.get("syllabus") === "true",
       });
     const db = canvasAdmin();
     let resolvedCourse = input.course;
@@ -66,19 +70,21 @@ export async function GET(request: Request) {
       .order("canvas_id")
       .limit(501);
     dbError(courses.error);
+    const pageSize = input.library ? 999 : 30;
     let query = db
       .from("canvas_records")
       .select("resource_type,canvas_id,payload,synced_at,course_canvas_id")
       .eq("user_id", user.id)
       .order("resource_type")
       .order("canvas_id")
-      .range(input.page * 30, input.page * 30 + 30);
+      .range(input.page * pageSize, input.page * pageSize + pageSize);
     if (input.local_course)
       query = query.in("resource_type", [
         "course",
         "module",
         "module_item",
         "page",
+        "page_content",
         "file",
         "announcement",
       ]);
@@ -99,17 +105,35 @@ export async function GET(request: Request) {
           )
           .eq("user_id", user.id)
           .in("canvas_file_id", ids)
-          .limit(31)
+          .limit(input.library ? 1000 : 31)
       : { data: [], error: null };
-    const chunks = ids.length
-      ? await db
-          .from("canvas_document_chunks")
-          .select("canvas_file_id,course_canvas_id,text")
-          .eq("user_id", user.id)
-          .eq("chunk_index", 0)
-          .in("canvas_file_id", ids)
-          .limit(31)
-      : { data: [], error: null };
+    const textIds = input.syllabus
+      ? (rows.data ?? [])
+          .filter(
+            (r) =>
+              r.resource_type === "file" &&
+              /syllabus|outline/i.test(
+                String(
+                  r.payload.display_name ??
+                    r.payload.filename ??
+                    r.payload.title ??
+                    "",
+                ),
+              ),
+          )
+          .map((r) => String(r.payload.id))
+      : ids;
+    let textQuery = db
+      .from("canvas_document_chunks")
+      .select("canvas_file_id,course_canvas_id,text,chunk_index")
+      .eq("user_id", user.id)
+      .in("canvas_file_id", textIds)
+      .order("chunk_index")
+      .limit(input.syllabus || input.library ? 1000 : 31);
+    textQuery = input.syllabus
+      ? textQuery.lt("chunk_index", 8)
+      : textQuery.eq("chunk_index", 0);
+    const chunks = textIds.length ? await textQuery : { data: [], error: null };
     dbError(docs.error);
     dbError(chunks.error);
     return NextResponse.json(
@@ -121,8 +145,33 @@ export async function GET(request: Request) {
           name: plainCanvasText(r.payload.name, 300),
         })),
         courses_truncated: (courses.data?.length ?? 0) > 500,
-        has_more: (rows.data?.length ?? 0) > 30,
-        records: rows.data?.slice(0, 30).map((r) => ({
+        has_more: (rows.data?.length ?? 0) > pageSize,
+        library_limited: input.library && (rows.data?.length ?? 0) >= 1000,
+        records: rows.data?.slice(0, pageSize).map((r) => ({
+          module: (() => {
+            const item = rows.data?.find(
+              (m) =>
+                m.resource_type === "module_item" &&
+                m.course_canvas_id === r.course_canvas_id &&
+                String(m.payload.content_id) ===
+                  String(r.payload.id ?? r.payload.page_id) &&
+                String(m.payload.type ?? "").toLowerCase() ===
+                  (r.resource_type === "page_content"
+                    ? "page"
+                    : r.resource_type),
+            );
+            const parentModule =
+              item &&
+              rows.data?.find(
+                (m) =>
+                  m.resource_type === "module" &&
+                  m.course_canvas_id === r.course_canvas_id &&
+                  String(m.payload.id) === String(item.payload.module_id),
+              );
+            return parentModule
+              ? plainCanvasText(parentModule.payload.name, 300)
+              : null;
+          })(),
           id: r.canvas_id,
           type: r.resource_type,
           course: r.course_canvas_id,
@@ -136,11 +185,15 @@ export async function GET(request: Request) {
           ),
           text:
             r.resource_type === "file"
-              ? (chunks.data?.find(
-                  (c) =>
-                    c.canvas_file_id === String(r.payload.id) &&
-                    c.course_canvas_id === r.course_canvas_id,
-                )?.text ?? "")
+              ? (chunks.data
+                  ?.filter(
+                    (c) =>
+                      c.canvas_file_id === String(r.payload.id) &&
+                      c.course_canvas_id === r.course_canvas_id,
+                  )
+                  .map((c) => c.text)
+                  .join(" ")
+                  .slice(0, 20000) ?? "")
               : plainCanvasText(
                   r.payload.body ??
                     r.payload.description ??
@@ -190,9 +243,10 @@ export async function GET(request: Request) {
                     : "File text not extracted yet";
                 })()
               : "Retrieved Canvas record",
-          url: r.course_canvas_id
-            ? `https://canvas.sfu.ca/courses/${r.course_canvas_id}`
-            : "https://canvas.sfu.ca",
+          url:
+            r.course_canvas_id && /^\d+$/.test(r.course_canvas_id)
+              ? `https://canvas.sfu.ca/courses/${r.course_canvas_id}${r.resource_type === "file" && /^\d+$/.test(String(r.payload.id)) ? `/files/${r.payload.id}` : r.resource_type === "assignment" && /^\d+$/.test(String(r.payload.id)) ? `/assignments/${r.payload.id}` : ""}`
+              : "https://canvas.sfu.ca",
         })),
       },
       { headers: { "Cache-Control": "private, no-store" } },

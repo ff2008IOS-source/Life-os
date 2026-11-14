@@ -1,6 +1,8 @@
 "use client";
+import { visibleArea } from "@/lib/visible-areas";
+import { realWorkspace } from "@/lib/real-workspace";
 import Link from "next/link";
-import { ConnectedCareerRecords } from "./connected-career-records";
+import { CareerRoadmap } from "./career-roadmap";
 import { AcademicsPanel } from "./academics-panel";
 import { projectSummary } from "@/lib/project-summary";
 import { ContactsPanel } from "./contacts-panel";
@@ -46,13 +48,15 @@ export function AreasPage({
   initialView?: string;
   initialAssessment?: string;
 }) {
-  const { data } = useWorkspace();
+  const { data: raw } = useWorkspace();
+  const data = realWorkspace(raw);
   const [editor, setEditor] = useState<EntityEditorState | null>(null);
   const [tab, setTab] = useState("overview");
   const area = data.areas.find((a) => a.slug === slug);
   const projects = data.projects.filter(
     (p) =>
       !p.archived_at &&
+      !p.deleted_at &&
       (!slug || p.area_id === area?.id || slug === "projects"),
   );
   if (!slug)
@@ -69,7 +73,7 @@ export function AreasPage({
           <EmptyState
             icon={Layers3}
             title="Set up your life areas"
-            description="Initialize your workspace from Home to create your five empty areas."
+            description="Set up your workspace from Home to get started."
             action={
               <Button asChild variant="outline">
                 <Link href="/">Go to Home</Link>
@@ -78,7 +82,7 @@ export function AreasPage({
           />
         ) : (
           <div className="cards-grid">
-            {data.areas.map((a) => {
+            {data.areas.filter(visibleArea).map((a) => {
               const Icon = icons[a.slug] ?? Layers3;
               const count = data.tasks.filter(
                 (t) =>
@@ -159,37 +163,37 @@ export function AreasPage({
           </Button>
         )}
       </div>
-      {slug === "projects" && (
-        <Link className="text-link" href="/areas/career#connected-roadmap">
-          Manage linked spreadsheet plans in Career
-        </Link>
+
+      {!["academics", "career"].includes(slug) && (
+        <div className="area-metrics">
+          <div className="area-summary">
+            Active tasks<strong>{active.length}</strong>
+          </div>
+          <div className="area-summary">
+            Active goals<strong>{goals.length}</strong>
+          </div>
+          <div className="area-summary">
+            Completed tasks
+            <strong>
+              {tasks.filter((t) => t.status === "completed").length}
+            </strong>
+          </div>
+        </div>
       )}
-      <div className="area-metrics">
-        <div className="area-summary">
-          Active tasks<strong>{active.length}</strong>
+      {!["academics", "career"].includes(slug) && (
+        <div className="tabs">
+          {["overview", "tasks"].map((t) => (
+            <button
+              className={`tab ${tab === t ? "active" : ""}`}
+              key={t}
+              aria-pressed={tab === t}
+              onClick={() => setTab(t)}
+            >
+              {t[0].toUpperCase() + t.slice(1)}
+            </button>
+          ))}
         </div>
-        <div className="area-summary">
-          Active goals<strong>{goals.length}</strong>
-        </div>
-        <div className="area-summary">
-          Completed tasks
-          <strong>
-            {tasks.filter((t) => t.status === "completed").length}
-          </strong>
-        </div>
-      </div>
-      <div className="tabs">
-        {["overview", "tasks"].map((t) => (
-          <button
-            className={`tab ${tab === t ? "active" : ""}`}
-            key={t}
-            aria-pressed={tab === t}
-            onClick={() => setTab(t)}
-          >
-            {t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
+      )}
       {tab === "tasks" ? (
         <section className="panel">
           <div className="panel-heading">
@@ -209,7 +213,40 @@ export function AreasPage({
         <>
           {slug === "projects" ? (
             <>
-              <ProjectCards projects={projects} onEdit={setEditor} />
+              <ProjectCards
+                projects={projects.filter(
+                  (p) => p.status !== "completed" && p.status !== "cancelled",
+                )}
+                onEdit={setEditor}
+              />
+              {projects.some((p) =>
+                ["completed", "cancelled"].includes(p.status),
+              ) && (
+                <details className="panel collection-disclosure">
+                  <summary>
+                    Completed and cancelled projects (
+                    {
+                      projects.filter((p) =>
+                        ["completed", "cancelled"].includes(p.status),
+                      ).length
+                    }
+                    )
+                  </summary>
+                  <ProjectCards
+                    projects={projects.filter((p) =>
+                      ["completed", "cancelled"].includes(p.status),
+                    )}
+                    onEdit={setEditor}
+                  />
+                </details>
+              )}
+              <ProjectRecovery
+                projects={data.projects.filter(
+                  (p) =>
+                    (!!p.archived_at || !!p.deleted_at) &&
+                    (slug === "projects" || p.area_id === area.id),
+                )}
+              />
               {!projects.length && (
                 <section className="panel">
                   <EmptyState
@@ -241,7 +278,7 @@ export function AreasPage({
                 />
               ) : slug === "career" ? (
                 <>
-                  <ConnectedCareerRecords />
+                  <CareerRoadmap />
                   <details className="panel">
                     <summary>Earlier imported career archive</summary>
                     <CareerPanel />
@@ -289,27 +326,62 @@ export function AreasPage({
                   />
                 </section>
               )}
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2>Next actions</h2>
-                  <span className="count-pill">{active.length}</span>
-                </div>
-                {active.length ? (
-                  <TaskList tasks={active.slice(0, 5)} />
-                ) : (
-                  <EmptyState
-                    compact
-                    title="No active actions"
-                    description="Add only what is useful to you."
-                  />
-                )}
-                <QuickCapture areaId={area.id} />
-              </section>
+              {slug !== "academics" && (
+                <section className="panel">
+                  <div className="panel-heading">
+                    <h2>Next actions</h2>
+                    <span className="count-pill">{active.length}</span>
+                  </div>
+                  {active.length ? (
+                    <TaskList tasks={active.slice(0, 5)} />
+                  ) : (
+                    <EmptyState
+                      compact
+                      title="No active actions"
+                      description="Add only what is useful to you."
+                    />
+                  )}
+                  <QuickCapture areaId={area.id} />
+                </section>
+              )}
             </div>
           )}
           {slug !== "projects" && projects.length > 0 && (
             <div style={{ marginTop: 22 }}>
-              <ProjectCards projects={projects} onEdit={setEditor} />
+              <ProjectCards
+                projects={projects.filter(
+                  (p) => p.status !== "completed" && p.status !== "cancelled",
+                )}
+                onEdit={setEditor}
+              />
+              {projects.some((p) =>
+                ["completed", "cancelled"].includes(p.status),
+              ) && (
+                <details className="panel collection-disclosure">
+                  <summary>
+                    Completed and cancelled projects (
+                    {
+                      projects.filter((p) =>
+                        ["completed", "cancelled"].includes(p.status),
+                      ).length
+                    }
+                    )
+                  </summary>
+                  <ProjectCards
+                    projects={projects.filter((p) =>
+                      ["completed", "cancelled"].includes(p.status),
+                    )}
+                    onEdit={setEditor}
+                  />
+                </details>
+              )}
+              <ProjectRecovery
+                projects={data.projects.filter(
+                  (p) =>
+                    (!!p.archived_at || !!p.deleted_at) &&
+                    (slug === "projects" || p.area_id === area.id),
+                )}
+              />
             </div>
           )}
         </>
@@ -327,7 +399,8 @@ function ProjectCards({
   projects: ReturnType<typeof useWorkspace>["data"]["projects"];
   onEdit: (state: EntityEditorState) => void;
 }) {
-  const { data } = useWorkspace();
+  const { data: raw } = useWorkspace();
+  const data = realWorkspace(raw);
   return (
     <div className="cards-grid">
       {projects.map((p) => {
@@ -359,7 +432,9 @@ function ProjectCards({
             <div className="full-width">
               <div className="flex-between small muted">
                 <span>
-                  {done} of {tasks.length} tasks complete
+                  {tasks.length
+                    ? `${done} of ${tasks.length} tasks complete`
+                    : "Add a first step when you’re ready"}
                 </span>
               </div>
               {tasks.length > 0 && (
@@ -409,5 +484,62 @@ function ProjectCards({
         );
       })}
     </div>
+  );
+}
+
+function ProjectRecovery({
+  projects,
+}: {
+  projects: ReturnType<typeof useWorkspace>["data"]["projects"];
+}) {
+  const { request, refresh, notify } = useWorkspace();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!projects.length) return null;
+  return (
+    <details className="panel collection-disclosure">
+      <summary>Archived & recently deleted ({projects.length})</summary>
+      <p className="small muted">
+        Your linked work and history are preserved. Restoring keeps automatic
+        scheduling off.
+      </p>
+      {projects.map((p) => (
+        <div className="setting-line" key={p.id}>
+          <div>
+            <strong>{p.name}</strong>
+            <p className="small muted">
+              {p.deleted_at ? "Recently deleted" : "Archived"}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await request(`/api/v1/projects/${p.id}/lifecycle`, {
+                  method: "POST",
+                  body: JSON.stringify({
+                    action: "restore",
+                    version: p.version,
+                  }),
+                });
+                await refresh();
+                notify("Project restored");
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Unable to restore");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Restore {p.name}
+          </Button>
+        </div>
+      ))}
+      {error && <p role="alert">{error}</p>}
+    </details>
   );
 }

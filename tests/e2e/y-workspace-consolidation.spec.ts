@@ -157,7 +157,8 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   const library = content
     .locator(".canvas-library-disclosure")
     .filter({ visible: true });
-  const unavailable = "**/api/canvas/materials?page=0&course=771201";
+  const unavailable =
+    "**/api/canvas/materials?library=true&page=0&course=771201";
   await page.route(unavailable, (route) =>
     route.fulfill({
       status: 503,
@@ -169,6 +170,9 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     .selectOption("771201");
   await expect(library).toContainText("Materials temporarily unavailable.");
   await expect(library.locator(".setting-line")).toHaveCount(0);
+  await library
+    .getByText("Reading & file preparation", { exact: true })
+    .click();
   await expect(
     library.getByRole("button", {
       name: "Prepare available files",
