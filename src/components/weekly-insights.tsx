@@ -29,17 +29,7 @@ export function WeeklyInsights() {
           {d.weekly.completed_on_time} met their deadline,{" "}
           {d.weekly.completed_late} completed after it.
         </li>
-        <li>
-          {d.source_errors.includes("work")
-            ? "Work history unavailable."
-            : `${d.weekly.reported_minutes} minutes logged; ${d.weekly.planned_minutes} minutes planned.`}
-        </li>
-        <li>{d.weekly.deferrals} tasks put off this week.</li>
-        <li>
-          {d.source_errors.includes("study")
-            ? "Study history unavailable."
-            : `${d.weekly.reported_academic_minutes} study minutes logged.`}
-        </li>
+        <li>You chose “Not Now” {d.weekly.deferrals} times this week.</li>
       </ul>
       {d.weekly.needs_review.length > 0 && (
         <p>

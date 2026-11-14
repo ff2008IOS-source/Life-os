@@ -213,8 +213,16 @@ test("synthetic reservation → actual completion → academic history and revie
   expect(reviewEvidence.items[0].task.status).toBe("completed");
   for (const route of ["/insights", "/reviews"]) {
     await page.goto(route);
-    await expect(page.getByText(/45 minutes logged/)).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: "Work history", exact: true })
+        .getByText(/45 minutes logged/),
+    ).toBeVisible();
     await page.reload();
-    await expect(page.getByText(/45 minutes logged/)).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: "Work history", exact: true })
+        .getByText(/45 minutes logged/),
+    ).toBeVisible();
   }
 });

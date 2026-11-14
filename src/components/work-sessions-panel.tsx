@@ -46,7 +46,7 @@ export function WorkSessionsPanel({
     };
   }, [query, workspace.tasks]);
   return (
-    <section className="panel settings-panel">
+    <section className="panel settings-panel" aria-label="Work history">
       <div className="academic-toolbar">
         <h2>{compact ? "Recorded work" : "Work sessions"}</h2>
         <span className="badge">
