@@ -14,20 +14,50 @@ export async function GET(request: Request) {
     const input = z
       .object({
         course: z.string().regex(/^\d+$/).nullable(),
+        local_course: z.uuid().nullable(),
         page: z.coerce.number().int().min(0).max(1000),
         context: z.boolean(),
       })
       .parse({
         course: params.get("course"),
+        local_course: params.get("local_course"),
         page: params.get("page") ?? 0,
         context: params.get("context") === "true",
       });
-    if (input.context && input.course)
+    const db = canvasAdmin();
+    let resolvedCourse = input.course;
+    if (input.local_course) {
+      const mapping = await db
+        .from("canvas_mappings")
+        .select("canvas_id,conflict")
+        .eq("user_id", user.id)
+        .eq("resource_type", "course")
+        .eq("local_table", "courses")
+        .eq("local_id", input.local_course)
+        .limit(2);
+      dbError(mapping.error);
+      if (mapping.data?.length !== 1 || mapping.data[0].conflict)
+        return NextResponse.json(
+          {
+            courses: [],
+            courses_truncated: false,
+            has_more: false,
+            records: [],
+            mapping_status: !mapping.data?.length
+              ? "unlinked"
+              : mapping.data.length > 1
+                ? "ambiguous"
+                : "needs_review",
+          },
+          { headers: { "Cache-Control": "private, no-store" } },
+        );
+      resolvedCourse = mapping.data[0].canvas_id;
+    }
+    if (input.context && resolvedCourse)
       return NextResponse.json(
-        await canvasStudyContext(user.id, input.course),
+        await canvasStudyContext(user.id, resolvedCourse),
         { headers: { "Cache-Control": "no-store" } },
       );
-    const db = canvasAdmin();
     const courses = await db
       .from("canvas_records")
       .select("canvas_id,payload,synced_at")
@@ -43,9 +73,18 @@ export async function GET(request: Request) {
       .order("resource_type")
       .order("canvas_id")
       .range(input.page * 30, input.page * 30 + 30);
-    if (input.course)
+    if (input.local_course)
+      query = query.in("resource_type", [
+        "course",
+        "module",
+        "module_item",
+        "page",
+        "file",
+        "announcement",
+      ]);
+    if (resolvedCourse)
       query = query.or(
-        `course_canvas_id.eq.${input.course},and(resource_type.eq.course,canvas_id.eq.${input.course})`,
+        `course_canvas_id.eq.${resolvedCourse},and(resource_type.eq.course,canvas_id.eq.${resolvedCourse})`,
       );
     const rows = await query;
     dbError(rows.error);
@@ -75,6 +114,8 @@ export async function GET(request: Request) {
     dbError(chunks.error);
     return NextResponse.json(
       {
+        mapped_course: resolvedCourse,
+        mapping_status: resolvedCourse ? "linked" : "library",
         courses: courses.data?.slice(0, 500).map((r) => ({
           id: r.canvas_id,
           name: plainCanvasText(r.payload.name, 300),

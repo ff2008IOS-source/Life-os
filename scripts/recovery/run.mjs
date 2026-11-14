@@ -15,6 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   recoveryConfiguration,
   assertTargetEmpty,
+  assertRecoverableFeatures,
   extractDumpScript,
   POSTGRES_IMAGE,
   CLI_VERSION,
@@ -195,18 +196,10 @@ function emptySummary(value) {
     vault_secrets: value.unsupported.vault_secrets,
   };
 }
-function assertBaseline(value) {
+function assertBaseline(value, mode) {
   if (value.database_major !== 17)
     throw Error("This pinned recovery client is verified for Postgres 17 only");
-  if (
-    value.unsupported.storage_objects ||
-    value.unsupported.vault_secrets ||
-    value.unsupported.mfa_factors ||
-    value.tables["private.oauth_credentials"]?.count
-  )
-    throw Error(
-      "Storage, Vault, MFA or integration credentials need an expanded recovery procedure before this beta workflow can run",
-    );
+  assertRecoverableFeatures(value, mode);
   if (
     value.tables["private.approved_users"]?.count !== 1 ||
     value.tables["auth.users"]?.count !== 1
@@ -346,7 +339,7 @@ export async function runRecovery(env = process.env) {
     stage = "read-only source inventory";
     const baseline = await manifest(source);
     stage = "source safety checks";
-    assertBaseline(baseline);
+    assertBaseline(baseline, config.mode);
     let target;
     if (config.target) {
       stage = "isolated target preflight";
@@ -387,7 +380,7 @@ export async function runRecovery(env = process.env) {
         "Supabase Auth settings and redirects",
         "Vercel environment configuration",
         "actual browser login rehearsal",
-        "future provider credentials and encryption keys",
+        "provider reconnection, encryption-key inventory and disabled-worker isolation before any hosted restore",
       ],
     };
     await writeFile(join(working, "manifest.json"), JSON.stringify(inventory), {

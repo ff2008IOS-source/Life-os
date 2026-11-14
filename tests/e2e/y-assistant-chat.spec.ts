@@ -73,6 +73,10 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
   ).toBeVisible();
   await page.goto("/reviews");
   await page
+    .getByText("Change review week", { exact: true })
+    .filter({ visible: true })
+    .click();
+  await page
     .getByLabel("Review week starts", { exact: true })
     .filter({ visible: true })
     .fill("2026-10-05");

@@ -71,6 +71,21 @@ beforeAll(async () => {
     ).rows[0].id;
     await source.query("select ensure_review_chat($1,$2)", [owner, review]);
     await source.query(
+      "insert into review_items(user_id,review_id,task_id,item_type)values($1,$2,$3,'approved_commitment')",
+      [owner, review, task],
+    );
+    await source.query(
+      "insert into review_snapshots(user_id,review_id,facts)values($1,$2,$3)",
+      [
+        owner,
+        review,
+        JSON.stringify({
+          as_of: "2026-11-13T00:00:00Z",
+          weekly: { completed_tasks: 1 },
+        }),
+      ],
+    );
+    await source.query(
       "insert into daily_check_ins(user_id,day,accomplishments)values($1,'2026-11-12','[TEST] Recovery check-in')",
       [owner],
     );
@@ -145,6 +160,8 @@ describe("offline JSON user-export recovery", () => {
     const result = await verifyUserExport(fixture);
     expect(result.content_matches).toBe(true);
     expect(result.table_counts.tasks).toBe(2);
+    expect(result.table_counts.review_snapshots).toBe(1);
+    expect(result.table_counts.review_items).toBe(1);
     expect(result.table_counts.work_completions).toBe(1);
     expect(result.table_counts.daily_check_ins).toBe(1);
     expect(result.table_counts.briefing_settings).toBe(1);

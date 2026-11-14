@@ -12,9 +12,9 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /Initialize workspace/ }).click();
+  await page.getByRole("button", { name: /Set up my space/ }).click();
   await expect(
-    page.getByRole("button", { name: /Initialize workspace/ }),
+    page.getByRole("button", { name: /Set up my space/ }),
   ).toHaveCount(0);
   await page
     .getByLabel("Quick capture task title")
@@ -33,9 +33,12 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   ).toBeVisible();
   await page
     .getByRole("button", {
-      name: "Complete [TEST] Persistent browser task",
+      name: "Mark Complete",
       exact: true,
     })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm task completion", exact: true })
     .click();
   await expect(page.getByText("Task completed", { exact: true })).toBeVisible();
   await page.goto("/planner");
@@ -76,9 +79,9 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await page.goto("/planner");
   await page.getByRole("tab", { name: "Scheduling preview" }).click();
   await page.getByRole("button", { name: "Generate preview" }).click();
-  await expect(page.locator("p[role=alert]")).toContainText(
-    "Connect and select your calendars before planning",
-  );
+  await expect(
+    page.locator(".error-message[role=alert]").filter({ visible: true }),
+  ).toContainText("Connect and select your calendars before planning");
   await expect(
     page.getByText("Proposed sessions", { exact: true }),
   ).toHaveCount(0);
@@ -182,7 +185,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  const initialize = page.getByRole("button", { name: /Initialize workspace/ });
+  const initialize = page.getByRole("button", { name: /Set up my space/ });
   if (await initialize.count()) {
     await initialize.click();
     await expect(initialize).toHaveCount(0);
@@ -273,6 +276,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
     source_type,
     source_key,
     recurrence_rule_id,
+    is_example,
     ...values
   } = t;
   void user_id;
@@ -282,6 +286,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   void source_type;
   void source_key;
   void recurrence_rule_id;
+  void is_example;
   const changed = await page.request.patch(`/api/v1/tasks/${id}`, {
     headers: origin,
     data: { version, data: { ...values, description: "[TEST] Changed once" } },

@@ -1,5 +1,7 @@
 "use client";
+import { realWorkspace } from "@/lib/real-workspace";
 import Link from "next/link";
+import { AttentionHistory } from "./attention-history";
 import { BriefingPanel } from "./briefing-page";
 import { useBriefing } from "./use-briefing";
 import { todayPriorities, personalGreeting } from "@/lib/today-priorities";
@@ -32,7 +34,8 @@ import { Button } from "./ui/button";
 import { goalProgress, taskSummary } from "@/lib/insights";
 import { TIMEZONE, localDate, friendlyDate } from "@/lib/dates";
 export function HomePage() {
-  const { data, request, refresh, notify, pending } = useWorkspace();
+  const { data: raw, request, refresh, notify, pending } = useWorkspace();
+  const data = realWorkspace(raw);
   const [calendarSummary, setCalendarSummary] = useState<{
     count: number | null;
     note: string;
@@ -95,7 +98,7 @@ export function HomePage() {
         if (live)
           setCalendarSummary({
             count: groupCalendarEvents(result.events).length,
-            note: "Cached events · next 7 days",
+            note: "In the next 7 days",
           });
       } catch {
         if (live)
@@ -113,7 +116,12 @@ export function HomePage() {
   const now = new Date();
   const summary = taskSummary(data.tasks, now);
   const ranked = todayPriorities(data, now);
-  const priorities = ranked.slice(0, 3).map((x) => x.task);
+  const priorities = briefing.data
+    ? briefing.data.recommendations.slice(1, 3).flatMap((x) => {
+        const task = data.tasks.find((t) => t.id === x.task_id);
+        return task ? [task] : [];
+      })
+    : ranked.slice(0, 3).map((x) => x.task);
   const upcoming = data.milestones
     .filter(
       (m) =>
@@ -131,19 +139,21 @@ export function HomePage() {
   const needsInit = data.areas.length === 0;
   const stats = [
     {
-      label: "Due today",
+      label: "Tasks due today",
       value: summary.dueToday.length,
-      note: "Tasks with a deadline today",
+      note: summary.dueToday.length
+        ? "Make time for these"
+        : "No tasks due today",
       icon: CheckCheck,
     },
     {
-      label: "Upcoming commitments",
+      label: "Your week",
       value: calendarSummary.count ?? "—",
       note: calendarSummary.note,
       icon: CalendarDays,
     },
     {
-      label: "Overdue tasks",
+      label: "Overdue",
       value: summary.overdue.length,
       note: summary.overdue.length
         ? "Ready for your attention"
@@ -152,7 +162,7 @@ export function HomePage() {
       className: summary.overdue.length ? "danger" : "",
     },
     {
-      label: "Weekly milestones",
+      label: "Milestones",
       value: upcoming.length,
       note: "Due in the next 7 days",
       icon: Flag,
@@ -160,16 +170,13 @@ export function HomePage() {
     },
   ];
   return (
-    <>
+    <div className="home-experience" id="daily-briefing">
       {needsInit && (
         <div className="notice">
           <Layers3 />
           <div>
             <strong>Welcome to your private workspace</strong>
-            <p>
-              Initialize your five Life Areas. This adds organization only, with
-              no invented commitments.
-            </p>
+            <p>Set up a space for your courses, projects and everyday plans.</p>
           </div>
           <Button
             disabled={pending}
@@ -179,20 +186,20 @@ export function HomePage() {
                   method: "POST",
                 });
                 await refresh();
-                notify("Workspace initialized");
+                notify("Your space is ready");
               } catch (e) {
                 notify(e instanceof Error ? e.message : "Setup failed");
               }
             }}
           >
-            Initialize workspace
+            Set up my space
             <ArrowRight size={13} />
           </Button>
         </div>
       )}
-      <div className="page-heading">
+      <div className="page-heading home-welcome">
         <div>
-          <span className="eyebrow">YOUR DAILY COMMAND CENTER</span>
+          <span className="eyebrow">A LITTLE SPACE TO THINK AHEAD</span>
           <h1>A little clarity for today.</h1>
           <p>{personalGreeting(data.profile.display_name, now)}</p>
         </div>
@@ -201,81 +208,87 @@ export function HomePage() {
           {formatInTimeZone(now, TIMEZONE, "EEE, MMM d")}
         </span>
       </div>
-      <BriefingPanel controller={briefing} compact />
-      <div className="stats-grid">
-        {stats.map((s) => (
-          <div className={`stat-card ${s.className ?? ""}`} key={s.label}>
-            <div className="stat-label">
-              {s.label}
-              <s.icon />
+      <div className="home-overview">
+        <BriefingPanel controller={briefing} compact />
+        <div className="stats-grid">
+          {stats.map((s) => (
+            <div className={`stat-card ${s.className ?? ""}`} key={s.label}>
+              <div className="stat-label">
+                {s.label}
+                <s.icon />
+              </div>
+              <span className="stat-number">{s.value}</span>
+              <span className="stat-note">{s.note}</span>
             </div>
-            <span className="stat-number">{s.value}</span>
-            <span className="stat-note">{s.note}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       <div className="dashboard-grid">
-        <div className="stack">
+        <div className="stack home-work-column">
           <section className="panel">
             <div className="panel-heading">
               <div className="panel-title">
                 <Sun />
-                <h2>Today’s Top 3</h2>
-                <span className="count-pill">{priorities.length}</span>
+                <h2>On your list</h2>
+                {priorities.length > 0 && (
+                  <span className="count-pill">{priorities.length}</span>
+                )}
               </div>
               <Link href="/planner" className="text-link">
                 All tasks
                 <ArrowUpRight size={12} />
               </Link>
             </div>
-            <p className="panel-description">
-              Ranked by deadline urgency, then priority and your preferred
-              order. Open a task to check dependencies and linked goals.
-            </p>
+
             {priorities.length ? (
               <TaskList tasks={priorities} />
             ) : (
-              <EmptyState
-                compact
-                icon={CheckCheck}
-                title="A fresh start"
-                description="Capture what’s on your mind. Your next priorities will appear here."
-              />
+              <div className="home-capture-empty">
+                <span className="capture-mark" aria-hidden="true">
+                  <Plus size={20} />
+                </span>
+                <p>
+                  Something on your mind?
+                  <small>Give it a place. You can organize it later.</small>
+                </p>
+              </div>
             )}
             <QuickCapture />
           </section>
-          <section className="panel">
-            <div className="panel-heading">
-              <div className="panel-title">
-                <Flag />
-                <h2>Deadlines to keep in view</h2>
+          {(summary.overdue.length > 0 || summary.dueToday.length > 0) && (
+            <section className="panel">
+              <div className="panel-heading">
+                <div className="panel-title">
+                  <Flag />
+                  <h2>Coming up</h2>
+                </div>
+                <Link href="/planner" className="text-link">
+                  Open planner
+                  <ArrowUpRight size={12} />
+                </Link>
               </div>
-              <Link href="/planner" className="text-link">
-                Open planner
-                <ArrowUpRight size={12} />
-              </Link>
-            </div>
-            {summary.overdue.length || summary.dueToday.length ? (
-              <TaskList
-                tasks={[...summary.overdue, ...summary.dueToday].slice(0, 5)}
-              />
-            ) : (
-              <EmptyState
-                compact
-                icon={CalendarCheck2}
-                title="No urgent deadlines recorded"
-                description="Your dated tasks will appear here when they need attention."
-              />
-            )}
-          </section>
+              {summary.overdue.length || summary.dueToday.length ? (
+                <TaskList
+                  tasks={[...summary.overdue, ...summary.dueToday].slice(0, 5)}
+                />
+              ) : (
+                <EmptyState
+                  compact
+                  icon={CalendarCheck2}
+                  title="A little breathing room"
+                  description="No tasks are due today or overdue. Course deadlines are in Academics."
+                />
+              )}
+            </section>
+          )}
           <section className="review-banner">
             <span className="section-icon">
               <BookOpen size={19} />
             </span>
             <div>
-              <h2>A small pause. A clearer week.</h2>
+              <h2>Make space for a fresh week.</h2>
               <p>
-                Reflect on what moved forward and choose what comes next.
+                A few minutes to reflect, reset and choose what comes next.
                 {recentReview
                   ? ` Last completed: ${friendlyDate(recentReview.completed_at)}.`
                   : " Your first weekly review is waiting when you’re ready."}
@@ -289,7 +302,7 @@ export function HomePage() {
             </div>
           </section>
         </div>
-        <div className="stack">
+        <div className="stack home-day-column">
           <GoogleCalendarPanel
             start={localDate()}
             end={new Date(
@@ -365,6 +378,8 @@ export function HomePage() {
           </section>
         </div>
       </div>
-    </>
+      <BriefingPanel controller={briefing} />
+      <AttentionHistory />
+    </div>
   );
 }

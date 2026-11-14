@@ -66,8 +66,14 @@ test("Canvas connection is private and secure UI handles verification, sync and 
     return route.fulfill({ json: { processed: 5, pending: 0, errors: [] } });
   });
   await page.goto("/canvas-connect");
-  await expect(page.getByText("Not connected", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Canvas access token")).toHaveAttribute(
+  const canvas = page
+    .getByRole("main")
+    .locator(".canvas-panel")
+    .filter({ visible: true });
+  await expect(
+    canvas.getByText("Not connected", { exact: true }),
+  ).toBeVisible();
+  await expect(canvas.getByLabel("Canvas access token")).toHaveAttribute(
     "type",
     "password",
   );
@@ -86,38 +92,38 @@ test("Canvas connection is private and secure UI handles verification, sync and 
         .analyze()
     ).violations,
   ).toEqual([]);
-  await page.getByLabel("Canvas access token").fill("synthetic-first-token");
+  await canvas.getByLabel("Canvas access token").fill("synthetic-first-token");
   const expiry = new Date(Date.now() + 25 * 86400000)
     .toISOString()
     .slice(0, 16);
-  await page.getByLabel("Actual token expiry (Vancouver)").fill(expiry);
-  await page.getByRole("button", { name: "Verify and save token" }).click();
-  await expect(page.getByLabel("Canvas access token")).toHaveValue("");
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
-  await expect(page.getByText(/5 resource records checked/)).toBeVisible();
-  await page
+  await canvas.getByLabel("Actual token expiry (Vancouver)").fill(expiry);
+  await canvas.getByRole("button", { name: "Verify and save token" }).click();
+  await expect(canvas.getByLabel("Canvas access token")).toHaveValue("");
+  await expect(canvas.getByText("Connected", { exact: true })).toBeVisible();
+  await canvas.getByRole("button", { name: "Sync now", exact: true }).click();
+  await expect(canvas.getByText(/5 items checked/)).toBeVisible();
+  await canvas
     .getByLabel("Canvas access token")
     .fill("synthetic-replacement-token");
-  await page.getByRole("button", { name: "Verify and save token" }).click();
-  await expect(page.getByLabel("Canvas access token")).toHaveValue("");
+  await canvas.getByRole("button", { name: "Verify and save token" }).click();
+  await expect(canvas.getByLabel("Canvas access token")).toHaveValue("");
   expect(saves).toBe(2);
   outstanding = true;
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Continue sync", exact: true }),
+    canvas.getByRole("button", { name: "Continue sync", exact: true }),
   ).toBeVisible();
   const continuation = page.waitForRequest(
     (r) => r.url().includes("/api/canvas/sync") && r.method() === "POST",
   );
-  await page
+  await canvas
     .getByRole("button", { name: "Continue sync", exact: true })
     .click();
   const sent = new URL((await continuation).url());
   expect(sent.searchParams.get("discover")).toBe("true");
   expect(sent.searchParams.has("refresh")).toBe(false);
   await expect(
-    page.getByRole("button", { name: "Sync now", exact: true }),
+    canvas.getByRole("button", { name: "Sync now", exact: true }),
   ).toBeVisible();
   // The Canvas service is mocked above. Real PostgreSQL ingestion/rotation is tested separately.
 });

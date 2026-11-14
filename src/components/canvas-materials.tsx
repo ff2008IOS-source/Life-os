@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
 type Data = {
+  mapped_course?: string | null;
+  mapping_status?:
+    "linked" | "library" | "unlinked" | "ambiguous" | "needs_review";
   courses: { id: string; name: string }[];
   courses_truncated: boolean;
   has_more: boolean;
@@ -22,17 +25,22 @@ type Data = {
     url: string;
   }[];
 };
-export function CanvasMaterials() {
+export function CanvasMaterials({
+  localCourseId,
+  embedded = false,
+}: { localCourseId?: string; embedded?: boolean } = {}) {
   const [revision, setRevision] = useState(0);
   const [reading, setReading] = useState(false);
   const [data, setData] = useState<Data | null>(null),
     [course, setCourse] = useState(""),
     [page, setPage] = useState(0),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [message, setMessage] = useState("");
   useEffect(() => {
     let active = true;
     void fetch(
-      `/api/canvas/materials?page=${page}${course ? `&course=${course}` : ""}`,
+      `/api/canvas/materials?page=${page}${localCourseId ? `&local_course=${encodeURIComponent(localCourseId)}` : course ? `&course=${course}` : ""}`,
     )
       .then(async (r) => {
         const d = await r.json();
@@ -44,45 +52,83 @@ export function CanvasMaterials() {
       })
       .catch((e) => {
         if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [course, page, revision]);
+  }, [localCourseId, course, page, revision]);
   return (
-    <section className="panel settings-panel">
+    <section className={embedded ? "course-materials" : "panel settings-panel"}>
       <div className="academic-toolbar">
-        <h1>Canvas academics</h1>
+        <h3>{localCourseId ? "Course materials" : "Canvas library"}</h3>
         <Link href="/canvas-connect" className="text-link">
           Connection
         </Link>
       </div>
       <p className="small muted">
-        Canvas snapshots show what was retrieved, not complete course or exam
-        coverage. Supported accessible files can be read automatically; scanned
-        or restricted files may remain unavailable. Check source freshness
-        before relying on a deadline or grade.
+        Your imported readings, slides and course resources.
       </p>
-      <label>
-        Canvas course
-        <select
-          value={course}
-          onChange={(e) => {
-            setCourse(e.target.value);
-            setPage(0);
-          }}
-        >
-          <option value="">All courses</option>
-          {data?.courses.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <details className="briefing-detail">
+        <summary>About these materials</summary>
+        <p>
+          Only material successfully retrieved from Canvas appears here.
+          Restricted files and scanned pages may be unavailable. This list does
+          not confirm complete exam coverage.
+        </p>
+      </details>
+      {loading && <p role="status">Loading course materials…</p>}
+      {data?.mapping_status === "unlinked" && (
+        <p className="notice">
+          This course is not linked to a Canvas course yet. Connect and sync
+          Canvas in Settings, or browse the separate Canvas library below.
+        </p>
+      )}
+      {data?.mapping_status === "needs_review" && (
+        <p className="notice">
+          This course’s Canvas link needs review before its materials can be
+          shown. Check the Canvas connection in Settings.
+        </p>
+      )}
+      {data?.mapping_status === "ambiguous" && (
+        <p className="notice">
+          More than one Canvas course is linked here. Review the connection
+          before using these materials.
+        </p>
+      )}
+      {!localCourseId && (
+        <>
+          <label>
+            Canvas course
+            <select
+              value={course}
+              onChange={(e) => {
+                setLoading(true);
+                setError("");
+                setCourse(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">All courses</option>
+              {data?.courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
       <Button
         variant="outline"
-        disabled={reading}
+        disabled={
+          reading ||
+          Boolean(error) ||
+          loading ||
+          (Boolean(localCourseId) && !data?.mapped_course)
+        }
         onClick={async () => {
           setReading(true);
           setError("");
@@ -90,10 +136,13 @@ export function CanvasMaterials() {
             const r = await fetch("/api/canvas/documents", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ course: course || null }),
+              body: JSON.stringify({
+                course: data?.mapped_course || course || null,
+              }),
             });
             const d = await r.json();
             if (!r.ok) throw Error(d.error?.message ?? "File reading failed.");
+            setLoading(true);
             setRevision((v) => v + 1);
           } catch (e) {
             setError((e as Error).message);
@@ -102,98 +151,144 @@ export function CanvasMaterials() {
           }
         }}
       >
-        {reading ? "Reading course files…" : "Read next course files"}
+        {reading ? "Reading course files…" : "Prepare available files"}
       </Button>
       {data?.courses_truncated && <p>Course list exceeds this view’s limit.</p>}
-      {data?.records.map((r) => (
-        <details key={r.type + r.id} className="setting-line">
-          <summary>
-            {r.title} <span className="badge">{r.type}</span>
-          </summary>
-          <div>
-            <p className="form-hint">
-              Retrieved {new Date(r.synced_at).toLocaleString()} ·{" "}
-              {r.content_status}
-            </p>
-            {r.due_at && (
-              <p>
-                Canvas deadline:{" "}
-                {new Date(r.due_at).toLocaleString("en-CA", {
-                  timeZone: "America/Vancouver",
-                })}{" "}
-                Vancouver
+      {!loading &&
+        !error &&
+        data?.records.map((r) => (
+          <details key={r.type + r.id} className="setting-line">
+            <summary>
+              {r.title}{" "}
+              <span className="badge">{r.type.replaceAll("_", " ")}</span>
+            </summary>
+            <div>
+              <p className="form-hint">
+                Retrieved {new Date(r.synced_at).toLocaleString()} ·{" "}
+                {r.content_status === "Retrieved Canvas record"
+                  ? "Synced from Canvas"
+                  : r.content_status}
               </p>
-            )}
-            {r.score !== null && (
-              <p>
-                Canvas score: {r.score}
-                {r.maximum !== null
-                  ? ` / ${r.maximum}`
-                  : " (maximum not available)"}
-              </p>
-            )}
-            <p>Submission/record state: {r.state ?? "Unknown"}</p>
-            <p
-              className="small"
-              style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}
-            >
-              {r.text || "No text content retrieved."}
-            </p>
-            {Object.entries(r.facts ?? {}).map(([k, v]) => (
-              <p key={k} className="small" style={{ overflowWrap: "anywhere" }}>
-                {k}: {v}
-              </p>
-            ))}
-            {r.type === "assignment" && (
-              <Button
-                onClick={async () => {
-                  try {
-                    const response = await fetch("/api/canvas/tasks", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ id: r.id }),
-                    });
-                    const body = await response.json();
-                    if (!response.ok) throw Error(body.error?.message);
-                    setError("");
-                    alert(
-                      "Linked task is available in Planner. Add an estimate before scheduling.",
-                    );
-                  } catch (e) {
-                    setError((e as Error).message);
-                  }
-                }}
+              {r.due_at && (
+                <p>
+                  Canvas deadline:{" "}
+                  {new Date(r.due_at).toLocaleString("en-CA", {
+                    timeZone: "America/Vancouver",
+                  })}{" "}
+                  Vancouver
+                </p>
+              )}
+              {r.score !== null && (
+                <p>
+                  Canvas score: {r.score}
+                  {r.maximum !== null
+                    ? ` / ${r.maximum}`
+                    : " (maximum not available)"}
+                </p>
+              )}
+              {r.type === "assignment" && (
+                <p>Status: {r.state?.replaceAll("_", " ") ?? "Unknown"}</p>
+              )}
+              <p
+                className="small"
+                style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}
               >
-                Add to Planner
-              </Button>
-            )}
-            <a
-              className="text-link"
-              href={r.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open Canvas course
-            </a>
-          </div>
-        </details>
-      ))}
-      {!data?.records.length && <p>No imported records on this page.</p>}
+                {r.text || "Text isn’t available for this item yet."}
+              </p>
+              <details>
+                <summary>Source details</summary>
+                {Object.entries(r.facts ?? {}).map(([k, v]) => (
+                  <p
+                    key={k}
+                    className="small"
+                    style={{ overflowWrap: "anywhere" }}
+                  >
+                    {k}: {v}
+                  </p>
+                ))}
+              </details>
+              {r.type === "assignment" && (
+                <Button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/canvas/tasks", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: r.id }),
+                      });
+                      const body = await response.json();
+                      if (!response.ok) throw Error(body.error?.message);
+                      setError("");
+                      setMessage(
+                        "Task ready in Planner. Add an estimate when you’re ready to plan a session.",
+                      );
+                    } catch (e) {
+                      setError((e as Error).message);
+                    }
+                  }}
+                >
+                  Add to Planner
+                </Button>
+              )}
+              <a
+                className="text-link"
+                href={r.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in Canvas
+              </a>
+            </div>
+          </details>
+        ))}
+      {!loading &&
+        !error &&
+        data?.mapping_status !== "unlinked" &&
+        data?.mapping_status !== "ambiguous" &&
+        data?.mapping_status !== "needs_review" &&
+        !data?.records.length && (
+          <p>No materials to show yet. Sync Canvas to check for updates.</p>
+        )}
+      {message && (
+        <p role="status">
+          {message} <Link href="/planner?section=tasks">Open Planner</Link>
+        </p>
+      )}
       <div className="career-import-actions">
-        <Button disabled={!page} onClick={() => setPage((p) => p - 1)}>
+        <Button
+          disabled={loading || !page}
+          onClick={() => {
+            setLoading(true);
+            setPage((p) => p - 1);
+          }}
+        >
           Previous
         </Button>
         <Button
-          disabled={!data?.has_more}
-          onClick={() => setPage((p) => p + 1)}
+          disabled={loading || !data?.has_more}
+          onClick={() => {
+            setLoading(true);
+            setPage((p) => p + 1);
+          }}
         >
           Next
         </Button>
       </div>
       {error && (
-        <p role="alert" className="error-message">
+        <div role="alert" className="error-message">
           {error}
-        </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLoading(true);
+              setError("");
+              setRevision((v) => v + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </div>
       )}
     </section>
   );

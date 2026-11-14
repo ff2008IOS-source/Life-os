@@ -1,16 +1,17 @@
 "use client";
 import Link from "next/link";
+import { consumerReason } from "@/lib/consumer-copy";
 import { useState, useRef } from "react";
 import {
+  Focus,
+  CalendarDays,
   RefreshCw,
   ArrowRight,
-  Sun,
-  CheckCircle2,
   AlertCircle,
   Clock3,
 } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
-import { useBriefing, type BriefingController } from "./use-briefing";
+import { type BriefingController } from "./use-briefing";
 import { DailyCheckInPanel } from "./daily-check-in";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
@@ -21,25 +22,8 @@ import { calendarRequest } from "./use-calendar";
 import type { Task } from "@/lib/schemas";
 
 import type { Attention } from "@/lib/briefing";
-export function BriefingPage() {
-  const state = useBriefing();
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">
-            A CLEARER DAY, GROUNDED IN YOUR RECORDS
-          </span>
-          <h1>Life OS Briefing</h1>
-          <p>What matters. What needs attention. Your next decision.</p>
-        </div>
-        <Link href="/assistant/history" className="text-link">
-          Saved conversation archive
-        </Link>
-      </div>
-      <BriefingPanel controller={state} />
-    </>
-  );
+function snoozeUntil(minutes: number) {
+  return new Date(Date.now() + minutes * 60000).toISOString();
 }
 export function BriefingPanel({
   controller: c,
@@ -50,6 +34,30 @@ export function BriefingPanel({
 }) {
   const { data: w, mutate, notify } = useWorkspace();
   const d = c.data;
+  const nextAssessment = d?.assessments
+    .filter((a) => {
+      const day =
+        a.due_date ??
+        (a.due_at
+          ? formatInTimeZone(a.due_at, d.timezone, "yyyy-MM-dd")
+          : null);
+      return (
+        !a.dropped &&
+        !["submitted", "returned", "excused"].includes(a.submission_state) &&
+        day &&
+        day >= d.today &&
+        (!a.due_at || Date.parse(a.due_at) >= Date.parse(d.refreshed_at))
+      );
+    })
+    .sort((a, b) =>
+      (a.due_at ?? a.due_date ?? "").localeCompare(
+        b.due_at ?? b.due_date ?? "",
+      ),
+    )[0];
+  const assessmentHref = nextAssessment
+    ? `/areas/academics?course=${nextAssessment.course_id}&assessment=${nextAssessment.id}#assessment-${nextAssessment.id}`
+    : "/areas/academics";
+
   const [editor, setEditor] = useState<Task | null>(null),
     [complete, setComplete] = useState<Task | null>(null),
     [scheduling, setScheduling] = useState<Task | null>(null),
@@ -151,78 +159,18 @@ export function BriefingPanel({
     }
   }
   const open = (id: string) => void freshTask(id, "edit");
-  const actionCard = (index: number) => {
-    const r = d?.recommendations[index];
-    if (!r) return null;
-    const task = w.tasks.find((t) => t.id === r.task_id);
-    return (
-      <article
-        className={index === 0 ? "briefing-primary" : "briefing-alternative"}
-        key={r.task_id}
-      >
-        <h3>{r.title}</h3>
-        {index === 0 ? (
-          <ul className="briefing-reasons">
-            {r.reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="small muted">{r.reasons.slice(0, 2).join(" · ")}</p>
-        )}
-        {!!r.goals.length && (
-          <div className="briefing-goal-links">
-            {r.goals.map((g) => (
-              <Link className="badge" href={`/goals#goal-${g.id}`} key={g.id}>
-                {g.title}
-              </Link>
-            ))}
-          </div>
-        )}
-        <div className="briefing-actions">
-          <Button size="sm" onClick={() => open(r.task_id)}>
-            View Task
-          </Button>
-          {task && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy || !!c.error}
-                onClick={() => void freshTask(task.id, "complete")}
-              >
-                Mark Complete
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!!c.error}
-                onClick={() => void freshTask(task.id, "schedule")}
-              >
-                Schedule
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy || !!c.error}
-                onClick={() =>
-                  void act({
-                    kind: "defer",
-                    task_id: r.task_id,
-                    item_key: `task:${r.task_id}`,
-                    fingerprint: String(r.version),
-                    until_at: new Date(Date.now() + 3600000).toISOString(),
-                  })
-                }
-              >
-                Not Now
-              </Button>
-            </>
-          )}
-        </div>
-      </article>
-    );
-  };
+  async function deferPrimary() {
+    const r = d?.recommendations[0];
+    if (!r) return;
+    const until = snoozeUntil(60);
+    await act({
+      kind: "defer",
+      task_id: r.task_id,
+      item_key: `task:${r.task_id}`,
+      fingerprint: String(r.version),
+      until_at: until,
+    });
+  }
   const dismiss = (
     a: Attention,
     kind: "snooze" | "dismiss",
@@ -234,9 +182,10 @@ export function BriefingPanel({
       fingerprint: a.fingerprint,
       until_at: until,
     });
+  if (!compact && !d) return null;
   return (
     <>
-      {(c.error || error) && (
+      {((compact && c.error) || error) && (
         <div className="notice" role="alert">
           <AlertCircle />
           <div>
@@ -255,43 +204,73 @@ export function BriefingPanel({
         </div>
       )}
       {!d ? (
-        <section className="panel briefing-card">
+        <section
+          className={
+            compact ? "panel next-action focus-card" : "panel briefing-card"
+          }
+          aria-busy={c.loading}
+        >
           <h2>{compact ? "Next best action" : "Daily Briefing"}</h2>
           <p>
             {c.loading
-              ? "Preparing your recorded day…"
-              : "Briefing data is unavailable. Your tasks remain in the planner."}
+              ? "Getting your day ready…"
+              : "Your briefing couldn’t load. You can still open your planner."}
           </p>
-          <Button
-            variant="outline"
-            onClick={() => void c.reload()}
-            disabled={c.loading}
-          >
-            Retry briefing
-          </Button>
+          {c.loading ? (
+            <div className="focus-skeleton" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          ) : (
+            <Button variant="outline" onClick={() => void c.reload()}>
+              Try again
+            </Button>
+          )}
         </section>
       ) : compact ? (
         <section
-          className="panel next-action"
+          className="panel next-action focus-card briefing-primary"
           aria-labelledby="next-action-title"
         >
           <div className="panel-heading">
             <h2 id="next-action-title">Next best action</h2>
-            <Link href="/briefing" className="text-link">
-              Open your briefing <ArrowRight size={12} />
+            <Link href="/#needs-attention" className="text-link">
+              Review your day <ArrowRight size={12} />
             </Link>
           </div>
-          <p className="small muted">
-            {d.summary.commitments ?? "Unknown"} calendar commitments ·{" "}
-            {d.summary.approaching_deadlines ?? "Unknown"} approaching academic
-            deadlines · {d.attention.length} items to review
-          </p>
+          <div className="focus-art" aria-hidden="true">
+            <Focus size={42} strokeWidth={1.2} />
+          </div>
           {d.recommendations[0] ? (
             <>
-              <h3>Start: {d.recommendations[0].title}</h3>
-              <p className="panel-description">
-                {d.recommendations[0].reasons.join(" · ")}
+              <h3>{d.recommendations[0].title}</h3>
+              <p className="focus-description">
+                {d.recommendations[0].urgency >= 3
+                  ? "A close deadline makes this a good place to start."
+                  : "A focused step toward what matters to you."}
               </p>
+              <div className="focus-meta">
+                {d.recommendations[0].remaining_minutes !== null && (
+                  <span>
+                    <Clock3 size={14} />
+                    {d.recommendations[0].remaining_minutes} min{" "}
+                    {w.tasks.find((t) => t.id === d.recommendations[0].task_id)
+                      ?.actual_minutes == null
+                      ? "estimated"
+                      : "remaining"}
+                  </span>
+                )}
+                <span>{consumerReason(d.recommendations[0].reasons[0])}</span>
+              </div>
+              <details className="focus-explanation">
+                <summary>Why this comes first</summary>
+                <ul>
+                  {d.recommendations[0].reasons.map((reason) => (
+                    <li key={reason}>{consumerReason(reason)}</li>
+                  ))}
+                </ul>
+              </details>
               <div className="flex-between">
                 <div>
                   {d.recommendations[0].goals.map((g) => (
@@ -304,149 +283,124 @@ export function BriefingPanel({
                     </Link>
                   ))}
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => open(d.recommendations[0].task_id)}
-                >
-                  Open task <ArrowRight size={12} />
-                </Button>
+                <div className="briefing-actions">
+                  <Button
+                    size="sm"
+                    onClick={() => open(d.recommendations[0].task_id)}
+                  >
+                    Open task <ArrowRight size={12} />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy || !!c.error}
+                    onClick={() =>
+                      void freshTask(d.recommendations[0].task_id, "schedule")
+                    }
+                  >
+                    Schedule
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy || !!c.error}
+                    onClick={deferPrimary}
+                  >
+                    Not Now
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy || !!c.error}
+                    onClick={() =>
+                      void freshTask(d.recommendations[0].task_id, "complete")
+                    }
+                  >
+                    Mark Complete
+                  </Button>
+                </div>
               </div>
             </>
+          ) : nextAssessment ? (
+            <div className="focus-academic">
+              <span className="focus-overline">
+                COMING UP IN {nextAssessment.course}
+              </span>
+              <h3>{nextAssessment.title}</h3>
+              <p className="focus-description">
+                Make a little room to prepare.
+              </p>
+              <div className="focus-meta">
+                <span>
+                  <CalendarDays size={14} />
+                  {nextAssessment.verification_status === "unverified"
+                    ? "Check the deadline"
+                    : `Due ${nextAssessment.due_at ? formatInTimeZone(nextAssessment.due_at, d.timezone, "EEE, MMM d · h:mm a") : formatInTimeZone(nextAssessment.due_date + "T12:00:00Z", d.timezone, "EEE, MMM d")}`}
+                </span>
+              </div>
+              <Button asChild>
+                <Link href={assessmentHref}>
+                  Plan preparation <ArrowRight size={15} />
+                </Link>
+              </Button>
+            </div>
           ) : (
-            <p className="panel-description">
-              No actionable task is currently recorded. Review upcoming
-              deadlines or capture a task in the planner.
-            </p>
+            <div className="focus-empty">
+              <h3>Your next move starts here.</h3>
+              <p className="focus-description">
+                Add one thing you want to make progress on, or take a look at
+                your week.
+              </p>
+              <Button asChild>
+                <Link href="/planner">
+                  Plan your day <ArrowRight size={15} />
+                </Link>
+              </Button>
+            </div>
           )}
-          <p className="briefing-refresh">
-            Refreshed {formatInTimeZone(d.refreshed_at, d.timezone, "h:mm a")}
-          </p>
+          <div className="focus-footer">
+            <span>
+              {d.summary.commitments == null
+                ? "Calendar needs an update"
+                : `${d.summary.commitments} ${d.summary.commitments === 1 ? "commitment" : "commitments"} today`}
+            </span>
+            {d.attention.length > 0 && (
+              <Link href="/#needs-attention">
+                {d.attention.length} to review <ArrowRight size={12} />
+              </Link>
+            )}
+          </div>
+          <div className="focus-update">
+            <span>
+              Updated {formatInTimeZone(d.refreshed_at, d.timezone, "h:mm a")}
+              {d.calendar.reliable &&
+              typeof d.calendar.available_minutes === "number" &&
+              Number.isFinite(d.calendar.available_minutes)
+                ? ` · ${d.calendar.available_minutes} min available today`
+                : ""}
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={c.loading}
+              onClick={() => void c.reload()}
+            >
+              <RefreshCw size={13} />
+              {c.loading ? "Refreshing…" : "Refresh day"}
+            </Button>
+          </div>
         </section>
       ) : (
         <>
-          <section className="briefing-hero panel briefing-card">
-            <div className="panel-heading">
-              <span className="briefing-kicker">
-                <Sun size={17} /> Daily Briefing
-              </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => void c.reload()}
-                disabled={c.loading}
-              >
-                <RefreshCw size={14} />
-                {c.loading ? "Refreshing…" : "Refresh"}
-              </Button>
-            </div>
-            <h2>{d.greeting}</h2>
-            <p>Here’s what deserves your attention today.</p>
-            <div className="briefing-metrics">
-              <div>
-                <strong>{d.summary.commitments ?? "—"}</strong>
-                <span>calendar commitments today</span>
-              </div>
-              <div>
-                <strong>{d.summary.academic_tasks}</strong>
-                <span>unfinished academic tasks</span>
-              </div>
-              <div>
-                <strong>{d.summary.approaching_deadlines ?? "—"}</strong>
-                <span>
-                  academic deadlines in {d.settings.deadline_days} days
-                </span>
-              </div>
-              <div>
-                <strong>{d.summary.completed_yesterday}</strong>
-                <span>tasks recorded complete yesterday</span>
-              </div>
-            </div>
-            <p className="briefing-refresh">
-              Last successful data refresh:{" "}
-              {formatInTimeZone(d.refreshed_at, d.timezone, "MMM d, h:mm a")} ·{" "}
-              {d.timezone}. Cached source synchronization is separate.
-            </p>
-            <p className="small muted">
-              {d.calendar.reliable
-                ? `${d.calendar.available_minutes} minutes of recorded availability after breaks, protected time and daily scheduling capacity.`
-                : "Availability is unknown until your selected calendars are current."}
-            </p>
-            <details className="briefing-detail">
-              <summary>
-                Today’s recorded commitments and source freshness
-              </summary>
-              <p className="small muted">
-                Oldest selected calendar sync:{" "}
-                {d.calendar.last_source_sync
-                  ? formatInTimeZone(
-                      d.calendar.last_source_sync,
-                      d.timezone,
-                      "MMM d, h:mm a",
-                    )
-                  : "Not recorded"}
-                . Cached events may change externally.
-              </p>
-              {d.calendar.events.length ? (
-                <ul>
-                  {d.calendar.events.map((e) => (
-                    <li key={e.id}>
-                      {e.title} ·{" "}
-                      {e.start_at
-                        ? formatInTimeZone(e.start_at, d.timezone, "h:mm a")
-                        : "All day"}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>
-                  No cached commitments are shown; consult connection health
-                  before treating the day as free.
-                </p>
-              )}
-            </details>
-          </section>
-          <div className="briefing-columns">
-            <div className="stack">
-              <section
-                className="panel briefing-card"
-                aria-labelledby="recommendation-title"
-              >
-                <div className="panel-heading">
-                  <h2 id="recommendation-title">Recommended Next Action</h2>
-                  <CheckCircle2 size={18} />
-                </div>
-                {actionCard(0) ?? (
-                  <p>
-                    No unblocked, non-deferred task is recorded. Review upcoming
-                    deadlines or capture a responsibility.
-                  </p>
-                )}
-                {d.recommendations.length > 1 && (
-                  <details className="briefing-detail">
-                    <summary>Alternatives and ranking explanation</summary>
-                    {d.recommendations
-                      .slice(1)
-                      .map((_, i) => actionCard(i + 1))}
-                  </details>
-                )}
-                <p className="small muted">
-                  Deadline urgency comes first. Within each band, adjustable
-                  weights combine importance, academic consequences, available
-                  time, linked goals and explicit deferrals. Unknown effort
-                  never becomes zero.
-                </p>
-              </section>
-              <DailyCheckInPanel today={d.today} timezone={d.timezone} />
-            </div>
+          <div className="briefing-columns home-attention-grid">
             <div className="stack">
               <section className="panel briefing-card">
                 <div className="panel-heading">
-                  <h2>Needs Attention</h2>
+                  <h2 id="needs-attention">Needs Attention</h2>
                   <AlertCircle size={18} />
                 </div>
                 <p className="small muted">
-                  Confirmed issues, possible issues and connection problems stay
-                  distinct. Dismissals apply only to the same source state.
+                  A few things worth checking before they get in your way.
                 </p>
                 {d.attention.length ? (
                   <div className="briefing-alerts">
@@ -465,18 +419,14 @@ export function BriefingPanel({
                         <p>{a.detail}</p>
                         <div className="briefing-actions">
                           <Link href={a.href} className="text-link">
-                            Review source
+                            Take a look
                           </Link>
                           <Button
                             size="sm"
                             variant="ghost"
                             disabled={busy}
                             onClick={() =>
-                              dismiss(
-                                a,
-                                "snooze",
-                                new Date(Date.now() + 86400000).toISOString(),
-                              )
+                              dismiss(a, "snooze", snoozeUntil(1440))
                             }
                           >
                             Snooze 1 day
@@ -487,16 +437,14 @@ export function BriefingPanel({
                             disabled={busy}
                             onClick={() => dismiss(a, "dismiss", null)}
                           >
-                            Dismiss this state
+                            Dismiss
                           </Button>
                         </div>
                       </article>
                     ))}
                   </div>
                 ) : (
-                  <p>
-                    No attention items in the successfully retrieved records.
-                  </p>
+                  <p>Nothing needs attention in your latest update.</p>
                 )}
                 {d.attention.length > 5 && (
                   <details className="briefing-detail">
@@ -509,64 +457,12 @@ export function BriefingPanel({
                   </details>
                 )}
               </section>
-              <section className="panel briefing-card">
-                <div className="panel-heading">
-                  <h2>Weekly Insights</h2>
-                  <Clock3 size={18} />
-                </div>
-                <p className="small muted">
-                  {d.weekly.start} – {d.weekly.end_exclusive} (end exclusive),
-                  as of refresh.
-                </p>
-                <ul className="briefing-reasons">
-                  <li>
-                    {d.weekly.completed_tasks} tasks recorded complete;{" "}
-                    {d.weekly.completed_on_time} met a recorded deadline,{" "}
-                    {d.weekly.completed_late} completed after it.
-                  </li>
-                  <li>
-                    {d.source_errors.includes("work")
-                      ? "Work history unavailable."
-                      : `${d.weekly.planned_minutes} recorded reservation minutes; ${d.weekly.reported_minutes} minutes of effort reported. These use different time anchors and are not a completion percentage.`}
-                  </li>
-                  <li>
-                    {d.weekly.deferrals} explicit Not Now decisions this week.
-                  </li>
-                  <li>
-                    {d.source_errors.includes("study")
-                      ? "Study history unavailable."
-                      : `${d.weekly.reported_academic_minutes} recorded study minutes. Exposure does not establish mastery.`}
-                  </li>
-                </ul>
-                {d.weekly.needs_review.length > 0 && (
-                  <p>
-                    Topics needing review:{" "}
-                    {d.weekly.needs_review.map((t) => t.title).join(", ")}
-                  </p>
-                )}
-                {d.weekly.goals.map((g) => (
-                  <p key={g.id}>
-                    <Link href={`/goals#goal-${g.id}`}>{g.title}</Link> ·{" "}
-                    {g.progress}
-                  </p>
-                ))}
-                <details className="briefing-detail">
-                  <summary>Definitions and missing historical data</summary>
-                  <p className="small muted">
-                    {d.weekly.coverage} Historical conflict frequency and
-                    deadline-change counts are not inferred from a single
-                    current snapshot.
-                  </p>
-                </details>
-                <Link href="/reviews" className="text-link">
-                  Open your full weekly review <ArrowRight size={12} />
-                </Link>
-              </section>
+              <DailyCheckInPanel today={d.today} timezone={d.timezone} />
             </div>
           </div>
           <details className="panel briefing-card">
             <summary className="text-link">
-              Personalization and transparent ranking settings
+              Adjust your daily priorities
             </summary>
             <form className="briefing-settings" onSubmit={saveSettings}>
               <label>
@@ -620,7 +516,7 @@ export function BriefingPanel({
               {settingsError && <p role="alert">{settingsError}</p>}
               <Button disabled={busy}>Save briefing preferences</Button>
               <Link href="/settings" className="text-link">
-                Profile picture and display name
+                Your preferences
               </Link>
             </form>
           </details>

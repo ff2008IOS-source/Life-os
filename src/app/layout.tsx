@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./consumer.css";
 import { Providers } from "@/components/providers";
 export const metadata: Metadata = {
   title: {
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0B1018",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f6f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c171a" },
+  ],
 };
 export default function RootLayout({
   children,

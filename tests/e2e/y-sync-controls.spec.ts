@@ -11,7 +11,7 @@ test("controlled calendar moves show confirmation and spreadsheet settings keep 
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  const initialize = page.getByRole("button", { name: /Initialize workspace/ });
+  const initialize = page.getByRole("button", { name: /Set up my space/ });
   if (await initialize.count()) {
     await initialize.click();
     await expect(initialize).toHaveCount(0);
@@ -125,7 +125,7 @@ test("controlled calendar moves show confirmation and spreadsheet settings keep 
   ).toBe(true);
   await page.goto("/settings?section=integrations");
   await page
-    .getByText("Existing project-status imports", { exact: true })
+    .getByText("Legacy imports and migration tools", { exact: true })
     .filter({ visible: true })
     .click();
   await expect(

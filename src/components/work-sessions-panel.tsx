@@ -46,7 +46,7 @@ export function WorkSessionsPanel({
     };
   }, [query, workspace.tasks]);
   return (
-    <section className="panel settings-panel">
+    <section className="panel settings-panel" aria-label="Work history">
       <div className="academic-toolbar">
         <h2>{compact ? "Recorded work" : "Work sessions"}</h2>
         <span className="badge">
@@ -55,18 +55,21 @@ export function WorkSessionsPanel({
       </div>
       {state && (
         <p className="small muted">
-          {state.summary.actual_minutes} reported minutes ·{" "}
+          {state.summary.actual_minutes} minutes logged ·{" "}
           {state.summary.academic_minutes} academic minutes ·{" "}
           {state.summary.tasks_completed} tasks marked complete
         </p>
       )}
-      <p className="form-hint">
-        {state
-          ? `${state.period.start} to ${state.period.end} (end exclusive). `
-          : ""}
-        Totals use when completion was recorded and the actual minutes you
-        entered. Planned time is not completed work.
-      </p>
+      <details className="metric-details">
+        <summary>How this is measured</summary>{" "}
+        <p className="form-hint">
+          {state
+            ? `${state.period.start} to ${state.period.end} (end exclusive). `
+            : ""}
+          Totals use when completion was recorded and the actual minutes you
+          entered. Planned time is not completed work.
+        </p>
+      </details>
       {!compact && (
         <>
           <div className="academic-record-list">

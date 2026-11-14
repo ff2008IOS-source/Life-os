@@ -17,6 +17,7 @@ const tables = [
   "task_occurrences",
   "reviews",
   "review_chat_links",
+  "review_snapshots",
   "audit_logs",
   "data_sources",
   "import_batches",

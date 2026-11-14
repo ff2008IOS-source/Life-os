@@ -10,7 +10,9 @@ import type { AssistantReply } from "@/lib/assistant/provider";
 export function PreparedWeeklyReview({
   review,
   onReply,
+  commitmentOpening,
 }: {
+  commitmentOpening?: string;
   review: Review;
   onReply: (r: AssistantReply) => void;
 }) {
@@ -45,25 +47,52 @@ export function PreparedWeeklyReview({
       : "Let’s establish what actually happened this week. What was the most important responsibility you moved forward?";
   return (
     <>
+      {d && (
+        <AssistantPage
+          key={review.id}
+          review={review}
+          onReply={onReply}
+          opening={commitmentOpening || opening}
+        />
+      )}
       {!d ? (
         <section className="panel briefing-card">
           <h2>Preparing your weekly review</h2>
-          <p>{c.error ?? "Reading your recorded work, deadlines and goals…"}</p>
+          <p>{c.error ?? "Bringing your week together…"}</p>
           {c.error && (
             <Button onClick={() => void c.reload()}>Retry overview</Button>
           )}
         </section>
       ) : (
-        <section className="panel briefing-card weekly-prepared">
+        <details className="panel briefing-card weekly-prepared">
+          <summary>Your week at a glance</summary>
           <span className="eyebrow">YOUR WEEK, PREPARED</span>
           <h2>
-            Review: {review.period_start} – {review.period_end}
+            Your week:{" "}
+            {formatInTimeZone(
+              review.period_start + "T12:00:00Z",
+              d.timezone,
+              "MMM d",
+            )}{" "}
+            –{" "}
+            {formatInTimeZone(
+              review.period_end + "T12:00:00Z",
+              d.timezone,
+              "MMM d",
+            )}
           </h2>
           <p>
-            Prepared from saved Life OS records as of{" "}
+            Updated{" "}
             {formatInTimeZone(d.refreshed_at, d.timezone, "MMM d, h:mm a")}.
-            Historical submission, grade and coverage gaps remain explicit.
           </p>
+          <details className="briefing-detail">
+            <summary>About this overview</summary>
+            <p>
+              Based on your saved courses, calendar and tasks. Missing grades
+              and unconfirmed deadlines stay unknown. This is today’s view of
+              your week; past external changes may not be available.
+            </p>
+          </details>
           {c.error && (
             <p role="alert">
               This overview could not refresh. Its data may be stale.
@@ -98,7 +127,9 @@ export function PreparedWeeklyReview({
                             : "Unknown")}
                       </td>
                       <td>
-                        <Link href="/canvas-materials">
+                        <Link
+                          href={`/areas/academics?course=${a.course_id}&assessment=${a.id}#assessment-${a.id}`}
+                        >
                           {a.course} · {a.title}
                         </Link>
                       </td>
@@ -127,7 +158,7 @@ export function PreparedWeeklyReview({
             <p>
               {d.source_errors.includes("academics")
                 ? "Academic information is unavailable."
-                : "No dated assessments are recorded for this window. This does not verify external course coverage."}
+                : "No deadlines to show for these weeks. Check Canvas if a course has not synced."}
             </p>
           )}
           <details className="briefing-detail">
@@ -153,8 +184,8 @@ export function PreparedWeeklyReview({
             </ul>
             <p>
               {d.weekly.needs_review.length
-                ? `Topics recorded as needing review: ${d.weekly.needs_review.map((t) => t.title).join(", ")}`
-                : "No topic weaknesses are recorded. This is not proof of exam readiness."}
+                ? `Topics to revisit: ${d.weekly.needs_review.map((t) => t.title).join(", ")}`
+                : "No study topics are marked for review yet."}
             </p>
           </details>
           <details className="briefing-detail">
@@ -178,16 +209,12 @@ export function PreparedWeeklyReview({
             {d.weekly.projects.map((p) => (
               <p key={p.id}>
                 Active project: {p.name} ·{" "}
-                {p.target_date
-                  ? `Target ${p.target_date}`
-                  : "No target recorded"}
+                {p.target_date ? `Target ${p.target_date}` : "No date set"}
               </p>
             ))}
             {d.weekly.roadmap.map((m) => (
               <p key={m.id}>
-                Planned milestone: {m.title} ·{" "}
-                {m.target_date ?? "No target recorded"}. This is a recorded
-                target, not a confirmed accomplishment.
+                Next milestone: {m.title} · {m.target_date ?? "No date set"}.
               </p>
             ))}
           </details>
@@ -227,15 +254,14 @@ export function PreparedWeeklyReview({
               ))}
           </details>
           <details className="briefing-detail">
-            <summary>5. Realistic next actions as of this refresh</summary>
+            <summary>5. Your next steps</summary>
             {d.recommendations.map((r) => (
               <p key={r.task_id}>
                 {r.title} · {r.reasons.slice(0, 2).join(" · ")}
               </p>
             ))}
             <p className="small muted">
-              These reflect current records, not reconstructed historical
-              decisions. Suggested commitments still require your approval.
+              Choose the actions you want to carry into next week.
             </p>
           </details>
           {review.conversation_summary && (
@@ -244,15 +270,7 @@ export function PreparedWeeklyReview({
               <p>{review.conversation_summary}</p>
             </details>
           )}
-        </section>
-      )}
-      {d && (
-        <AssistantPage
-          key={review.id}
-          review={review}
-          onReply={onReply}
-          opening={opening}
-        />
+        </details>
       )}
     </>
   );

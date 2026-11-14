@@ -9,7 +9,7 @@ test("long import notes stay inside concise project cards on iPad and iPhone", a
   await expect(
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
-  const init = page.getByRole("button", { name: /Initialize workspace/ });
+  const init = page.getByRole("button", { name: /Set up my space/ });
   if (await init.count()) {
     await init.click();
     await expect(init).toHaveCount(0);

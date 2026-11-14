@@ -1,4 +1,6 @@
 "use client";
+import { WeeklyInsights } from "./weekly-insights";
+import { realWorkspace } from "@/lib/real-workspace";
 import { WorkSessionsPanel } from "./work-sessions-panel";
 import { useState } from "react";
 import { addDays, format } from "date-fns";
@@ -7,7 +9,8 @@ import { useWorkspace } from "./workspace-provider";
 import { EmptyState } from "./task-list";
 import { localDate, isOverdue } from "@/lib/dates";
 export function InsightsPage() {
-  const { data } = useWorkspace();
+  const { data: raw } = useWorkspace();
+  const data = realWorkspace(raw);
   const [range, setRange] = useState("week");
   const end = localDate();
   const start = format(
@@ -77,6 +80,7 @@ export function InsightsPage() {
         start={start}
         end={format(addDays(new Date(end + "T12:00:00"), 1), "yyyy-MM-dd")}
       />
+      <WeeklyInsights />
       <div className="stats-grid">
         {[
           {
@@ -169,12 +173,12 @@ export function InsightsPage() {
                 compact
                 icon={ChartNoAxesCombined}
                 title="A pattern will emerge over time"
-                description="No task completions recorded in this range. This does not measure everything you achieved."
+                description="Finish a task to see your progress here."
               />
             )}
             <p className="data-source">
               Source: user-entered task completion timestamps · last 7 days ·
-              America/Vancouver. Counts reflect recorded actions only.
+              America/Vancouver. Based on what you’ve logged in Life OS.
             </p>
           </div>
         </section>
@@ -186,7 +190,7 @@ export function InsightsPage() {
             {data.areas.length ? (
               <table>
                 <caption className="sr-only">
-                  Active and completed recorded tasks by area
+                  Your tasks across life areas
                 </caption>
                 <thead>
                   <tr>

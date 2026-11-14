@@ -11,6 +11,10 @@ test("native review snapshots persist and assistant remains disabled without a c
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
   await page.goto("/reviews");
+  await page
+    .getByText("Past check-ins and briefings", { exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Personal check-ins" }),
   ).toBeVisible();
@@ -27,25 +31,19 @@ test("native review snapshots persist and assistant remains disabled without a c
     .getByRole("navigation", { name: "Mobile navigation" })
     .getByRole("link", { name: "More", exact: true })
     .click();
-  await page
-    .locator(".more-list")
-    .getByRole("link", { name: "Briefing", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/briefing$/);
   await expect(
     page
-      .getByRole("navigation", { name: "Mobile navigation" })
-      .getByRole("link", { name: "More", exact: true }),
-  ).toHaveClass("active");
+      .locator(".more-list")
+      .getByRole("link", { name: "Briefing", exact: true }),
+  ).toHaveCount(0);
+  await page.goto("/briefing");
+  await expect(page).toHaveURL(/\/#daily-briefing$/);
   await expect(
-    page.getByRole("heading", { name: "Life OS Briefing" }),
+    page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
   await expect(page.getByLabel("Your question")).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "Daily Briefing", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("heading", { name: "Recommended Next Action", exact: true }),
+    page.getByRole("heading", { name: "Needs Attention", exact: true }),
   ).toBeVisible();
   for (const viewport of [
     { width: 1280, height: 900 },

@@ -107,6 +107,22 @@ export function assertTargetEmpty(preflight) {
   )
     throw Error("Recovery project is not empty; no restore was attempted");
 }
+/** Encrypted database backups can retain ciphertext; restoring live provider
+ * credentials is a different operation and remains blocked pending key recovery
+ * and verified worker isolation. Storage/Vault/MFA still need separate handling. */
+export function assertRecoverableFeatures(manifest, mode) {
+  if (
+    manifest.unsupported.storage_objects ||
+    manifest.unsupported.vault_secrets ||
+    manifest.unsupported.mfa_factors ||
+    (mode === "backup_and_restore" &&
+      (manifest.tables["private.oauth_credentials"]?.count ||
+        manifest.tables["public.canvas_connections"]?.count))
+  )
+    throw Error(
+      "Storage, Vault, MFA or integration credentials need an expanded recovery procedure before this beta workflow can run",
+    );
+}
 export function extractDumpScript(output) {
   const start = output.indexOf("#!/usr/bin/env bash\n");
   if (start < 0)

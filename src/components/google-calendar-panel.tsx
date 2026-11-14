@@ -122,7 +122,9 @@ export function GoogleCalendarPanel({
               </Link>
             ))
           ) : (
-            <p className="muted small">No more cached events today.</p>
+            <p className="muted small">
+              Your schedule is clear for the rest of today.
+            </p>
           )}
         </div>
         <div className="panel-footer">

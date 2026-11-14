@@ -1,6 +1,8 @@
 "use client";
 import { useId, useState } from "react";
 import { format, startOfWeek, addDays } from "date-fns";
+import { ReviewCommitments } from "./review-commitments";
+import { calendarRequest } from "./use-calendar";
 import { PreparedWeeklyReview } from "./prepared-weekly-review";
 import { WrittenReviewsPage } from "./reviews-page";
 import { PersonalWorkflowsPanel } from "./personal-workflows-panel";
@@ -20,6 +22,7 @@ export function ReviewsPage() {
       "yyyy-MM-dd",
     ),
   );
+  const [commitmentOpening, setCommitmentOpening] = useState("");
   const [active, setActive] = useState<string | null>(null),
     [summary, setSummary] = useState(""),
     [checked, setChecked] = useState(false),
@@ -75,6 +78,10 @@ export function ReviewsPage() {
     if (!review) return;
     setError("");
     try {
+      await calendarRequest("/api/v1/reviews/context", {
+        method: "POST",
+        body: JSON.stringify({ action: "capture", review_id: review.id }),
+      });
       await mutate(
         "reviews",
         review.id,
@@ -109,16 +116,25 @@ export function ReviewsPage() {
         </div>
       </div>
       <section className="panel weekly-review-start">
-        <label>
-          Review week starts
-          <input
-            type="date"
-            value={week}
-            disabled={!!review}
-            onChange={(e) => setWeek(e.target.value)}
-            required
-          />
-        </label>
+        <div>
+          <strong>Week of {friendlyDate(week)}</strong>
+          <p className="small muted">
+            A little perspective, then a realistic plan.
+          </p>
+        </div>
+        <details className="review-date-options">
+          <summary>Change review week</summary>
+          <label>
+            Review week starts
+            <input
+              type="date"
+              value={week}
+              disabled={!!review}
+              onChange={(e) => setWeek(e.target.value)}
+              required
+            />
+          </label>
+        </details>
         {review ? (
           <Button
             variant="outline"
@@ -139,15 +155,23 @@ export function ReviewsPage() {
         <>
           <p className="small muted">
             Week of {friendlyDate(review.period_start)} ·{" "}
-            {review.completed_at ? "Completed review" : "Saved draft"} ·
-            Original conversation and written notes stay separate.
+            {review.completed_at ? "Completed review" : "Saved draft"} · Your
+            plans and reflection, together.
           </p>
-          <PreparedWeeklyReview review={review} onReply={setCandidate} />
-          <section className="panel settings-panel">
+          <PreparedWeeklyReview
+            review={review}
+            onReply={setCandidate}
+            commitmentOpening={commitmentOpening}
+          />
+          <ReviewCommitments review={review} onOpening={setCommitmentOpening} />
+          <details
+            className="panel settings-panel review-reflection"
+            open={candidate ? true : undefined}
+          >
+            <summary>Finish and save your reflection</summary>
             <h2>Your reviewed reflection</h2>
             <p className="small muted">
-              Edit and approve this reflection before saving. AI suggestions do
-              not update tasks, goals or completion records.
+              Keep what feels useful. Review your reflection before saving it.
             </p>
             {candidate && (
               <Button
@@ -198,8 +222,8 @@ export function ReviewsPage() {
               <div className="review-proposals">
                 <h3>Proposed next actions</h3>
                 <p className="small muted">
-                  Open a draft, confirm its details, then capture it. Goal and
-                  project links use the normal task controls.
+                  Choose an action to turn into a task. You’ll review it before
+                  adding it.
                 </p>
                 {candidate.next_actions.slice(0, 3).map((action, i) => (
                   <div className="setting-line" key={i}>
@@ -217,7 +241,7 @@ export function ReviewsPage() {
                 ))}
               </div>
             )}
-          </section>
+          </details>
         </>
       ) : (
         <section className="panel settings-panel">
@@ -258,7 +282,10 @@ export function ReviewsPage() {
         </summary>
         <WrittenReviewsPage />
       </details>
-      <PersonalWorkflowsPanel />
+      <details className="panel">
+        <summary>Past check-ins and briefings</summary>
+        <PersonalWorkflowsPanel />
+      </details>
       <WorkSessionsPanel
         compact
         start={week}

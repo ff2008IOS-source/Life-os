@@ -1,15 +1,10 @@
 "use client";
 import Link from "next/link";
+import { AppLogo } from "./profile-identity";
 import { MfaPanel } from "./mfa-panel";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  ArrowRight,
-  Check,
-  Layers3,
-  LockKeyhole,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Check, LockKeyhole, ShieldCheck } from "lucide-react";
 import { Button } from "./ui/button";
 export function Login({
   configured,
@@ -55,9 +50,9 @@ export function Login({
       <section className="login-story">
         <Link className="brand" href="/">
           <span className="logo">
-            <Layers3 size={23} />
+            <AppLogo />
           </span>
-          Life OS<span className="beta-pill">PRIVATE BETA</span>
+          Life OS
         </Link>
         <div className="login-story-content">
           <span className="eyebrow">A LITTLE CLARITY. EVERY DAY.</span>

@@ -15,8 +15,28 @@ const assessment = (
   category_id: null,
   dropped: false,
   submission_state: "unknown",
+  verification_status: "verified",
 });
 describe("academic integrity and verified source mappings", () => {
+  it("does not call a partial or unverified inventory an overall grade", () => {
+    expect(
+      academicGrade("points", [assessment("a", 80, null)]).overall_grade,
+    ).toBeNull();
+    expect(
+      academicGrade(
+        "points",
+        [{ ...assessment("a", 80, null), verification_status: "unverified" }],
+        [],
+        { inventoryComplete: true, rulesVerified: true },
+      ).overall_grade,
+    ).toBeNull();
+    expect(
+      academicGrade("points", [assessment("a", 80, null)], [], {
+        inventoryComplete: false,
+        rulesVerified: true,
+      }).warnings.join(" "),
+    ).toMatch(/inventory/);
+  });
   it("keeps unknown grades out of the denominator and refuses an overall grade with incomplete weights", () => {
     const result = academicGrade("assessment_weights", [
       assessment("a", 80, 25),
@@ -35,16 +55,21 @@ describe("academic integrity and verified source mappings", () => {
   });
   it("calculates final grades only when the selected formula and all required scores are present", () => {
     expect(
-      academicGrade("assessment_weights", [
-        assessment("a", 80, 25),
-        assessment("b", 100, 75),
-      ]).overall_grade,
+      academicGrade(
+        "assessment_weights",
+        [assessment("a", 80, 25), assessment("b", 100, 75)],
+        [],
+        { inventoryComplete: true, rulesVerified: true },
+      ).overall_grade,
     ).toBe(95);
     const a = { ...assessment("a", 50, null), maximum_score: 50 };
     const b = { ...assessment("b", 50, null), maximum_score: 100 };
-    expect(academicGrade("points", [a, b]).overall_grade).toBeCloseTo(
-      (100 / 150) * 100,
-    );
+    expect(
+      academicGrade("points", [a, b], [], {
+        inventoryComplete: true,
+        rulesVerified: true,
+      }).overall_grade,
+    ).toBeCloseTo((100 / 150) * 100);
   });
   it("honours configured category dropping without treating unknown scores as zero", () => {
     const categories = [
@@ -59,7 +84,10 @@ describe("academic integrity and verified source mappings", () => {
       (x) => ({ ...x, category_id: "category" }),
     );
     expect(
-      academicGrade("category_weights", list, categories).overall_grade,
+      academicGrade("category_weights", list, categories, {
+        inventoryComplete: true,
+        rulesVerified: true,
+      }).overall_grade,
     ).toBe(80);
     const incomplete = [
       ...list,

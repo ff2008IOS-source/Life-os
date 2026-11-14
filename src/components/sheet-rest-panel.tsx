@@ -10,7 +10,7 @@ import {
   type Cells,
   type Conflicts,
 } from "@/lib/integrations/sheet-ledger-model";
-type Dataset = {
+export type Dataset = {
   id: string;
   title: string;
   worksheet_title: string;
@@ -25,7 +25,7 @@ type Dataset = {
   last_write_at: string | null;
   last_error: string | null;
 };
-type Row = {
+export type Row = {
   id: string;
   version: number;
   local_values: Values;
@@ -182,9 +182,8 @@ export function SheetRestPanel() {
     >
       <h2>Google Sheets synchronization</h2>
       <p className="small muted">
-        Standard Google Sheets API. Tables start import-only. Formula results
-        remain source-owned; missing rows preserve their Life OS history. The
-        shooting chart is excluded.
+        Keep Life OS and your spreadsheets connected. Choose what to sync and
+        when to allow changes.
       </p>
       <div className="stack">
         <label>
@@ -521,7 +520,8 @@ export function SheetRestPanel() {
             {d.last_write_at
               ? new Date(d.last_write_at).toLocaleString()
               : "Never"}
-            . Hourly polling is processed by the existing background worker;
+            . Polling is processed by the existing background worker in bounded
+            batches; actual refresh times depend on backlog and provider limits;
             delays are possible.
           </p>
           {d.last_error && (
@@ -573,7 +573,7 @@ export function SheetRestPanel() {
             Sync now
           </Button>
           <details>
-            <summary>Review mapping after source changes</summary>
+            <summary>Advanced connection settings</summary>
             <p className="small muted">
               Pause this table and disable outbound writes first. Preserve field
               keys, types and identity; update exact headers and bounded ranges
@@ -874,7 +874,7 @@ export function SheetRestPanel() {
     </section>
   );
 }
-function RowEditor({
+export function RowEditor({
   row,
   config,
   busy,

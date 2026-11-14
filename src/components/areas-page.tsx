@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ConnectedCareerRecords } from "./connected-career-records";
 import { AcademicsPanel } from "./academics-panel";
 import { projectSummary } from "@/lib/project-summary";
 import { ContactsPanel } from "./contacts-panel";
@@ -34,7 +35,17 @@ const descriptions: Record<string, string> = {
   finances: "Understand your money, on your terms.",
   wellbeing: "Make room for the things that sustain you.",
 };
-export function AreasPage({ slug }: { slug?: string }) {
+export function AreasPage({
+  slug,
+  initialCourse,
+  initialView,
+  initialAssessment,
+}: {
+  slug?: string;
+  initialCourse?: string;
+  initialView?: string;
+  initialAssessment?: string;
+}) {
   const { data } = useWorkspace();
   const [editor, setEditor] = useState<EntityEditorState | null>(null);
   const [tab, setTab] = useState("overview");
@@ -148,6 +159,11 @@ export function AreasPage({ slug }: { slug?: string }) {
           </Button>
         )}
       </div>
+      {slug === "projects" && (
+        <Link className="text-link" href="/areas/career#connected-roadmap">
+          Manage linked spreadsheet plans in Career
+        </Link>
+      )}
       <div className="area-metrics">
         <div className="area-summary">
           Active tasks<strong>{active.length}</strong>
@@ -163,14 +179,11 @@ export function AreasPage({ slug }: { slug?: string }) {
         </div>
       </div>
       <div className="tabs">
-        {[
-          "overview",
-          "tasks",
-          ...(slug === "projects" ? ["projects"] : []),
-        ].map((t) => (
+        {["overview", "tasks"].map((t) => (
           <button
             className={`tab ${tab === t ? "active" : ""}`}
             key={t}
+            aria-pressed={tab === t}
             onClick={() => setTab(t)}
           >
             {t[0].toUpperCase() + t.slice(1)}
@@ -202,7 +215,7 @@ export function AreasPage({ slug }: { slug?: string }) {
                   <EmptyState
                     icon={Layers3}
                     title="Give your next project a home"
-                    description="Create confirmed projects when you’re ready. No project states have been assumed."
+                    description="Break an idea into a few achievable steps."
                     action={
                       <Button onClick={() => setEditor({ kind: "projects" })}>
                         <Plus size={13} />
@@ -214,12 +227,25 @@ export function AreasPage({ slug }: { slug?: string }) {
               )}
             </>
           ) : (
-            <div className="dashboard-grid">
+            <div
+              className={
+                slug === "academics" ? "course-layout" : "dashboard-grid"
+              }
+            >
               {slug === "academics" ? (
-                <AcademicsPanel />
+                <AcademicsPanel
+                  key={`${initialCourse ?? "all"}:${initialAssessment ?? ""}:${initialView ?? ""}`}
+                  initialView={initialView}
+                  initialCourse={initialCourse}
+                  initialAssessment={initialAssessment}
+                />
               ) : slug === "career" ? (
                 <>
-                  <CareerPanel />
+                  <ConnectedCareerRecords />
+                  <details className="panel">
+                    <summary>Earlier imported career archive</summary>
+                    <CareerPanel />
+                  </details>
                   <ContactsPanel />
                 </>
               ) : (
@@ -231,8 +257,8 @@ export function AreasPage({ slug }: { slug?: string }) {
                         : slug === "career"
                           ? "Career development"
                           : slug === "finances"
-                            ? "Your financial workspace"
-                            : "Your wellbeing workspace"}
+                            ? "Optional finance area"
+                            : "Optional wellbeing area"}
                     </h2>
                     <span className="badge">
                       {["finances", "wellbeing"].includes(slug)
@@ -255,10 +281,10 @@ export function AreasPage({ slug }: { slug?: string }) {
                       slug === "academics"
                         ? "No courses, assessments, grades, or deadlines have been imported. Specialized academic records are a later phase."
                         : slug === "career"
-                          ? "The career spreadsheet remains untouched. Read-only mapping will be verified after Stage B authorization."
+                          ? "Connect your career plans, projects and professional relationships."
                           : slug === "finances"
-                            ? "No financial data recorded. Accounts, transactions, and budgets will be available in the specialized phase."
-                            : "No wellbeing data recorded. Optional habits and reflections will be available in the specialized phase."
+                            ? "Keep money-related tasks here. Financial tracking is not set up yet."
+                            : "Make room for your routines and personal priorities."
                     }
                   />
                 </section>
@@ -312,7 +338,7 @@ function ProjectCards({
         const done = tasks.filter((t) => t.status === "completed").length;
         const milestones = data.milestones.filter((m) => m.project_id === p.id);
         return (
-          <article className="entity-card" key={p.id}>
+          <article className="entity-card" key={p.id} id={`project-${p.id}`}>
             <div className="flex-between full-width">
               <span className="section-icon">
                 <Layers3 />

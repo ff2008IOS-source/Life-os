@@ -118,6 +118,29 @@ const server = createServer((req, res) => {
         );
         return send(200, { ok: true });
       }
+      if (
+        url.pathname === "/__fixtures/canvas-course" &&
+        req.method === "POST"
+      ) {
+        const id = String(body.canvas_id);
+        await db.query(
+          "insert into canvas_records(user_id,resource_type,canvas_id,payload) values($1,'course',$2,$3::jsonb) on conflict(user_id,resource_type,canvas_id)do update set payload=excluded.payload",
+          [
+            uid,
+            id,
+            JSON.stringify({
+              id: Number(id),
+              name: "[TEST] Linked course",
+              syllabus_body: "[TEST] Verified course reading",
+            }),
+          ],
+        );
+        await db.query(
+          "insert into canvas_mappings(user_id,resource_type,canvas_id,local_id,local_table,conflict)values($1,'course',$2,$3,'courses',$4)on conflict(user_id,resource_type,canvas_id)do update set local_id=excluded.local_id,conflict=excluded.conflict",
+          [uid, id, body.local_id, body.conflict ?? null],
+        );
+        return send(200, { ok: true });
+      }
       if (url.pathname === "/health") return send(200, { ok: true });
       if (url.pathname === "/auth/v1/token") {
         if (body.email !== user.email || body.password !== "test-password-only")
@@ -144,16 +167,18 @@ const server = createServer((req, res) => {
         sessions.delete(auth);
         return send(200, {});
       }
-      if (!sessions.has(auth))
+      const isAdmin = auth === "synthetic-test-server-key";
+      if (!sessions.has(auth) && !isAdmin)
         return send(401, { message: "Unauthorized", code: "42501" });
       await db.exec(
-        `begin; set local role authenticated; select set_config('request.jwt.claim.sub','${uid}',true);`,
+        `begin; set local role ${isAdmin ? "service_role" : "authenticated"}; select set_config('request.jwt.claim.sub','${uid}',true);`,
       );
       try {
         if (url.pathname.startsWith("/rest/v1/rpc/")) {
           const fn = url.pathname.split("/").at(-1);
           if (
             ![
+              "prepare_assessment",
               "complete_work_session",
               "work_progress_summary",
               "prepare_my_workflow",
@@ -189,6 +214,7 @@ const server = createServer((req, res) => {
           "milestones",
           "reviews",
           "review_chat_links",
+          "review_snapshots",
           "task_dependencies",
           "goal_tasks",
           "audit_logs",
@@ -268,6 +294,17 @@ const server = createServer((req, res) => {
             continue;
           // Deliberately bounded PostgREST subset used by the deadline API.
           // Identifiers are validated and all comparison values parameterized.
+          if (key === "or") {
+            const courseFilter = val.match(
+              /^\(course_canvas_id\.eq\.(\d+),and\(resource_type\.eq\.course,canvas_id\.eq\.(\d+)\)\)$/,
+            );
+            if (courseFilter) {
+              where.push(
+                `(course_canvas_id = ${param(courseFilter[1])} or (resource_type = 'course' and canvas_id = ${param(courseFilter[2])}))`,
+              );
+              continue;
+            }
+          }
           if (key === "or" && val === "(published.is.null,published.eq.true)") {
             where.push(
               `(${quote("published")} is null or ${quote("published")} = ${param(true)})`,

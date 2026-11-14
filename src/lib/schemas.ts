@@ -143,6 +143,7 @@ export const profileInput = z
   .strict();
 export type TaskInput = z.infer<typeof taskInput>;
 export type Task = TaskInput & {
+  is_example?: boolean;
   id: string;
   user_id: string;
   version: number;
@@ -154,6 +155,7 @@ export type Task = TaskInput & {
   recurrence_rule_id: string | null;
 };
 export type Project = z.infer<typeof projectInput> & {
+  is_example?: boolean;
   id: string;
   user_id: string;
   version: number;
@@ -162,6 +164,7 @@ export type Project = z.infer<typeof projectInput> & {
   archived_at: string | null;
 };
 export type Goal = z.infer<typeof goalInput> & {
+  is_example?: boolean;
   id: string;
   user_id: string;
   version: number;

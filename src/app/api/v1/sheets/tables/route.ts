@@ -167,9 +167,17 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .limit(5);
     dbError(tests.error);
+    const links = await db
+      .from("sheet_rest_project_links")
+      .select("project_id,dataset_id,row_id,field_key")
+      .eq("user_id", user.id)
+      .limit(501);
+    dbError(links.error);
+    if ((links.data?.length ?? 0) > 500)
+      throw new ApiError(422, "Project links require pagination.");
     if (!dataset)
       return NextResponse.json(
-        { datasets: sources.data, tests: tests.data },
+        { datasets: sources.data, tests: tests.data, links: links.data },
         { headers: { "Cache-Control": "no-store" } },
       );
     id.parse(dataset);
@@ -211,6 +219,7 @@ export async function GET(request: Request) {
     for (const r of [rows, ops, runs]) dbError(r.error);
     return NextResponse.json(
       {
+        links: links.data,
         datasets: sources.data,
         tests: tests.data,
         rows: rows.data!.slice(0, 100),

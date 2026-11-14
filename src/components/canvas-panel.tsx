@@ -15,7 +15,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   if (!r.ok) throw Error(d.error?.message ?? "Canvas request failed.");
   return d;
 }
-export function CanvasPanel() {
+export function CanvasPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const [state, setState] = useState<Status | null>(null),
     [token, setToken] = useState(""),
     [expiry, setExpiry] = useState(""),
@@ -60,7 +60,7 @@ export function CanvasPanel() {
         );
         count += d.processed;
         setMessage(
-          `${count} resource records checked. ${d.pending} pages/jobs ready to continue.`,
+          `${count} items checked. ${d.pending ? "More updates are waiting." : "Check complete."}`,
         );
         if (d.errors.length) {
           setError(d.errors.join(" "));
@@ -84,14 +84,16 @@ export function CanvasPanel() {
   return (
     <section className="panel settings-panel canvas-panel">
       <div className="academic-toolbar">
-        <h1>SFU Canvas</h1>
-        <Link className="text-link" href="/settings?section=integrations">
-          Settings
-        </Link>
+        {embedded ? <h3>Manage connection</h3> : <h1>SFU Canvas</h1>}
+        {!embedded && (
+          <Link className="text-link" href="/settings?section=integrations">
+            Settings
+          </Link>
+        )}
       </div>
       <p className="muted small">
-        Read-only academic synchronization. Canvas deadlines and grades stay
-        separate from study effort and mastery.
+        Your courses, deadlines and grades, connected. Life OS never changes
+        your Canvas records.
       </p>
       <p role="status">
         {state
@@ -110,7 +112,7 @@ export function CanvasPanel() {
             "America/Vancouver",
             "MMM d, yyyy h:mm a",
           )}{" "}
-          Vancouver (owner supplied).
+          Vancouver (the date you saved).
         </p>
       )}
       {state?.warning !== null && state?.warning !== undefined && (
@@ -121,14 +123,14 @@ export function CanvasPanel() {
         </p>
       )}
       <p className="form-hint">
-        Last successful resource sync:{" "}
+        Last updated:{" "}
         {state?.connection?.last_sync_at
           ? formatInTimeZone(
               state.connection.last_sync_at,
               "America/Vancouver",
               "MMM d, h:mm a",
             )
-          : "Not yet verified"}
+          : "Not updated yet"}
         . {state?.stale ? "Data may be stale." : ""}
       </p>
       <form
@@ -150,7 +152,7 @@ export function CanvasPanel() {
             });
             setToken("");
             setMessage(
-              "Canvas verified. Select Sync now to import authorized academic information.",
+              "Canvas connected. Select Sync now to bring in your courses.",
             );
             await reload();
           } catch (e) {
@@ -161,17 +163,20 @@ export function CanvasPanel() {
         }}
       >
         {state?.health && (
-          <p className="form-hint">
-            {state.health.academic_stale_count === 0
-              ? "Academic resources are within their refresh targets."
-              : `${state.health.academic_stale_count} academic resources need refresh.`}
-            {state.health.restricted_count > 0
-              ? ` ${state.health.restricted_count} resource listings are unavailable to this Canvas account; permitted module-linked sources can still sync.`
-              : ""}
-            {state.health.material_backlog_count > 0
-              ? ` ${state.health.material_backlog_count} material jobs are waiting for refresh.`
-              : ""}
-          </p>
+          <details className="metric-details">
+            <summary>Connection details</summary>
+            <p className="form-hint">
+              {state.health.academic_stale_count === 0
+                ? "Academic resources are within their refresh targets."
+                : `${state.health.academic_stale_count} academic resources need refresh.`}
+              {state.health.restricted_count > 0
+                ? ` ${state.health.restricted_count} resource listings are unavailable to this Canvas account; permitted module-linked sources can still sync.`
+                : ""}
+              {state.health.material_backlog_count > 0
+                ? ` ${state.health.material_backlog_count} material jobs are waiting for refresh.`
+                : ""}
+            </p>
+          </details>
         )}
         <label>
           Canvas access token
@@ -194,9 +199,8 @@ export function CanvasPanel() {
           />
         </label>
         <p className="form-hint">
-          Enter or replace your token here. It is encrypted on the server and
-          never shown again. Replacement preserves imported records. Never enter
-          it in chat.
+          Your token is stored securely and never shown again. Replacing it
+          keeps your courses and history. Keep it private; only enter it here.
         </p>
         <Button disabled={busy || !token || !expiry}>
           Verify and save token
@@ -299,12 +303,12 @@ export function CanvasPanel() {
       )}
       {pending > 0 && (
         <p role="status" className="small">
-          {pending} resource jobs still need to finish. Your saved records are
-          available; continue syncing without replacing the token.
+          More course updates are waiting. Your saved information is available.
+          Select Continue sync to finish; you don’t need a new token.
         </p>
       )}
       <details>
-        <summary>Synchronization status by resource</summary>
+        <summary>Detailed connection status</summary>
         {state?.resources.map((j) => (
           <p className="small" key={j.job_key}>
             {j.resource_type}:{" "}
@@ -431,5 +435,27 @@ function ConflictReview({
       )}
       {error && <span role="alert">{error}</span>}
     </span>
+  );
+}
+
+export function CanvasConnectionSettings({
+  initialOpen = false,
+}: {
+  initialOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(initialOpen);
+  return (
+    <details
+      id="canvas-connection"
+      className="panel settings-panel"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary>
+        <h2>SFU Canvas</h2>
+      </summary>
+      <p className="small muted">Courses, grades, deadlines and materials.</p>
+      {open && <CanvasPanel embedded />}
+    </details>
   );
 }

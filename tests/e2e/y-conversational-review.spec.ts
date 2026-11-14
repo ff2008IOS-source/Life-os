@@ -61,6 +61,10 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
   ).toBeVisible();
   await page.goto("/reviews");
   await page
+    .getByText("Change review week", { exact: true })
+    .filter({ visible: true })
+    .click();
+  await page
     .getByLabel("Review week starts", { exact: true })
     .filter({ visible: true })
     .fill("2026-10-19");

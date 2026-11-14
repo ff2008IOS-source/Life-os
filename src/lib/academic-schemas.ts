@@ -23,6 +23,8 @@ export const academicSchemas = {
         .enum(["unknown", "assessment_weights", "category_weights", "points"])
         .default("unknown"),
       source_id: id,
+      inventory_confirmed: z.boolean().default(false),
+      grading_rules_confirmed: z.boolean().default(false),
       verification_status: verification,
     })
     .strict(),
