@@ -66,6 +66,9 @@ test("synthetic reservation → actual completion → academic history and revie
     .filter({ visible: true })
     .first()
     .click();
+  await page
+    .getByRole("button", { name: "[TEST] Recorded academic work", exact: true })
+    .click();
   await page.getByRole("button", { name: "Prepare work", exact: true }).click();
   await page.getByLabel("Estimated preparation minutes").fill("60");
   await page
@@ -91,6 +94,7 @@ test("synthetic reservation → actual completion → academic history and revie
     .getByLabel("Linked study topic")
     .selectOption(topic.id);
   await page.getByRole("button", { name: "Save task", exact: true }).click();
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const task = (
     await (await page.request.get(`/api/v1/tasks/${taskId}`)).json()

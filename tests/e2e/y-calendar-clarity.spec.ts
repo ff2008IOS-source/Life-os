@@ -78,16 +78,26 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
   ).toBeVisible();
   await page.goto("/planner");
   const calendar = page.locator(".planner-calendar");
+  await calendar
+    .getByRole("button", { name: "Calendars", exact: true })
+    .click();
   await expect(
     calendar.getByRole("button", { name: "[TEST] SFU", exact: true }),
   ).toBeVisible();
   const work = calendar
     .locator(".time-event")
     .filter({ hasText: "[TEST] Linked work" });
-  await expect(work).toHaveAttribute(
-    "aria-label",
-    /Flexible work session.*Overlaps a busy entry/,
-  );
+  await expect(
+    calendar.getByRole("button", { name: /2 overlapping events/ }),
+  ).toBeVisible();
+  await calendar.getByRole("button", { name: /2 overlapping events/ }).click();
+  await expect(
+    page.getByRole("dialog").getByText("[TEST] Fixed lecture", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByText("[TEST] Linked work", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog" }).click();
   await calendar
     .getByRole("button", { name: "[TEST] SFU", exact: true })
     .click();
@@ -118,7 +128,7 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
     .filter({ hasText: "[TEST] Unlinked study session" })
     .click();
   await expect(
-    page.getByText("Read-only Google event", { exact: true }),
+    page.getByText("Calendar commitment", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Manage work session" }),

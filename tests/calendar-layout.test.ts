@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   groupCalendarEvents,
   layoutDay,
+  readableDay,
 } from "@/lib/integrations/calendar-layout";
 import { validCronSecret, runDailyWork } from "@/lib/integrations/daily-sync";
 import type { CalendarEvent } from "@/lib/integrations/calendar-view";
@@ -19,6 +20,30 @@ const event: CalendarEvent = {
   raw_metadata: {},
 };
 describe("compact calendar layout and daily worker limits", () => {
+  it("summarizes dense overlap groups without losing source identities", () => {
+    const input = [
+      event,
+      {
+        ...event,
+        id: "two",
+        title: "Second commitment",
+        start_at: "2026-11-06T16:30:00Z",
+        end_at: "2026-11-06T18:00:00Z",
+      },
+      {
+        ...event,
+        id: "later",
+        title: "Later commitment",
+        start_at: "2026-11-06T18:00:00Z",
+        end_at: "2026-11-06T19:00:00Z",
+      },
+    ];
+    const before = structuredClone(input);
+    const blocks = readableDay(groupCalendarEvents(input), "2026-11-06");
+    expect(blocks.map((b) => b.items.length)).toEqual([2, 1]);
+    expect(blocks[0].items.map((e) => e.id)).toEqual(["one", "two"]);
+    expect(input).toEqual(before);
+  });
   it("groups only matching display entries and retains every original source", () => {
     const second = { ...event, id: "two", calendar_id: "other" };
     const different = { ...event, id: "three", end_at: "2026-11-06T17:30:00Z" };

@@ -156,10 +156,11 @@ test("Sheets table controls preserve formulas, review conflicts and require expl
     headers: { Origin: "http://127.0.0.1:3000" },
   });
   await page.goto("/areas/career");
+  await page.getByText("Connected plan details", { exact: true }).click();
   const connected = page.getByRole("region", {
     name: "Connected career and project records",
   });
-  await connected.getByLabel("Choose a roadmap").selectOption(dataset);
+  await connected.getByLabel("Plan source").selectOption(dataset);
   await connected.getByText("test-row · pending", { exact: true }).click();
   await expect(
     connected.getByText("Calculated · Formula (read-only)", { exact: false }),

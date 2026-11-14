@@ -86,3 +86,37 @@ export function layoutDay(groups: EventGroup[], day: string) {
   finish();
   return items;
 }
+
+/** Dense overlap groups become one readable entry. This is a display model only. */
+export function readableDay(groups: EventGroup[], day: string) {
+  const items = layoutDay(groups, day);
+  const result: {
+    id: string;
+    start: number;
+    end: number;
+    items: typeof items;
+  }[] = [];
+  for (const item of items) {
+    const last = result.at(-1);
+    if (last && item.start < last.end) {
+      last.items.push(item);
+      last.end = Math.max(last.end, item.end);
+    } else
+      result.push({
+        id: item.id,
+        start: item.start,
+        end: item.end,
+        items: [item],
+      });
+  }
+  return result.flatMap((cluster) =>
+    cluster.items.some((item) => item.columns > 1)
+      ? [cluster]
+      : cluster.items.map((item) => ({
+          id: item.id,
+          start: item.start,
+          end: item.end,
+          items: [item],
+        })),
+  );
+}

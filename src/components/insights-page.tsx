@@ -1,4 +1,6 @@
 "use client";
+import { AcademicProgressSummary } from "./academic-progress-summary";
+import { visibleArea } from "@/lib/visible-areas";
 import { WeeklyInsights } from "./weekly-insights";
 import { realWorkspace } from "@/lib/real-workspace";
 import { WorkSessionsPanel } from "./work-sessions-panel";
@@ -80,6 +82,7 @@ export function InsightsPage() {
         start={start}
         end={format(addDays(new Date(end + "T12:00:00"), 1), "yyyy-MM-dd")}
       />
+      <AcademicProgressSummary />
       <WeeklyInsights />
       <div className="stats-grid">
         {[
@@ -107,16 +110,18 @@ export function InsightsPage() {
             note: "Occurrences within selected range",
             icon: ChartNoAxesCombined,
           },
-        ].map((s) => (
-          <section className="stat-card" key={s.label}>
-            <div className="stat-label">
-              {s.label}
-              <s.icon />
-            </div>
-            <strong className="stat-number">{s.value}</strong>
-            <span className="stat-note">{s.note}</span>
-          </section>
-        ))}
+        ]
+          .filter((s) => s.value > 0)
+          .map((s) => (
+            <section className="stat-card" key={s.label}>
+              <div className="stat-label">
+                {s.label}
+                <s.icon />
+              </div>
+              <strong className="stat-number">{s.value}</strong>
+              <span className="stat-note">{s.note}</span>
+            </section>
+          ))}
       </div>
       <div className="dashboard-grid">
         <section className="panel">
@@ -200,7 +205,7 @@ export function InsightsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.areas.map((a) => (
+                  {data.areas.filter(visibleArea).map((a) => (
                     <tr key={a.id}>
                       <td>{a.name}</td>
                       <td>
@@ -233,17 +238,6 @@ export function InsightsPage() {
             </p>
           </div>
         </section>
-      </div>
-      <div className="notice" style={{ marginTop: 22 }}>
-        <ChartNoAxesCombined />
-        <div>
-          <strong>Missing data stays missing</strong>
-          <p>
-            Academic performance, spending, habits, and calendar utilization
-            will appear only when relevant records are available. No estimates
-            are being substituted.
-          </p>
-        </div>
       </div>
     </>
   );

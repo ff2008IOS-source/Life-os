@@ -8,6 +8,8 @@ import {
 import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 type Deadline = {
+  earned_score: number | null;
+  maximum_score: number | null;
   canvas_id: string;
   course_canvas_id: string;
   submission_state: string;
@@ -21,6 +23,8 @@ type Deadline = {
   course_code: string | null;
 };
 export function CanvasDeadlines() {
+  const [search, setSearch] = useState("");
+  const [course, setCourse] = useState("");
   const [view, setView] = useState("upcoming"),
     [page, setPage] = useState(0),
     [loading, setLoading] = useState(true);
@@ -30,9 +34,12 @@ export function CanvasDeadlines() {
     [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    void fetch(`/api/canvas/deadlines?view=${view}&page=${page}`, {
-      cache: "no-store",
-    })
+    void fetch(
+      `/api/canvas/deadlines?view=${view}&page=${page}&search=${encodeURIComponent(search)}&course=${encodeURIComponent(course)}`,
+      {
+        cache: "no-store",
+      },
+    )
       .then(async (r) => {
         const d = await r.json();
         if (!r.ok)
@@ -54,14 +61,38 @@ export function CanvasDeadlines() {
     return () => {
       active = false;
     };
-  }, [view, page]);
+  }, [view, page, search, course]);
   return (
     <section className="panel settings-panel">
       <h2>Canvas deadlines</h2>
-      <p className="form-hint">
-        Academic deadlines stay separate from study sessions. Upcoming shows the
-        next 30 days. A grade alone does not confirm submission.
-      </p>
+      <p className="form-hint">Your assessments at a glance.</p>
+      <div className="record-search">
+        <label>
+          Find a deadline
+          <input
+            type="search"
+            value={search}
+            placeholder="Search assignments…"
+            onChange={(e) => {
+              setLoading(true);
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+          />
+        </label>
+        <label>
+          Course code
+          <input
+            value={course}
+            placeholder="All courses"
+            onChange={(e) => {
+              setLoading(true);
+              setCourse(e.target.value);
+              setPage(0);
+            }}
+          />
+        </label>
+      </div>
       <div className="career-import-actions" aria-label="Canvas deadline views">
         {[
           ["upcoming", "Upcoming"],
@@ -101,25 +132,50 @@ export function CanvasDeadlines() {
       {!loading &&
         !error &&
         records.map((r) => (
-          <div className="setting-line" key={r.canvas_id}>
+          <div className="setting-line deadline-record" key={r.canvas_id}>
             <div style={{ minWidth: 0, overflowWrap: "anywhere" }}>
               <strong>
                 {r.course_code ? `${r.course_code} · ` : ""}
                 {r.title}
               </strong>
-              <p>
-                {formatInTimeZone(
-                  r.due_at,
-                  "America/Vancouver",
-                  "MMM d, h:mm a",
-                )}{" "}
-                Vancouver{r.conflict ? " · Reconciliation needed" : ""}
-                {" · "}
-                {deadlineStatusLabel(
-                  r.submission_state,
-                  Date.parse(r.due_at) < now,
-                )}
-                {r.late ? " · Late" : ""}
+              <div className="deadline-facts">
+                <div>
+                  <span className="small muted">Due</span>
+                  <p>
+                    {formatInTimeZone(
+                      r.due_at,
+                      "America/Vancouver",
+                      "MMM d, h:mm a",
+                    )}{" "}
+                    Vancouver
+                  </p>
+                </div>
+                <div>
+                  <span className="small muted">Submission</span>
+                  <p>
+                    {deadlineStatusLabel(
+                      r.submission_state,
+                      Date.parse(r.due_at) < now,
+                    )}
+                    {r.late ? " · Late" : ""}
+                  </p>
+                </div>
+                <div>
+                  <span className="small muted">Result</span>
+                  <p>
+                    {typeof r.earned_score === "number" &&
+                    typeof r.maximum_score === "number"
+                      ? `${r.earned_score} / ${r.maximum_score}`
+                      : r.submission_state === "submitted"
+                        ? "Awaiting grade"
+                        : r.submission_state === "graded"
+                          ? "View in Canvas"
+                          : "Not recorded"}
+                  </p>
+                </div>
+              </div>
+              <p className="small muted">
+                {r.conflict ? "Source details need review. " : ""}
                 {now - Date.parse(r.synced_at) > 2 * 3600000 ||
                 !r.submission_synced_at ||
                 now - Date.parse(r.submission_synced_at) > 2 * 3600000

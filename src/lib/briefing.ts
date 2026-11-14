@@ -475,6 +475,8 @@ export function buildBriefing(input: BriefingInput) {
   for (const p of w.projects.filter(
     (p) =>
       p.status === "active" &&
+      !p.deleted_at &&
+      !p.archived_at &&
       nowMs - Date.parse(p.updated_at) > s.stalled_days * 86400000,
   ))
     add(
@@ -709,7 +711,7 @@ export function buildBriefing(input: BriefingInput) {
       conflicts: weekConflicts.slice(0, 8),
       conflict_count: weekConflicts.length,
       projects: w.projects
-        .filter((p) => p.status === "active")
+        .filter((p) => p.status === "active" && !p.deleted_at && !p.archived_at)
         .slice(0, 8)
         .map((p) => ({ id: p.id, name: p.name, target_date: p.target_date })),
       roadmap: w.milestones

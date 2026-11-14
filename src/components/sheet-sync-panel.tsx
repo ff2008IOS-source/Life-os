@@ -1,4 +1,5 @@
 "use client";
+import { availableProject } from "@/lib/visible-areas";
 import { useState, useEffect } from "react";
 import { calendarRequest } from "./use-calendar";
 import { useWorkspace } from "./workspace-provider";
@@ -347,7 +348,7 @@ export function SheetSyncPanel() {
               Life OS project
               <select name="project" required defaultValue="">
                 <option value="">Choose project</option>
-                {data.projects.map((p) => (
+                {data.projects.filter(availableProject).map((p) => (
                   <option value={p.id} key={p.id}>
                     {p.name}
                   </option>

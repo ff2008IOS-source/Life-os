@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 test("core screens and task form have no automated WCAG A/AA violations", async ({
   page,
 }) => {
+  test.setTimeout(90000); // Multiple complete-page WCAG scans, not a single interaction.
   await page.goto("/login");
   expect(
     (

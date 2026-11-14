@@ -1,4 +1,5 @@
 "use client";
+import { visibleArea, availableProject } from "@/lib/visible-areas";
 import { formatInTimeZone } from "date-fns-tz";
 import { vancouverInputInstant } from "@/lib/local-time-input";
 import { RecurrenceEditor } from "./recurrence-editor";
@@ -182,11 +183,16 @@ export function TaskEditor({
               defaultValue={task?.area_id ?? defaultArea ?? ""}
             >
               <option value="">No area</option>
-              {data.areas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
+              {data.areas
+                .filter(
+                  (a) =>
+                    visibleArea(a) || a.id === (task?.area_id ?? defaultArea),
+                )
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
             </select>
           </label>
           <label>
@@ -194,7 +200,7 @@ export function TaskEditor({
             <select name="project_id" defaultValue={task?.project_id ?? ""}>
               <option value="">No project</option>
               {data.projects
-                .filter((p) => !p.archived_at)
+                .filter((p) => availableProject(p) || p.id === task?.project_id)
                 .map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}

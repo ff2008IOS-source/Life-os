@@ -103,6 +103,8 @@ export async function POST(request: Request) {
         .update({ automation_enabled: true })
         .eq("user_id", user.id)
         .eq("status", "active")
+        .is("deleted_at", null)
+        .is("archived_at", null)
         .not("source_id", "is", null);
       dbError(projects.error);
     }

@@ -15,7 +15,7 @@ import { Modal } from "./dialog";
 import { eventOnDate, eventTimeLabel } from "@/lib/integrations/calendar-view";
 import {
   groupCalendarEvents,
-  layoutDay,
+  readableDay,
   type EventGroup,
 } from "@/lib/integrations/calendar-layout";
 import {
@@ -53,9 +53,20 @@ export function PlannerCalendar({
     [details, setDetails] = useState<EventGroup | null>(null),
     [dayDetail, setDayDetail] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const restored = useRef("");
   useEffect(() => {
-    if (scroller.current) scroller.current.scrollTop = 7 * 36;
-  }, [view]);
+    if (!data || !scroller.current || restored.current === view) return;
+    restored.current = view;
+    let saved = 7 * 36;
+    try {
+      const raw = localStorage.getItem(`lifeos:v1:calendar-scroll:${view}`);
+      if (raw !== null && Number.isFinite(Number(raw)))
+        saved = Math.max(0, Math.min(864, Number(raw)));
+    } catch {
+      /* Private browsing may disable storage. */
+    }
+    scroller.current.scrollTop = saved;
+  }, [view, data]);
   const calendars = data?.calendars.filter((c) => c.sync_enabled) ?? [];
   const allGroups = groupCalendarEvents(events, group);
   const groups = groupCalendarEvents(
@@ -185,7 +196,7 @@ export function PlannerCalendar({
           </Button>
         </div>
       </div>
-      {!!calendars.length && (
+      {filters && !!calendars.length && (
         <div className="calendar-source-legend" aria-label="Calendar sources">
           {calendars.map((c) => (
             <button
@@ -239,8 +250,8 @@ export function PlannerCalendar({
       {filters && (
         <div className="calendar-filter-panel">
           <p className="small muted">
-            Display filters only. Hidden commitments still constrain scheduling.
-            Conflicts also consider calendars you’ve hidden.
+            Choose the calendars you want to see. Hidden events still protect
+            your time.
           </p>
           <label className="inline-check">
             <input
@@ -398,7 +409,11 @@ export function PlannerCalendar({
                 <button
                   key={d.toISOString()}
                   className={`time-day-heading ${format(d, "yyyy-MM-dd") === selectedDay ? "selected-mobile" : ""} ${format(d, "yyyy-MM-dd") === localDate() ? "is-today" : ""}`}
-                  onClick={() => onDay(d)}
+                  onClick={() => {
+                    onDay(d);
+                    setDayDetail(format(d, "yyyy-MM-dd"));
+                  }}
+                  aria-label={`Open schedule for ${format(d, "EEEE, MMMM d")}`}
                 >
                   <span>{format(d, "EEE")}</span>
                   <strong>{format(d, "d")}</strong>
@@ -444,6 +459,16 @@ export function PlannerCalendar({
             <div
               className="time-grid-scroll"
               ref={scroller}
+              onScroll={(e) => {
+                try {
+                  localStorage.setItem(
+                    `lifeos:v1:calendar-scroll:${view}`,
+                    String(e.currentTarget.scrollTop),
+                  );
+                } catch {
+                  /* Optional display preference. */
+                }
+              }}
               tabIndex={0}
               aria-label="Calendar time grid"
             >
@@ -469,42 +494,69 @@ export function PlannerCalendar({
                       key={day}
                       className={`time-day-column ${day === selectedDay ? "selected-mobile" : ""} ${day === localDate() ? "is-today" : ""}`}
                     >
-                      {layoutDay(groups, day).map((g) => (
-                        <button
-                          key={g.id}
-                          className={`time-event ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
-                          aria-label={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((s) => name(s.calendar_id)).join(", ")}${overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
-                          onClick={() => {
-                            setDayDetail(null);
-                            setDetails(g);
-                          }}
-                          title={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)}${overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
-                          style={{
-                            top: g.start * 0.6,
-                            height: Math.max(20, (g.end - g.start) * 0.6 - 2),
-                            left: `calc(${(g.column / g.columns) * 100}% + 2px)`,
-                            width: `calc(${100 / g.columns}% - 4px)`,
-                            borderLeftColor: color(g),
-                            background: `color-mix(in srgb, ${color(g)} 17%, var(--surface))`,
-                          }}
-                        >
-                          {overlaps.has(g.id) && (
-                            <AlertTriangle
-                              size={12}
-                              className="calendar-overlap-icon"
-                              aria-label="Overlaps a busy entry"
-                            />
-                          )}
-                          <strong>{g.event.title || "Untitled event"}</strong>
-                          <small>
-                            {g.event.work_session ? "Work · " : ""}
-                            {eventTimeLabel(g.event)}
-                            {g.sources.length > 1
-                              ? ` · ${g.sources.length} calendars`
-                              : ""}
-                          </small>
-                        </button>
-                      ))}
+                      {readableDay(groups, day).map((cluster) => {
+                        const g = cluster.items[0];
+                        const crowded = cluster.items.length > 1;
+                        return (
+                          <button
+                            key={cluster.id}
+                            className={`time-event ${crowded ? "calendar-overlap-group" : ""} ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
+                            aria-label={
+                              crowded
+                                ? `${cluster.items.length} overlapping events on ${day}. Open full schedule`
+                                : `${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((s) => name(s.calendar_id)).join(", ")}${overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`
+                            }
+                            onClick={() => {
+                              if (crowded) {
+                                setDetails(null);
+                                setDayDetail(day);
+                              } else {
+                                setDayDetail(null);
+                                setDetails(g);
+                              }
+                            }}
+                            title={cluster.items
+                              .map(
+                                (item) =>
+                                  `${item.event.title} · ${eventTimeLabel(item.event)}`,
+                              )
+                              .join("\n")}
+                            style={{
+                              top: cluster.start * 0.6,
+                              height: Math.max(
+                                24,
+                                (cluster.end - cluster.start) * 0.6 - 2,
+                              ),
+                              left: 2,
+                              width: "calc(100% - 4px)",
+                              borderLeftColor: color(g),
+                              background: `color-mix(in srgb, ${color(g)} 17%, var(--surface))`,
+                            }}
+                          >
+                            {(crowded || overlaps.has(g.id)) && (
+                              <AlertTriangle
+                                size={12}
+                                className="calendar-overlap-icon"
+                                aria-label="Overlaps a busy entry"
+                              />
+                            )}
+                            <strong>
+                              {crowded
+                                ? `${cluster.items.length} overlapping events`
+                                : g.event.title || "Untitled event"}
+                            </strong>
+                            <small>
+                              {crowded
+                                ? cluster.items
+                                    .slice(0, 2)
+                                    .map((item) => item.event.title)
+                                    .join(" · ")
+                                : eventTimeLabel(g.event)}
+                            </small>
+                            {crowded && <small>View full schedule →</small>}
+                          </button>
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -514,10 +566,7 @@ export function PlannerCalendar({
         </>
       )}
       <div className="calendar-footnote">
-        <span>
-          Imported commitments stay protected · Task deadlines don’t reserve
-          time
-        </span>
+        <span>Tap a day for its full schedule</span>
         <Link href="/settings?section=integrations">Sync settings</Link>
       </div>
       {details && (
@@ -529,15 +578,15 @@ export function PlannerCalendar({
           }}
           description={
             details.event.work_session
-              ? "Linked Life OS reservation. Changes use the existing session controls and provider checks."
-              : "Imported commitment. Life OS keeps this source event protected."
+              ? "Your scheduled work session."
+              : "From your connected calendar."
           }
         >
           <div className="event-detail">
             <span className="badge">
               {details.event.work_session
                 ? calendarKindLabel(details.event)
-                : "Read-only Google event"}
+                : "Calendar commitment"}
             </span>
             {details.event.work_session && (
               <>

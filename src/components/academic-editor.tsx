@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "./date-field";
 import { ZodError } from "zod";
 import { useState } from "react";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
@@ -305,6 +306,15 @@ export function AcademicEditor({
                     ],
                 )
             : field.options;
+          if (field.type === "date")
+            return (
+              <DateField
+                key={field.key}
+                name={field.key}
+                label={field.label}
+                defaultValue={initial == null ? "" : String(initial)}
+              />
+            );
           return (
             <label
               key={field.key}

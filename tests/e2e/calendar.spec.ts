@@ -111,7 +111,7 @@ test("read-only calendar controls select, sync and show a cached recurring insta
   await page.getByRole("button", { name: /\[TEST\] Study session/ }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
-    page.getByText("Read-only Google event", { exact: true }),
+    page.getByText("Calendar commitment", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("All day", { exact: true }).last()).toBeVisible();
 

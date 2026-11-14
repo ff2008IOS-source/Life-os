@@ -1,4 +1,5 @@
 "use client";
+import { availableProject } from "@/lib/visible-areas";
 import { useEffect, useState, useRef } from "react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
@@ -684,7 +685,7 @@ export function SheetRestPanel() {
                   <label>
                     Existing project
                     <select name="project" required>
-                      {workspace.projects.map((p) => (
+                      {workspace.projects.filter(availableProject).map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name} · {p.status}
                         </option>

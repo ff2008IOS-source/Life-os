@@ -162,6 +162,7 @@ export type Project = z.infer<typeof projectInput> & {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
+  deleted_at?: string | null;
 };
 export type Goal = z.infer<typeof goalInput> & {
   is_example?: boolean;

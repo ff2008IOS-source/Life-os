@@ -53,11 +53,17 @@ export function WorkSessionsPanel({
           {state ? `${state.summary.session_count} recorded` : "Loading…"}
         </span>
       </div>
-      {state && (
+      {state && state.summary.session_count > 0 && (
         <p className="small muted">
           {state.summary.actual_minutes} minutes logged ·{" "}
           {state.summary.academic_minutes} academic minutes ·{" "}
           {state.summary.tasks_completed} tasks marked complete
+        </p>
+      )}
+      {state && state.summary.session_count === 0 && (
+        <p className="small muted">
+          No work sessions logged for this period. Your completed sessions will
+          appear here.
         </p>
       )}
       <details className="metric-details">

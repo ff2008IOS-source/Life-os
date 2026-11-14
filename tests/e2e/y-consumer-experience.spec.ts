@@ -188,16 +188,24 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
   await expect(
     page.locator(`#assessment-${assessment.id}`).filter({ visible: true }),
   ).toContainText(assessment.title);
+  await page
+    .locator(`#assessment-${assessment.id}`)
+    .filter({ visible: true })
+    .getByRole("button", { name: assessment.title, exact: true })
+    .click();
   await expect(
     page
-      .locator(`#assessment-${assessment.id}`)
-      .filter({ visible: true })
+      .getByRole("dialog")
       .getByRole("button", { name: "Prepare work", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await expect(
     page.locator(`#assessment-${assessment.id}`).filter({ visible: true }),
   ).toHaveClass(/assessment-highlight/);
   await expect(
-    page.locator(".academic-record-row").filter({ visible: true }).first(),
+    page
+      .locator(".assessment-table tbody tr")
+      .filter({ visible: true })
+      .first(),
   ).toContainText(assessment.title);
 });
