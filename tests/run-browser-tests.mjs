@@ -8,6 +8,7 @@ const result = spawnSync(
     stdio: "inherit",
     env: {
       ...process.env,
+      LIFE_OS_TEST_CLOCK_ORIGIN: String(Date.now()),
       NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import=${preload}`]
         .filter(Boolean)
         .join(" "),
