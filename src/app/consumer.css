@@ -96,7 +96,7 @@ summary:focus-visible {
   letter-spacing: -0.8px;
 }
 .sidebar .logo {
-  background: linear-gradient(145deg, #377d71, #173c41);
+  background: linear-gradient(145deg, #596bc8, #202b57);
   box-shadow: 0 4px 12px #1b574124;
   border-radius: 11px;
 }
@@ -285,9 +285,9 @@ summary:focus-visible {
   background: #14383a;
 }
 .focus-card .button-primary {
-  background: #d6f2b9;
-  color: #173b31;
-  border-color: #d6f2b9;
+  background: #c7d2fe;
+  color: #202b57;
+  border-color: #c7d2fe;
   box-shadow: none;
 }
 .focus-card .button-primary:hover {
@@ -312,7 +312,7 @@ summary:focus-visible {
   gap: 8px;
 }
 .focus-card .text-link {
-  color: #d6f2b9;
+  color: #c7d2fe;
 }
 .focus-explanation {
   font-size: 12px;
@@ -347,7 +347,7 @@ summary:focus-visible {
   display: inline-flex;
   gap: 5px;
   align-items: center;
-  color: #d6f2b9;
+  color: #c7d2fe;
 }
 .focus-card:has(.focus-explanation[open]) .focus-art {
   opacity: 0.3;
@@ -415,8 +415,8 @@ summary:focus-visible {
 .review-banner {
   border-radius: 18px;
   padding: 24px;
-  background: #e8eddf;
-  border: 1px solid #dce3ce;
+  background: #e9edff;
+  border: 1px solid #cdd5f0;
 }
 .review-banner h2 {
   font-size: 19px;
@@ -426,8 +426,8 @@ summary:focus-visible {
   font-size: 12px;
 }
 .dark .review-banner {
-  background: #263c33;
-  border-color: #3a5144;
+  background: #202c4a;
+  border-color: #475978;
 }
 .goal-row h3 {
   font-size: 14px;
@@ -485,7 +485,7 @@ summary:focus-visible {
 }
 
 .button-primary:hover {
-  background: #1c594f;
+  background: #404cae;
 }
 .dark .button-primary {
   background: #b9c5ff;
@@ -495,8 +495,8 @@ summary:focus-visible {
   background: #cad3ff;
 }
 .dark .focus-card .button-primary {
-  background: #d6f2b9;
-  color: #173b31;
+  background: #c7d2fe;
+  color: #202b57;
 }
 .metric-details {
   margin-block: 10px;
@@ -679,7 +679,7 @@ summary:focus-visible {
     var(--sidebar);
 }
 .login-story .logo {
-  background: linear-gradient(145deg, #377d71, #173c41);
+  background: linear-gradient(145deg, #596bc8, #202b57);
   border-radius: 11px;
 }
 
