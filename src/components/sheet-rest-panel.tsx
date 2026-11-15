@@ -155,7 +155,7 @@ export function SheetRestPanel() {
       setNotice(
         body.action === "sync"
           ? result.conflicts || result.held_outbound
-            ? "Updated. Some changes need review."
+            ? "Updated. Some changes are pending or need review."
             : "Table synced."
           : "Changes saved.",
       );
@@ -182,7 +182,7 @@ export function SheetRestPanel() {
           AbortSignal.timeout(20000),
         ]),
       });
-      setState(current);
+      setState((old) => ({ ...old, ...current }));
       const results = await syncAllTables(
         current.datasets,
         (id) =>

@@ -11,7 +11,11 @@ it("syncs every active personal table once, skips paused/tests, continues after 
   }));
   const sync = vi.fn(async (id: string) => {
     if (id === "b") throw Error("Google authorization needs renewal");
-    return { conflicts: id === "c" ? 1 : 0, confirmed: 0 };
+    return {
+      conflicts: id === "c" ? 1 : 0,
+      confirmed: 0,
+      held_outbound: id === "d",
+    };
   });
   const snapshots: BatchResult[][] = [];
   const results = await syncAllTables(
@@ -28,7 +32,7 @@ it("syncs every active personal table once, skips paused/tests, continues after 
     "synced",
     "failed",
     "attention",
-    "synced",
+    "attention",
   ]);
   expect(results[1].message).toContain("authorization");
   expect(snapshots[0].every((r) => r.status === "waiting")).toBe(true);

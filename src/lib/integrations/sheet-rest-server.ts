@@ -323,7 +323,14 @@ export async function synchronizeDataset(user: string, id: string) {
       .select("id")
       .eq("user_id", user)
       .eq("dataset_id", id)
-      .in("status", ["conflict", "failed", "unknown"])
+      .in("status", [
+        "draft",
+        "approved",
+        "writing",
+        "conflict",
+        "failed",
+        "unknown",
+      ])
       .limit(1);
     dbError(blocked.error);
     held = Math.max(held, blocked.data?.length ?? 0);

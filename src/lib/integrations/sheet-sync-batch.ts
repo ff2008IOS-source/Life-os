@@ -36,7 +36,7 @@ export async function syncAllTables(
       result.status =
         value.conflicts || value.held_outbound ? "attention" : "synced";
       if (result.status === "attention")
-        result.message = "Updated; some changes need review.";
+        result.message = "Updated; some changes are pending or need review.";
     } catch (e) {
       result.status = "failed";
       result.message =
