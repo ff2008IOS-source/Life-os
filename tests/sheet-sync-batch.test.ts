@@ -37,7 +37,7 @@ it("stops before starting another table when cancelled; never retries a timed-ou
   let cancelled = false;
   const sync = vi.fn(async () => {
     cancelled = true;
-    throw Error("Timed out; result unknown");
+    throw new DOMException("Timed out", "TimeoutError");
   });
   const results = await syncAllTables(
     ["a", "b"].map((id) => ({ id, title: id, mode: "two_way" })),
@@ -46,5 +46,6 @@ it("stops before starting another table when cancelled; never retries a timed-ou
     () => cancelled,
   );
   expect(sync).toHaveBeenCalledTimes(1);
+  expect(results[0].message).toContain("before retrying");
   expect(results.map((r) => r.status)).toEqual(["failed", "waiting"]);
 });

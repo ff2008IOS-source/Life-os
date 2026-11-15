@@ -64,7 +64,7 @@ test("Sync all skips paused/test tables, continues on failure and displays hones
   expect(calls).toEqual(["1", "2", "3"]);
   const results = panel.getByRole("region", { name: "Sync all results" });
   await expect(results.getByText("Synced", { exact: true })).toBeVisible();
-  await expect(results).toContainText("Could not sync");
+  await expect(results).toContainText("Sync not confirmed");
   await expect(results).toContainText("Needs review");
   await panel.getByRole("button", { name: "Sync all", exact: true }).click();
   await expect(

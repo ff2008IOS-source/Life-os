@@ -302,7 +302,7 @@ export function SheetRestPanel() {
                     syncing: "Syncing…",
                     synced: "Synced",
                     attention: "Needs review",
-                    failed: "Could not sync",
+                    failed: "Sync not confirmed",
                   }[r.status]
                 }
                 {r.message ? ` · ${r.message}` : ""}

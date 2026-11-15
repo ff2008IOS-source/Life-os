@@ -40,9 +40,11 @@ export async function syncAllTables(
     } catch (e) {
       result.status = "failed";
       result.message =
-        e instanceof Error
-          ? e.message
-          : "Could not sync. Check this table and try again.";
+        e instanceof Error && ["TimeoutError", "AbortError"].includes(e.name)
+          ? "The request ended before its result was confirmed. Check this table’s sync history before retrying."
+          : e instanceof Error
+            ? e.message
+            : "Could not confirm this sync. Check this table’s history.";
     }
     publish();
   }
