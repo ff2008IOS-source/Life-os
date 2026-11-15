@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { schedule, DEFAULT_POLICY } from "../../src/lib/scheduler";
@@ -112,10 +112,43 @@ test("synthetic reservation → actual completion → academic history and revie
     },
   );
   expect((await replayPreparation.json()).task_id).toBe(task.id);
-  const review = await create("reviews", {
-    period_start: "2026-11-30",
-    period_end: "2026-12-06",
-  });
+  // Work against the current Sunday review, preserving any earlier synthetic reflection.
+  const existingReview = (
+    await (await page.request.get("/api/v1/reviews")).json()
+  ).data.find((r: { period_start: string }) => r.period_start === "2026-11-09");
+  let review;
+  if (existingReview) {
+    const response = await page.request.patch(
+      `/api/v1/reviews/${existingReview.id}`,
+      {
+        headers: { Origin: "http://127.0.0.1:3000" },
+        data: {
+          version: existingReview.version,
+          data: {
+            period_start: "2026-11-09",
+            period_end: "2026-11-15",
+            completed_at: null,
+            ...Object.fromEntries(
+              [
+                "achievements",
+                "obstacles",
+                "missed_commitments",
+                "decisions",
+                "priorities",
+                "conversation_summary",
+              ].map((k) => [k, existingReview[k] ?? ""]),
+            ),
+          },
+        },
+      },
+    );
+    expect(response.status(), await response.text()).toBe(200);
+    review = (await response.json()).data;
+  } else
+    review = await create("reviews", {
+      period_start: "2026-11-09",
+      period_end: "2026-11-15",
+    });
   const approval = await page.request.post("/api/v1/reviews/context", {
     headers: { Origin: "http://127.0.0.1:3000" },
     data: {

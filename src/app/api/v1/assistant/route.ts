@@ -1,3 +1,4 @@
+import { requireSundayReview } from "@/lib/review-access";
 import {
   reviewContext,
   savedReviewContext,
@@ -169,6 +170,7 @@ export async function POST(request: Request) {
         422,
         "AI is available inside the weekly review. Saved history remains in your archive.",
       );
+    await requireSundayReview(db, user.id);
     if (new TextEncoder().encode(x.question).length > 1500)
       throw new ApiError(422, "Keep this request within 1,500 UTF-8 bytes.");
     if (!process.env.GROQ_API_KEY)
@@ -178,6 +180,20 @@ export async function POST(request: Request) {
       );
     let reviewSources: AssistantSource[] = [];
     if (x.review_id) {
+      const selectedReview = await db
+        .from("reviews")
+        .select("period_start,period_end")
+        .eq("user_id", user.id)
+        .eq("id", x.review_id)
+        .maybeSingle();
+      dbError(selectedReview.error);
+      if (!selectedReview.data) throw new ApiError(404, "Review not found.");
+      await requireSundayReview(
+        db,
+        user.id,
+        selectedReview.data.period_start,
+        selectedReview.data.period_end,
+      );
       reviewSources = await reviewContext(db, user.id, x.review_id);
       const linked = await serverAdmin().rpc("ensure_review_chat", {
         p_user: user.id,
@@ -225,15 +241,17 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(6);
     dbError(history.error);
-    sources.push(
-      ...(await assistantAcademicContext(
-        db,
-        user.id,
-        x.question,
-        (history.data ?? []).map((e) => e.question).join("\n"),
-        x.course_canvas_id,
-      )),
-    );
+    // Weekly reviews use verified review facts; do not start document extraction on a conversational reply.
+    if (!x.review_id)
+      sources.push(
+        ...(await assistantAcademicContext(
+          db,
+          user.id,
+          x.question,
+          (history.data ?? []).map((e) => e.question).join("\n"),
+          x.course_canvas_id,
+        )),
+      );
     for (const exchange of [...(history.data ?? [])].slice(0, 2).reverse())
       sources.push({
         id: `history:${exchange.id}`,
@@ -260,6 +278,8 @@ export async function POST(request: Request) {
         .select("id,name,status,target_date")
         .eq("user_id", user.id)
         .eq("status", "active")
+        .is("deleted_at", null)
+        .is("archived_at", null)
         .limit(8),
       db
         .from("goals")
@@ -296,9 +316,16 @@ export async function POST(request: Request) {
       : x.question;
     const ordered = x.review_id
       ? [
-          reviewSources[0],
-          ...sources.filter((s) => s.id.startsWith("history:")).reverse(),
-          ...reviewSources.slice(1),
+          ...["review:week", "review:areas", "review:evidence"].flatMap((id) =>
+            reviewSources.filter((s) => s.id === id),
+          ),
+          ...sources.filter((s) => s.id.startsWith("history:")).slice(0, 1),
+          ...reviewSources.filter(
+            (s) =>
+              !["review:week", "review:areas", "review:evidence"].includes(
+                s.id,
+              ),
+          ),
           ...sources.filter((s) => !s.id.startsWith("history:")),
         ]
       : prioritizeAssistantSources(contextQuestion, sources);

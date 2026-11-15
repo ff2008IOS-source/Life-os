@@ -1,3 +1,4 @@
+import { sheetSyncDiagnostic } from "./sheet-sync-diagnostic";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { ApiError } from "../auth";
@@ -359,14 +360,13 @@ export async function synchronizeDataset(user: string, id: string) {
     };
   } catch (e) {
     const known = e instanceof SheetsRestError;
-    const message = known
-      ? e.message
-      : "Spreadsheet structure, permissions or concurrent edits need review. No unconfirmed write was marked successful.";
+    const diagnostic = sheetSyncDiagnostic(e);
+    const message = diagnostic.message;
     await db
       .from("sheet_rest_datasets")
       .update({
         last_error: message,
-        last_error_code: known ? e.code : "REVIEW_REQUIRED",
+        last_error_code: diagnostic.code,
         attempts: d.attempts + 1,
         next_sync_at: new Date(
           Date.now() +
@@ -390,7 +390,7 @@ export async function synchronizeDataset(user: string, id: string) {
     throw new ApiError(
       known && e.code === "PERMISSION" ? 403 : 409,
       message,
-      known ? e.code : "SHEETS_REVIEW_REQUIRED",
+      diagnostic.code,
     );
   } finally {
     await db

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 test("deterministic briefing saves check-ins, performs approved task actions and keeps AI out of the daily flow", async ({
   page,

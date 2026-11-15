@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 test("chat finds context automatically, keeps follow-ups in one conversation and resumes history", async ({
   page,
@@ -73,14 +73,6 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
   ).toBeVisible();
   await page.goto("/reviews");
   await page
-    .getByText("Change review week", { exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByLabel("Review week starts", { exact: true })
-    .filter({ visible: true })
-    .fill("2026-10-05");
-  await page
     .getByRole("button", { name: "Start weekly conversation", exact: true })
     .click();
   await expect(page.getByLabel("First review question")).toBeVisible();
@@ -97,7 +89,7 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
   await page.getByLabel("Your response").press("Enter");
   await expect(page.getByLabel("Assistant reply")).toHaveCount(2);
   await page.reload();
-  await page.getByRole("button", { name: /Resume week of Oct 5/ }).click();
+  await page.getByRole("button", { name: /Resume week of Nov 9/ }).click();
   await expect(page.getByLabel("Assistant reply")).toHaveCount(2);
   await expect(page.getByLabel("Your message").first()).toContainText(
     "What's on my next exam?",
@@ -130,7 +122,7 @@ test("chat finds context automatically, keeps follow-ups in one conversation and
       error: null,
     });
   await page.reload();
-  await page.getByRole("button", { name: /Resume week of Oct 5/ }).click();
+  await page.getByRole("button", { name: /Resume week of Nov 9/ }).click();
   await expect(page.getByLabel("Assistant reply")).toHaveCount(12);
   await page.getByRole("log", { name: "Messages" }).evaluate((element) => {
     element.scrollTop = 0;

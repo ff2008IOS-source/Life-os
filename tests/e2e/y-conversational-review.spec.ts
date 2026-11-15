@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 test("weekly conversation resumes, keeps approved reflection separate and drafts tasks only on request", async ({
   page,
@@ -60,14 +60,6 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
     page.getByRole("heading", { name: "Next best action", exact: true }),
   ).toBeVisible();
   await page.goto("/reviews");
-  await page
-    .getByText("Change review week", { exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByLabel("Review week starts", { exact: true })
-    .filter({ visible: true })
-    .fill("2026-10-19");
   await page.getByRole("button", { name: "Start weekly conversation" }).click();
   await page
     .getByLabel("Your response")
@@ -77,7 +69,7 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
     "What got in the way",
   );
   await page.reload();
-  await page.getByRole("button", { name: /Resume week of Oct 19/ }).click();
+  await page.getByRole("button", { name: /Resume week of Nov 9/ }).click();
   await expect(page.getByLabel("Assistant reply")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Use latest reply as a draft summary" })
@@ -134,7 +126,7 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await page.reload();
-  await page.getByRole("button", { name: /Resume week of Oct 19/ }).click();
+  await page.getByRole("button", { name: /Resume week of Nov 9/ }).click();
   await expect(
     page
       .getByLabel("Review summary", { exact: true })

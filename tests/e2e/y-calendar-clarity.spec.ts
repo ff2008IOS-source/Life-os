@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { fromZonedTime } from "date-fns-tz";
 test("calendar distinguishes confirmed work sessions, keeps hidden commitments protected and opens session controls", async ({
   page,

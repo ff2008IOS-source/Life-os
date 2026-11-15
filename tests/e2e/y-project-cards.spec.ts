@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("long import notes stay inside concise project cards on iPad and iPhone", async ({
   page,
 }) => {

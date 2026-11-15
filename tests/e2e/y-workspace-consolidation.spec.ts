@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 
 test("one daily workspace preserves old links, saves planning boundaries safely and scopes materials to the mapped course", async ({

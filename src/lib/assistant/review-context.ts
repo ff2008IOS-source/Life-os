@@ -1,11 +1,11 @@
+import { assessmentTiming } from "../temporal-context";
 import "server-only";
 import { reviewCommitments } from "../review-commitments";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays, format } from "date-fns";
-import { fromZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { dbError } from "../http";
 import { ApiError } from "../auth";
-import { localDate } from "../dates";
 import type { AssistantSource } from "./provider";
 export async function reviewContext(
   db: SupabaseClient,
@@ -22,6 +22,14 @@ export async function reviewContext(
     .maybeSingle();
   dbError(r.error);
   if (!r.data) throw new ApiError(404, "This review is unavailable.");
+  const profile = await db
+    .from("profiles")
+    .select("timezone")
+    .eq("user_id", user)
+    .maybeSingle();
+  dbError(profile.error);
+  const zone = profile.data?.timezone || "America/Vancouver";
+  const now = new Date();
   const start = r.data.period_start,
     end = format(
       addDays(new Date(r.data.period_end + "T12:00Z"), 1),
@@ -29,7 +37,7 @@ export async function reviewContext(
     ),
     nextEnd = format(addDays(new Date(end + "T12:00Z"), 7), "yyyy-MM-dd");
   const instant = (date: string) =>
-    fromZonedTime(date + "T00:00:00", "America/Vancouver").toISOString();
+    fromZonedTime(date + "T00:00:00", zone).toISOString();
   const [
     completed,
     late,
@@ -54,7 +62,9 @@ export async function reviewContext(
       .eq("user_id", user)
       .is("deleted_at", null)
       .not("status", "in", "(completed,cancelled)")
-      .or(`due_date.lt.${localDate()},due_at.lt.${new Date().toISOString()}`)
+      .or(
+        `due_date.lt.${formatInTimeZone(now, zone, "yyyy-MM-dd")},due_at.lt.${now.toISOString()}`,
+      )
       .order("due_date")
       .limit(6),
     db
@@ -108,8 +118,53 @@ export async function reviewContext(
     (rows ?? [])
       .filter((x) => !String(x.title ?? "").startsWith("[TEST]"))
       .map((x) => ({ ...x, title: String(x.title ?? "").slice(0, 100) }));
+  const [projects, goals, milestones] = await Promise.all([
+    db
+      .from("projects")
+      .select("id,name,status,target_date")
+      .eq("user_id", user)
+      .eq("status", "active")
+      .is("archived_at", null)
+      .is("deleted_at", null)
+      .limit(5),
+    db
+      .from("goals")
+      .select("id,title,status")
+      .eq("user_id", user)
+      .eq("status", "active")
+      .limit(5),
+    db
+      .from("milestones")
+      .select("id,title,status,target_date")
+      .eq("user_id", user)
+      .order("target_date")
+      .limit(5),
+  ]);
+  [projects, goals, milestones].forEach((r) => dbError(r.error));
   const commitments = await reviewCommitments(db, user, start);
   return [
+    {
+      id: "review:areas",
+      title: "Your connected responsibilities",
+      url: "/reviews",
+      text: JSON.stringify({
+        rule: "Current records, not proof of progress this week. Cover relevant responsibilities beyond academics, one question at a time.",
+        projects: (projects.data ?? [])
+          .filter((p) => !p.name.startsWith("[TEST]"))
+          .slice(0, 3)
+          .map((p) => ({ name: p.name.slice(0, 70), status: p.status })),
+        goals: clean(goals.data)
+          .slice(0, 3)
+          .map((g) => g.title),
+        milestones: clean(milestones.data)
+          .slice(0, 3)
+          .map((m) => ({
+            title: m.title,
+            status: m.status,
+            due: m.target_date,
+          })),
+      }),
+    },
     ...(commitments.items.length
       ? [
           {
@@ -137,7 +192,11 @@ export async function reviewContext(
       text: JSON.stringify({
         week_start: start,
         week_end: r.data.period_end,
-        as_of: new Date().toISOString(),
+        as_of: now.toISOString(),
+        local_today: formatInTimeZone(now, zone, "yyyy-MM-dd"),
+        timezone: zone,
+        temporal_rule:
+          "Past scheduled dates are reflection topics, not proof of completion. Upcoming dates are preparation topics. Owner-reported completion is not a verified grade.",
         rule: "Ask one focused question per turn. Never treat deadlines as completion or study as mastery. New commitments require owner approval.",
         owner_notes: {
           achievements: r.data.achievements.slice(0, 200),
@@ -160,7 +219,7 @@ export async function reviewContext(
         completed_in_selected_week: clean(completed.data)
           .slice(0, 3)
           .map((x) => ({ title: x.title, actual_minutes: x.actual_minutes })),
-        currently_overdue_as_of: localDate(),
+        currently_overdue_as_of: formatInTimeZone(now, zone, "yyyy-MM-dd"),
         overdue: clean(late.data)
           .slice(0, 3)
           .map((x) => ({ title: x.title, due: x.due_at ?? x.due_date })),
@@ -174,6 +233,14 @@ export async function reviewContext(
             due: x.due_at ?? x.due_date,
             verification: x.verification_status,
             submission: x.submission_state,
+            temporal_status: assessmentTiming(
+              {
+                due_at: x.due_at as string | null,
+                due_date: x.due_date as string | null,
+              },
+              now,
+              zone,
+            ),
           })),
       }),
     },

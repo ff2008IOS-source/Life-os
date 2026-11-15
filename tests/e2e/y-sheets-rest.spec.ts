@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 test("Sheets table controls preserve formulas, review conflicts and require explicit outgoing approval", async ({
   page,

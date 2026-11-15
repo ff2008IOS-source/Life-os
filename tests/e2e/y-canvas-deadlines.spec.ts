@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("Canvas deadlines default to upcoming and separate unknown past-due work from submitted history", async ({
   page,
 }) => {

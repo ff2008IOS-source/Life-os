@@ -209,7 +209,7 @@ it("flags expired Canvas and stale Google data while keeping core task recommend
   const d = buildBriefing(i);
   expect(d.calendar.reliable).toBe(false);
   expect(d.recommendations).toHaveLength(1);
-  expect(d.attention.find((a) => a.id === "canvas:health")?.detail).toContain(
+  expect(d.sync_health.sources.find((a) => a.id === "canvas")?.issue).toContain(
     "expiry has passed",
   );
 });
@@ -268,5 +268,9 @@ it("keeps explicit examples out of recommendations and counts, and reports stale
   ];
   const result = buildBriefing(input);
   expect(result.recommendations).toHaveLength(0);
-  expect(result.attention.some((a) => a.id === "sheets:source")).toBe(true);
+  expect(
+    result.sync_health.sources.some(
+      (a) => a.id === "sheets:source" && !!a.issue,
+    ),
+  ).toBe(true);
 });

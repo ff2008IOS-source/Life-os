@@ -1,3 +1,4 @@
+import { requireSundayReview } from "@/lib/review-access";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authorized, ApiError } from "@/lib/auth";
@@ -19,6 +20,13 @@ export async function PATCH(request: Request, { params }: Context) {
       .strict()
       .parse(await readJson(request));
     const values = schema.parse(body.data);
+    if (entity === "reviews")
+      await requireSundayReview(
+        db,
+        user.id,
+        "period_start" in values ? String(values.period_start) : undefined,
+        "period_end" in values ? String(values.period_end) : undefined,
+      );
     const { data: current, error: readError } = await db
       .from(entity)
       .select("*")
@@ -32,6 +40,13 @@ export async function PATCH(request: Request, { params }: Context) {
         409,
         "This record changed. Refresh first.",
         "VERSION_CONFLICT",
+      );
+    if (entity === "reviews")
+      await requireSundayReview(
+        db,
+        user.id,
+        current.period_start,
+        current.period_end,
       );
     if (entity === "projects" && (current.deleted_at || current.archived_at))
       throw new ApiError(409, "Restore this project before editing it.");

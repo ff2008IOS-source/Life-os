@@ -1,3 +1,4 @@
+import { aggregateSyncHealth, type SyncSource } from "./sync-health";
 import { realWorkspace } from "./real-workspace";
 import { z } from "zod";
 import { addDays, format, startOfWeek } from "date-fns";
@@ -91,6 +92,7 @@ export type BriefingInput = {
     expires_at?: string | null;
     enabled?: boolean;
     last_error?: string | null;
+    last_sync_at?: string | null;
     health?: { academic_stale_count: number; retry_error_count: number };
   } | null;
   actions: BriefingAction[];
@@ -381,6 +383,75 @@ export function buildBriefing(input: BriefingInput) {
         health: input.canvas.health,
       }),
     );
+  const connectionIssues = attention.filter((a) => a.kind === "connection");
+  const syncSources: SyncSource[] = [
+    ...selected.map((c) => ({
+      id: `calendar:${c.id}`,
+      name: c.name,
+      lastSuccess: c.last_synced_at,
+      issue:
+        c.sync_error ||
+        (!calendarReliable ? "Calendar coverage needs verification" : null),
+    })),
+    ...(input.sheet_health ?? [])
+      .filter((s) => s.mode !== "paused")
+      .map((s) => ({
+        id: `sheets:${s.id}`,
+        name: s.title,
+        lastSuccess: s.last_read_at,
+        issue:
+          s.last_error ||
+          (!s.last_read_at || nowMs - Date.parse(s.last_read_at) > 3 * 3600000
+            ? "Refresh overdue"
+            : null),
+      })),
+    ...(input.canvas
+      ? [
+          {
+            id: "canvas",
+            name: "Canvas",
+            lastSuccess: input.canvas.last_sync_at ?? null,
+            issue:
+              connectionIssues.find((a) => a.id === "canvas:health")?.detail ??
+              null,
+          },
+        ]
+      : []),
+  ];
+  if (
+    !selected.length &&
+    connectionIssues.some((a) => a.id.startsWith("calendar:"))
+  )
+    syncSources.push({
+      id: "calendar:availability",
+      name: "Calendar",
+      lastSuccess: null,
+      issue: "Select calendars to confirm your schedule coverage",
+    });
+  for (const error of input.source_errors)
+    if (!syncSources.some((s) => s.id === `source:${error}`))
+      syncSources.push({
+        id: `source:${error}`,
+        name: error,
+        lastSuccess: null,
+        issue: "Status could not refresh",
+      });
+  if (connectionIssues.length) {
+    for (let i = attention.length - 1; i >= 0; i--)
+      if (attention[i].kind === "connection") attention.splice(i, 1);
+    add(
+      "connections:health",
+      "connection",
+      "Connected data needs attention",
+      `${syncSources.filter((s) => s.issue).length} sources need checking. Open the connection summary for the cause and affected sources.`,
+      "/#connected-data",
+      connectionIssues
+        .map((a) => a.id + ":" + a.fingerprint)
+        .sort()
+        .join("|"),
+    );
+  }
+  const syncHealth = aggregateSyncHealth(syncSources);
   const knownAssessments = input.assessments.filter(
     (a) => !a.dropped && !submitted(a),
   );
@@ -632,6 +703,7 @@ export function buildBriefing(input: BriefingInput) {
     refreshed_at: now.toISOString(),
     today,
     timezone: zone,
+    sync_health: syncHealth,
     greeting: briefingGreeting(
       w.profile.display_name,
       s.fallback_name,

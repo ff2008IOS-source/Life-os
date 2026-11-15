@@ -34,6 +34,10 @@ export function WorkspaceProvider({
     setNotice({ message, undo });
   }, []);
   async function request(url: string, options: RequestInit = {}) {
+    if (typeof navigator !== "undefined" && !navigator.onLine)
+      throw Error(
+        "You’re offline. Your draft is kept; reconnect before saving.",
+      );
     const response = await fetch(url, {
       ...options,
       headers: { "Content-Type": "application/json", ...options.headers },

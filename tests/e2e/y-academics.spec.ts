@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("academic forms save unknown term dates, course rules and scores without inventing a final grade", async ({
   page,
 }) => {

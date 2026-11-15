@@ -55,8 +55,12 @@ it("bounds owner-specific selected-week evidence across Vancouver DST and carrie
     },
   });
   const sources = await reviewContext(client, "owner", "review");
-  expect(sources[0].text).toContain("2025-10-27");
-  expect(sources[1].text).toContain("Bounded examples");
+  expect(sources.find((s) => s.id === "review:week")!.text).toContain(
+    "2025-10-27",
+  );
+  expect(sources.find((s) => s.id === "review:evidence")!.text).toContain(
+    "Bounded examples",
+  );
   expect(sources.find((s) => s.id === "review:carry")?.text).toContain(
     "Finish analysis",
   );

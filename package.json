@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "node tests/run-browser-tests.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:bundle": "node tests/verify-parser-bundle.mjs"

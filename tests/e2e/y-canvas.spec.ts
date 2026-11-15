@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 test("Canvas connection is private and secure UI handles verification, sync and replacement", async ({
   page,

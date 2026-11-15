@@ -1,5 +1,8 @@
 "use client";
+import { assessmentTiming } from "@/lib/temporal-context";
 import Link from "next/link";
+import { format, parseISO } from "date-fns";
+import { useCurrentTime } from "./use-current-time";
 import { formatInTimeZone } from "date-fns-tz";
 import { useBriefing } from "./use-briefing";
 import { AssistantPage } from "./assistant-page";
@@ -16,6 +19,7 @@ export function PreparedWeeklyReview({
   review: Review;
   onReply: (r: AssistantReply) => void;
 }) {
+  const now = useCurrentTime();
   const c = useBriefing(review.period_start),
     d = c.data;
   const assessments =
@@ -38,13 +42,24 @@ export function PreparedWeeklyReview({
         ),
       ) ?? [];
   const pending = assessments.find(
-    (a) => !["submitted", "returned", "excused"].includes(a.submission_state),
+    (a) =>
+      assessmentTiming(a, now, d?.timezone || "America/Vancouver") ===
+        "upcoming" &&
+      !["submitted", "returned", "excused"].includes(a.submission_state),
   );
-  const opening = pending
-    ? `Let’s start with ${pending.course} — ${pending.title}. What preparation have you completed, and what still needs attention?`
-    : d?.weekly.completed_tasks
-      ? `You have ${d.weekly.completed_tasks} tasks recorded complete during this review week. Which accomplishment mattered most, and why?`
-      : "Let’s establish what actually happened this week. What was the most important responsibility you moved forward?";
+  const past = assessments
+    .filter(
+      (a) =>
+        assessmentTiming(a, now, d?.timezone || "America/Vancouver") === "past",
+    )
+    .at(-1);
+  const opening = past
+    ? `${past.course} — ${past.title} was scheduled for ${past.due_date ? format(parseISO(past.due_date), "EEEE, MMM d") : formatInTimeZone(past.due_at!, d!.timezone, "EEEE, MMM d")}. How did it go?`
+    : pending
+      ? `Let’s start with ${pending.course} — ${pending.title}. What preparation have you completed, and what still needs attention?`
+      : d?.weekly.completed_tasks
+        ? `You have ${d.weekly.completed_tasks} tasks recorded complete during this review week. Which accomplishment mattered most, and why?`
+        : "Let’s establish what actually happened this week. What was the most important responsibility you moved forward?";
   return (
     <>
       {d && (
