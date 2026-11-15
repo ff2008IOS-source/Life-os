@@ -31,3 +31,11 @@ Official references: https://developers.google.com/workspace/sheets/api/limits a
 The test button creates a uniquely titled synthetic workbook with a formula, formatting and an unrelated-cell sentinel. Verification exercises this same server sync path: initial import, local/outbound update, external/inbound update, conflicting edits, conflict choice, addition, row reordering, reviewed deletion, preservation of formulas/formatting/unrelated values and repeat sync without duplicates. Only a fully successful run sets its status to verified. API/RLS denial, refresh, rate limits and unknown outcomes also have isolated automated tests; these do not prove live Google behavior.
 
 The additive migration creates no imported records and enables no existing source. Owner exports include the new ledger/link/test tables; encrypted database backup/recovery enumeration includes them automatically. App rollback can leave these tables in place. Pause mapped sources and disable outbound writes before rollback; do not drop history/notes to roll back code. Production merges and real-table activation remain separate owner decisions.
+
+## Sync all connected tables
+
+Settings → Integrations → Google Sheets synchronization has a **Sync all** button above the account controls. It refreshes the current table list, then synchronizes active personal tables sequentially through the same authenticated endpoint as individual sync. Paused tables and disposable test workbooks are skipped. Existing table permissions, operation approvals, leases, formula protection and conflict checks still apply.
+
+The results distinguish synced tables, changes needing review and failed attempts. One table's failure does not stop unrelated tables. Requests are not automatically retried after an uncertain response. Keep the page open while the batch runs; navigating away stops starting further tables, but a request already accepted by the server may finish. Each table's normal sync history remains available after reload.
+
+A missing confirmed outbound timestamp means no outbound change has been verified; it does not prove that no write was attempted. The interface labels this explicitly.
