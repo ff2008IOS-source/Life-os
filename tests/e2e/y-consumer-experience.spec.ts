@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 import { formatInTimeZone } from "date-fns-tz";
 import { addDays, format } from "date-fns";

@@ -222,14 +222,21 @@ export function AssistantPage({
           current ? { ...current, limits: e.limits } : current,
         );
         setError("");
-      } else setError((e as Error).message);
+      } else
+        setError(
+          e instanceof Error && ["TimeoutError", "AbortError"].includes(e.name)
+            ? "This reply took too long. Your response is still in the box. Check the conversation before retrying."
+            : (e as Error).message,
+        );
       if (
         e instanceof AssistantRequestError &&
         ["AI_PROVIDER_LIMIT", "AI_UNAVAILABLE"].includes(e.code)
       )
         intent.current = null;
-      await reload().catch(() => {});
-      if (conversation) await history(conversation.id).catch(() => {});
+      setBusy(false);
+      setSending("");
+      void reload().catch(() => {});
+      if (conversation) void history(conversation.id).catch(() => {});
     } finally {
       setBusy(false);
       setSending("");
@@ -650,6 +657,7 @@ class AssistantRequestError extends Error {
 async function assistantSend<T>(url: string, options: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...options,
+    signal: AbortSignal.timeout(45000),
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
   });

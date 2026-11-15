@@ -1,3 +1,4 @@
+import { requireSundayReview } from "@/lib/review-access";
 import { formatInTimeZone } from "date-fns-tz";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -63,6 +64,12 @@ export async function POST(request: Request) {
       ])
       .parse(await readJson(request));
     const review = await ownedReview(db, user.id, x.review_id);
+    await requireSundayReview(
+      db,
+      user.id,
+      review.period_start,
+      review.period_end,
+    );
     if (x.action === "approve_commitment") {
       if (review.completed_at)
         throw new ApiError(

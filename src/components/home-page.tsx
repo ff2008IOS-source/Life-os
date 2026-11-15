@@ -1,4 +1,7 @@
 "use client";
+import { reviewAvailability } from "@/lib/temporal-context";
+import { SyncHealth } from "./sync-health";
+import { useCurrentTime } from "./use-current-time";
 import { realWorkspace } from "@/lib/real-workspace";
 import Link from "next/link";
 import { AttentionHistory } from "./attention-history";
@@ -113,7 +116,7 @@ export function HomePage() {
     };
   }, []);
   const briefing = useBriefing();
-  const now = new Date();
+  const now = useCurrentTime();
   const summary = taskSummary(data.tasks, now);
   const ranked = todayPriorities(data, now);
   const priorities = briefing.data
@@ -209,7 +212,7 @@ export function HomePage() {
         </span>
       </div>
       <div className="home-overview">
-        <BriefingPanel controller={briefing} compact />
+        <BriefingPanel controller={briefing} compact hideConnectionAlerts />
         <div className="stats-grid">
           {stats.map((s) => (
             <div className={`stat-card ${s.className ?? ""}`} key={s.label}>
@@ -222,6 +225,9 @@ export function HomePage() {
             </div>
           ))}
         </div>
+      </div>
+      <div id="connected-data">
+        <SyncHealth controller={briefing} />
       </div>
       <div className="dashboard-grid">
         <div className="stack home-work-column">
@@ -291,11 +297,13 @@ export function HomePage() {
                 A few minutes to reflect, reset and choose what comes next.
                 {recentReview
                   ? ` Last completed: ${friendlyDate(recentReview.completed_at)}.`
-                  : " Your first weekly review is waiting when you’re ready."}
+                  : " Your review opens on Sunday."}
               </p>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/reviews">
-                  Start weekly review
+                  {reviewAvailability(now, data.profile.timezone).open
+                    ? "Start weekly review"
+                    : "View review history"}
                   <ArrowRight size={12} />
                 </Link>
               </Button>
@@ -378,7 +386,7 @@ export function HomePage() {
           </section>
         </div>
       </div>
-      <BriefingPanel controller={briefing} />
+      <BriefingPanel controller={briefing} hideConnectionAlerts />
       <AttentionHistory />
     </div>
   );

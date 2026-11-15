@@ -28,12 +28,18 @@ function snoozeUntil(minutes: number) {
 export function BriefingPanel({
   controller: c,
   compact = false,
+  hideConnectionAlerts = false,
 }: {
   controller: BriefingController;
   compact?: boolean;
+  hideConnectionAlerts?: boolean;
 }) {
   const { data: w, mutate, notify } = useWorkspace();
   const d = c.data;
+  const attention =
+    d?.attention.filter(
+      (a) => !hideConnectionAlerts || a.kind !== "connection",
+    ) ?? [];
   const nextAssessment = d?.assessments
     .filter((a) => {
       const day =
@@ -364,9 +370,9 @@ export function BriefingPanel({
                 ? "Calendar needs an update"
                 : `${d.summary.commitments} ${d.summary.commitments === 1 ? "commitment" : "commitments"} today`}
             </span>
-            {d.attention.length > 0 && (
+            {attention.length > 0 && (
               <Link href="/#needs-attention">
-                {d.attention.length} to review <ArrowRight size={12} />
+                {attention.length} to review <ArrowRight size={12} />
               </Link>
             )}
           </div>
@@ -402,9 +408,9 @@ export function BriefingPanel({
                 <p className="small muted">
                   A few things worth checking before they get in your way.
                 </p>
-                {d.attention.length ? (
+                {attention.length ? (
                   <div className="briefing-alerts">
-                    {d.attention.slice(0, 5).map((a) => (
+                    {attention.slice(0, 5).map((a) => (
                       <article key={a.id}>
                         <span
                           className={`badge ${a.kind === "confirmed" ? "red" : ""}`}
@@ -446,10 +452,10 @@ export function BriefingPanel({
                 ) : (
                   <p>Nothing needs attention in your latest update.</p>
                 )}
-                {d.attention.length > 5 && (
+                {attention.length > 5 && (
                   <details className="briefing-detail">
-                    <summary>{d.attention.length - 5} more items</summary>
-                    {d.attention.slice(5).map((a) => (
+                    <summary>{attention.length - 5} more items</summary>
+                    {attention.slice(5).map((a) => (
                       <p key={a.id}>
                         <Link href={a.href}>{a.title}</Link> · {a.detail}
                       </p>

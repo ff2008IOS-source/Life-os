@@ -1,26 +1,26 @@
 /* Shared product finish. Existing layout, provider colors and interaction rules remain intact. */
 :root {
-  --bg: #f5f6f2;
-  --sidebar: #fcfdfb;
+  --bg: #f5f7fc;
+  --sidebar: #ffffff;
   --surface: #ffffff;
-  --elevated: #eef2ed;
-  --border: #dce4dc;
-  --text: #1e302f;
-  --muted: #586c68;
-  --blue: #236b60;
-  --blue-soft: #e3f0e9;
+  --elevated: #eef1fa;
+  --border: #dce2f0;
+  --text: #1c2540;
+  --muted: #52627d;
+  --blue: #4f5bc5;
+  --blue-soft: #e9edff;
   --shadow: 0 4px 24px #193f2f05;
 }
 .dark {
-  --bg: #0c171a;
-  --sidebar: #101e21;
-  --surface: #142529;
-  --elevated: #1c3033;
-  --border: #30464a;
-  --text: #eff6f2;
-  --muted: #afc2bc;
-  --blue: #a7e4ca;
-  --blue-soft: #a7e4ca12;
+  --bg: #0b1020;
+  --sidebar: #10182b;
+  --surface: #151e33;
+  --elevated: #1c2942;
+  --border: #334361;
+  --text: #eef2ff;
+  --muted: #b2bfd8;
+  --blue: #a5b4fc;
+  --blue-soft: #a5b4fc12;
   --shadow: 0 8px 28px #00000012;
 }
 body {
@@ -75,7 +75,7 @@ h1 {
     transform 160ms ease;
 }
 .button-primary {
-  background: #236b60;
+  background: #4f5bc5;
   color: #ffffff;
   box-shadow: 0 3px 9px #246b6012;
 }
@@ -96,7 +96,7 @@ summary:focus-visible {
   letter-spacing: -0.8px;
 }
 .sidebar .logo {
-  background: linear-gradient(145deg, #377d71, #173c41);
+  background: linear-gradient(145deg, #596bc8, #202b57);
   box-shadow: 0 4px 12px #1b574124;
   border-radius: 11px;
 }
@@ -285,9 +285,9 @@ summary:focus-visible {
   background: #14383a;
 }
 .focus-card .button-primary {
-  background: #d6f2b9;
-  color: #173b31;
-  border-color: #d6f2b9;
+  background: #c7d2fe;
+  color: #202b57;
+  border-color: #c7d2fe;
   box-shadow: none;
 }
 .focus-card .button-primary:hover {
@@ -312,7 +312,7 @@ summary:focus-visible {
   gap: 8px;
 }
 .focus-card .text-link {
-  color: #d6f2b9;
+  color: #c7d2fe;
 }
 .focus-explanation {
   font-size: 12px;
@@ -347,7 +347,7 @@ summary:focus-visible {
   display: inline-flex;
   gap: 5px;
   align-items: center;
-  color: #d6f2b9;
+  color: #c7d2fe;
 }
 .focus-card:has(.focus-explanation[open]) .focus-art {
   opacity: 0.3;
@@ -415,8 +415,8 @@ summary:focus-visible {
 .review-banner {
   border-radius: 18px;
   padding: 24px;
-  background: #e8eddf;
-  border: 1px solid #dce3ce;
+  background: #e9edff;
+  border: 1px solid #cdd5f0;
 }
 .review-banner h2 {
   font-size: 19px;
@@ -426,8 +426,8 @@ summary:focus-visible {
   font-size: 12px;
 }
 .dark .review-banner {
-  background: #263c33;
-  border-color: #3a5144;
+  background: #202c4a;
+  border-color: #475978;
 }
 .goal-row h3 {
   font-size: 14px;
@@ -485,18 +485,18 @@ summary:focus-visible {
 }
 
 .button-primary:hover {
-  background: #1c594f;
+  background: #404cae;
 }
 .dark .button-primary {
-  background: #b2e2cb;
-  color: #183b31;
+  background: #b9c5ff;
+  color: #182248;
 }
 .dark .button-primary:hover {
-  background: #c7efdc;
+  background: #cad3ff;
 }
 .dark .focus-card .button-primary {
-  background: #d6f2b9;
-  color: #173b31;
+  background: #c7d2fe;
+  color: #202b57;
 }
 .metric-details {
   margin-block: 10px;
@@ -534,14 +534,14 @@ summary:focus-visible {
 }
 
 .mobile-nav .mobile-add {
-  background: #236b60;
+  background: #4f5bc5;
   color: white;
   box-shadow: 0 3px 10px #173b4024;
   border-radius: 11px;
 }
 .dark .mobile-nav .mobile-add {
-  background: #b2e2cb;
-  color: #183b31;
+  background: #b9c5ff;
+  color: #182248;
 }
 @media (max-width: 700px) {
   .content {
@@ -675,11 +675,11 @@ summary:focus-visible {
 
 .login-story {
   background:
-    radial-gradient(ellipse at 10% 60%, #236b6010, transparent 65%),
+    radial-gradient(ellipse at 10% 60%, #4f5bc510, transparent 65%),
     var(--sidebar);
 }
 .login-story .logo {
-  background: linear-gradient(145deg, #377d71, #173c41);
+  background: linear-gradient(145deg, #596bc8, #202b57);
   border-radius: 11px;
 }
 
@@ -806,4 +806,149 @@ summary:focus-visible {
 /* Keep form text fully readable while the backdrop fades in. */
 .dialog-content {
   animation: none;
+}
+/* Life OS 2.0 P0: shared scale and a constrained, execution-first grid. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-control: 10px;
+  --radius-card: 18px;
+  --elevation-card: 0 6px 24px #0b102008;
+}
+.home-experience .home-overview {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+.home-overview > .focus-card,
+.home-overview > .stats-grid {
+  grid-column: 1 / -1;
+}
+.home-overview .stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.home-experience > .dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 24px;
+}
+.home-work-column {
+  grid-column: span 7;
+}
+.home-day-column {
+  grid-column: span 5;
+}
+.home-experience .focus-card.panel {
+  min-height: 220px;
+  background: linear-gradient(130deg, #202d60, #14213f);
+  border-color: #475d90;
+}
+.focus-card .focus-meta span {
+  background: #17284a;
+  color: #e5ebff;
+  border-color: #7088bd;
+}
+.focus-card .button-primary,
+.dark .focus-card .button-primary {
+  background: #c7d2fe;
+  color: #202b57;
+  border-color: #c7d2fe;
+}
+.focus-card .button-primary:hover,
+.dark .focus-card .button-primary:hover {
+  background: #e0e7ff;
+}
+.sync-health {
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+.sync-health h2 {
+  font-size: 14px;
+}
+.sync-health > p {
+  margin-top: 8px;
+}
+.sync-health .setting-line {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.offline-notice {
+  margin-bottom: 20px;
+  border-color: var(--warning);
+}
+@media (min-width: 1101px) {
+  .sidebar-collapsed .sidebar {
+    width: 72px;
+    padding-inline: 10px;
+  }
+  .sidebar-collapsed .main-shell {
+    margin-left: 72px;
+    width: calc(100% - 72px);
+  }
+  .sidebar-collapsed .brand {
+    font-size: 0;
+    gap: 0;
+  }
+  .sidebar-collapsed .brand .logo {
+    font-size: 14px;
+  }
+  .sidebar-collapsed .sidebar-label,
+  .sidebar-collapsed .area-link,
+  .sidebar-collapsed .nav-link > span,
+  .sidebar-collapsed .account > div,
+  .sidebar-collapsed .account > svg {
+    display: none;
+  }
+  .sidebar-collapsed .nav-link {
+    justify-content: center;
+    padding: 12px;
+  }
+}
+@media (max-width: 1100px) {
+  .sidebar-toggle {
+    display: none;
+  }
+  .home-work-column,
+  .home-day-column {
+    grid-column: span 6;
+  }
+}
+@media (max-width: 700px) {
+  .home-overview .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .home-experience > .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .home-work-column,
+  .home-day-column {
+    display: contents;
+  }
+  .home-experience .focus-card.panel {
+    padding: 22px 20px;
+    min-height: 200px;
+  }
+  .sync-health {
+    padding: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media (max-width: 700px) {
+  .button,
+  .tab,
+  .calendar-kind-legend button {
+    min-height: 40px;
+  }
 }

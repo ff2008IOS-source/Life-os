@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("provider cooldown keeps the draft, explains the exact pause, refreshes status and never automatically resends", async ({
   page,
 }) => {
@@ -46,14 +46,6 @@ test("provider cooldown keeps the draft, explains the exact pause, refreshes sta
     page.getByRole("heading", { name: "A little clarity for today." }),
   ).toBeVisible();
   await page.goto("/reviews");
-  await page
-    .getByText("Change review week", { exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByLabel("Review week starts", { exact: true })
-    .filter({ visible: true })
-    .fill("2026-10-12");
   await page
     .getByRole("button", { name: "Start weekly conversation", exact: true })
     .click();

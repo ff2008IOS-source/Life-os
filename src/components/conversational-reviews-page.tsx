@@ -1,5 +1,7 @@
 "use client";
+import { reviewAvailability } from "@/lib/temporal-context";
 import { useId, useState } from "react";
+import { useCurrentTime } from "./use-current-time";
 import { format, startOfWeek, addDays } from "date-fns";
 import { ReviewCommitments } from "./review-commitments";
 import { calendarRequest } from "./use-calendar";
@@ -16,6 +18,11 @@ import { localDate, friendlyDate } from "@/lib/dates";
 export function ReviewsPage() {
   const { data, mutate, pending, notify } = useWorkspace();
   const summaryId = useId();
+  const now = useCurrentTime();
+  const gate = reviewAvailability(
+    now,
+    data.profile.timezone || "America/Vancouver",
+  );
   const [week, setWeek] = useState(() =>
     format(
       startOfWeek(new Date(localDate() + "T12:00:00"), { weekStartsOn: 1 }),
@@ -59,12 +66,17 @@ export function ReviewsPage() {
   async function start() {
     setError("");
     try {
-      const old = data.reviews.find((r) => r.period_start === week);
+      setWeek(gate.weekStart);
+      const old = data.reviews.find((r) => r.period_start === gate.weekStart);
       if (old) {
         open(old);
         return;
       }
-      const saved = (await mutate("reviews", null, payload())) as {
+      const saved = (await mutate("reviews", null, {
+        ...payload(),
+        period_start: gate.weekStart,
+        period_end: gate.weekEnd,
+      })) as {
         data: Review;
       };
       open(saved.data);
@@ -106,6 +118,53 @@ export function ReviewsPage() {
       );
     }
   }
+  if (!gate.open || (review && review.period_start !== gate.weekStart))
+    return (
+      <>
+        <div className="page-heading">
+          <div>
+            <h1>Your weekly review</h1>
+            <p>Reflect on the week, then plan what comes next.</p>
+          </div>
+        </div>
+        <section className="panel settings-panel">
+          <h2>
+            {gate.open ? "Review history" : "Your review opens on Sunday"}
+          </h2>
+          <p>
+            {gate.open
+              ? "Past reflections are read-only."
+              : `Next review: ${friendlyDate(gate.weekEnd)} · ${gate.timezone}. Your saved reflections are always available.`}
+          </p>
+          {gate.open && (
+            <Button
+              onClick={() => {
+                setActive(null);
+                setWeek(gate.weekStart);
+              }}
+            >
+              Back to this week
+            </Button>
+          )}
+        </section>
+        {data.reviews
+          .slice()
+          .sort((a, b) => b.period_start.localeCompare(a.period_start))
+          .map((r) => (
+            <details className="panel" key={r.id}>
+              <summary>
+                Week of {friendlyDate(r.period_start)} ·{" "}
+                {r.completed_at ? "Completed" : "Draft"}
+              </summary>
+              <p className="preserve-lines">
+                {r.conversation_summary ||
+                  r.achievements ||
+                  "No reflection saved yet."}
+              </p>
+            </details>
+          ))}
+      </>
+    );
   return (
     <>
       <div className="page-heading">
@@ -122,19 +181,6 @@ export function ReviewsPage() {
             A little perspective, then a realistic plan.
           </p>
         </div>
-        <details className="review-date-options">
-          <summary>Change review week</summary>
-          <label>
-            Review week starts
-            <input
-              type="date"
-              value={week}
-              disabled={!!review}
-              onChange={(e) => setWeek(e.target.value)}
-              required
-            />
-          </label>
-        </details>
         {review ? (
           <Button
             variant="outline"

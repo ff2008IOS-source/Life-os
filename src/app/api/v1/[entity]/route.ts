@@ -1,3 +1,4 @@
+import { requireSundayReview } from "@/lib/review-access";
 import { NextResponse } from "next/server";
 import { authorized, ApiError } from "@/lib/auth";
 import { checkMutation, readJson, dbError, failure } from "@/lib/http";
@@ -43,6 +44,13 @@ export async function POST(request: Request, { params }: Context) {
     const schema = schemaFor(entity);
     const { db, user } = await authorized();
     const values = schema.parse(await readJson(request));
+    if (entity === "reviews")
+      await requireSundayReview(
+        db,
+        user.id,
+        "period_start" in values ? String(values.period_start) : undefined,
+        "period_end" in values ? String(values.period_end) : undefined,
+      );
     const stamp =
       (entity === "tasks" || entity === "milestones") &&
       "status" in values &&

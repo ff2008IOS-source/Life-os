@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
-import { startOfWeek, addDays, format } from "date-fns";
+import { reviewAvailability } from "@/lib/temporal-context";
+import { useCurrentTime } from "./use-current-time";
+import { addDays, format } from "date-fns";
 import { BookOpen, ArrowLeft, ArrowRight, Check, Plus } from "lucide-react";
 import type { Review } from "@/lib/schemas";
 import { useWorkspace } from "./workspace-provider";
@@ -46,6 +48,10 @@ const steps = [
 ] as const;
 export function WrittenReviewsPage() {
   const { data, mutate, notify, pending } = useWorkspace();
+  const gate = reviewAvailability(
+    useCurrentTime(),
+    data.profile.timezone || "America/Vancouver",
+  );
   const [editing, setEditing] = useState<Review | null | undefined>(undefined);
   const [step, setStep] = useState(0);
   const [fields, setFields] = useState({
@@ -56,22 +62,12 @@ export function WrittenReviewsPage() {
     priorities: "",
   });
   const [error, setError] = useState("");
-  const [period, setPeriod] = useState(() =>
-    format(
-      startOfWeek(new Date(localDate() + "T12:00:00"), { weekStartsOn: 1 }),
-      "yyyy-MM-dd",
-    ),
-  );
+  const [period, setPeriod] = useState(gate.weekStart);
+  const canEdit = gate.open && period === gate.weekStart;
   function open(review: Review | null) {
     setEditing(review);
     setStep(0);
-    setPeriod(
-      review?.period_start ??
-        format(
-          startOfWeek(new Date(localDate() + "T12:00:00"), { weekStartsOn: 1 }),
-          "yyyy-MM-dd",
-        ),
-    );
+    setPeriod(review?.period_start ?? gate.weekStart);
     setFields({
       achievements: review?.achievements ?? "",
       missed_commitments: review?.missed_commitments ?? "",
@@ -135,7 +131,7 @@ export function WrittenReviewsPage() {
           <h2>Written reviews</h2>
           <p>A clearer next week starts with a little reflection.</p>
         </div>
-        {editing === undefined && (
+        {editing === undefined && gate.open && (
           <Button
             onClick={() =>
               open(data.reviews.find((r) => r.period_start === period) ?? null)
@@ -219,17 +215,13 @@ export function WrittenReviewsPage() {
               ))}
             </aside>
             <section className="panel review-form">
+              {!canEdit && <p className="notice">Saved review · read only</p>}
               <span className="eyebrow">STEP {step + 1} OF 5</span>
               <h2 style={{ marginTop: 10 }}>{steps[step].title}</h2>
               <p>{steps[step].description}</p>
               <label style={{ marginBottom: 18 }}>
                 Review week starts
-                <input
-                  type="date"
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                  required
-                />
+                <input type="date" value={period} readOnly required />
               </label>
               <div className="review-context">
                 {step === 0 ? (
@@ -296,6 +288,7 @@ export function WrittenReviewsPage() {
               <label>
                 {steps[step].prompt}
                 <textarea
+                  readOnly={!canEdit}
                   rows={6}
                   maxLength={10000}
                   value={fields[steps[step].field]}
@@ -321,7 +314,7 @@ export function WrittenReviewsPage() {
                 <Button
                   variant="ghost"
                   onClick={() => save(false)}
-                  disabled={pending || !period}
+                  disabled={pending || !period || !canEdit}
                 >
                   Save draft
                 </Button>
@@ -339,7 +332,7 @@ export function WrittenReviewsPage() {
                 ) : (
                   <Button
                     onClick={() => save(true)}
-                    disabled={pending || !period}
+                    disabled={pending || !period || !canEdit}
                   >
                     <Check size={13} />
                     Complete review

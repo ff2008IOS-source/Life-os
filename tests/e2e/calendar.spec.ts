@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("read-only calendar controls select, sync and show a cached recurring instance", async ({
   page,
 }) => {

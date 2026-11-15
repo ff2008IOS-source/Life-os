@@ -1,4 +1,9 @@
 "use client";
+import {
+  syncAllTables,
+  type BatchResult,
+  type SyncResult,
+} from "@/lib/integrations/sheet-sync-batch";
 import { availableProject } from "@/lib/visible-areas";
 import { useEffect, useState, useRef } from "react";
 import { useWorkspace } from "./workspace-provider";
@@ -88,6 +93,10 @@ export function SheetRestPanel() {
     [spreadsheet, setSpreadsheet] = useState(""),
     [connection, setConnection] = useState(""),
     [testRequest, setTestRequest] = useState("");
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batch, setBatch] = useState<BatchResult[]>([]);
+  const batchController = useRef<AbortController | null>(null);
+  useEffect(() => () => batchController.current?.abort(), []);
   const d = state?.datasets.find((d) => d.id === selected);
   async function load(id = selected, after?: string) {
     const s = await calendarRequest<State>(
@@ -142,14 +151,82 @@ export function SheetRestPanel() {
       requests.current.delete(intent);
       await load();
       await refresh();
+      window.dispatchEvent(new Event("lifeos:changed"));
       setNotice(
-        "Saved. Only writes marked confirmed in sync history have been verified in Google Sheets.",
+        body.action === "sync"
+          ? result.conflicts || result.held_outbound
+            ? "Updated. Some changes are pending or need review."
+            : "Table synced."
+          : "Changes saved.",
       );
       return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sheets operation failed.");
     } finally {
       setBusy(false);
+    }
+  }
+  async function syncAll() {
+    if (batchController.current) return;
+    const controller = new AbortController();
+    batchController.current = controller;
+    setBatchRunning(true);
+    setBusy(true);
+    setError("");
+    setNotice("");
+    setBatch([]);
+    try {
+      const current = await calendarRequest<State>(endpoint, {
+        signal: AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(20000),
+        ]),
+      });
+      setState((old) => ({ ...old, ...current }));
+      const results = await syncAllTables(
+        current.datasets,
+        (id) =>
+          calendarRequest<SyncResult>(endpoint, {
+            method: "POST",
+            body: JSON.stringify({ action: "sync", dataset_id: id }),
+            signal: AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(120000),
+            ]),
+          }),
+        (value) => {
+          if (!controller.signal.aborted) setBatch(value);
+        },
+        () => controller.signal.aborted,
+      );
+      if (controller.signal.aborted) return;
+      const synced = results.filter((r) => r.status === "synced").length;
+      const attention = results.length - synced;
+      setNotice(
+        results.length
+          ? `${synced} of ${results.length} tables synced.${attention ? ` ${attention} need attention; see the results below.` : " Everything is up to date."}`
+          : "No active tables to sync. Paused tables and test workbooks are skipped.",
+      );
+      window.dispatchEvent(new Event("lifeos:changed"));
+      try {
+        await load();
+        await refresh();
+      } catch {
+        setError(
+          "Sync results are shown below, but the latest table details could not load. Refresh this page.",
+        );
+      }
+    } catch (e) {
+      if (!controller.signal.aborted)
+        setError(
+          e instanceof Error ? e.message : "Could not start synchronization.",
+        );
+    } finally {
+      batchController.current = null;
+      if (!controller.signal.aborted) {
+        setBusy(false);
+        setBatchRunning(false);
+      }
     }
   }
   function confirmMode(
@@ -186,6 +263,54 @@ export function SheetRestPanel() {
         Keep Life OS and your spreadsheets connected. Choose what to sync and
         when to allow changes.
       </p>
+      <Button
+        disabled={
+          busy ||
+          !state?.datasets.some((t) => !t.test_only && t.mode !== "paused")
+        }
+        onClick={() => void syncAll()}
+      >
+        {batchRunning ? "Syncing tables…" : "Sync all"}
+      </Button>
+      <p className="small muted">
+        Updates all active tables using your existing permissions. Paused tables
+        and test workbooks are skipped.
+      </p>
+      {batch.length > 0 && (
+        <section
+          aria-label="Sync all results"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {batchRunning && (
+            <p className="small">Keep this page open while your tables sync.</p>
+          )}
+          <p className="small">
+            {
+              batch.filter((r) => !["waiting", "syncing"].includes(r.status))
+                .length
+            }{" "}
+            of {batch.length} checked
+          </p>
+          {batch.map((r) => (
+            <div className="setting-line" key={r.id}>
+              <strong>{r.title}</strong>
+              <span>
+                {
+                  {
+                    waiting: "Waiting",
+                    syncing: "Syncing…",
+                    synced: "Synced",
+                    attention: "Needs review",
+                    failed: "Sync not confirmed",
+                  }[r.status]
+                }
+                {r.message ? ` · ${r.message}` : ""}
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
       <div className="stack">
         <label>
           Connected Google account
@@ -513,17 +638,21 @@ export function SheetRestPanel() {
             Open source spreadsheet
           </a>
           <p className="small muted">
-            {d.mode} · Incoming:{" "}
+            {{
+              two_way: "Two-way sync",
+              import_only: "Import only",
+              export_only: "Export only",
+              paused: "Paused",
+            }[d.mode] ?? d.mode}
+            {" · Last updated: "}
             {d.last_read_at
               ? new Date(d.last_read_at).toLocaleString()
-              : "Never"}{" "}
-            · Verified outbound:{" "}
+              : "Not synced yet"}
+          </p>
+          <p className="small muted">
             {d.last_write_at
-              ? new Date(d.last_write_at).toLocaleString()
-              : "Never"}
-            . Polling is processed by the existing background worker in bounded
-            batches; actual refresh times depend on backlog and provider limits;
-            delays are possible.
+              ? `Last change sent to Sheets: ${new Date(d.last_write_at).toLocaleString()}`
+              : "No changes to Sheets have been confirmed yet."}
           </p>
           {d.last_error && (
             <p role="alert" className="error-message">
@@ -859,7 +988,7 @@ export function SheetRestPanel() {
           </details>
         </div>
       )}
-      {busy && (
+      {busy && !batchRunning && (
         <p role="status">Working… Keep this page open during verification.</p>
       )}
       {error && (

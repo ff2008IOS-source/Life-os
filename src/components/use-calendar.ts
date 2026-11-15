@@ -10,6 +10,11 @@ export async function calendarRequest<T>(
 ): Promise<T> {
   const response = await fetch(url, {
     ...options,
+    signal:
+      options?.signal ??
+      AbortSignal.timeout(
+        options?.method && options.method !== "GET" ? 120000 : 20000,
+      ),
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
   });

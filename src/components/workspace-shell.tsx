@@ -1,11 +1,13 @@
 "use client";
 import { visibleArea, availableProject } from "@/lib/visible-areas";
+import { OfflineNotice } from "./offline-notice";
 import Link from "next/link";
 import { AppLogo, ProfileAvatar } from "./profile-identity";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import {
+  PanelLeftClose,
   Home,
   CalendarDays,
   Layers3,
@@ -37,6 +39,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const { data } = useWorkspace();
   const path = usePathname();
   const [editor, setEditor] = useState<{ task: Task | null } | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
   const { setTheme } = useTheme();
@@ -61,7 +64,9 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   ).length;
 
   return (
-    <div className={`app-shell density-${data.profile.density}`}>
+    <div
+      className={`app-shell density-${data.profile.density} ${collapsed ? "sidebar-collapsed" : ""}`}
+    >
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -78,6 +83,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               className={`nav-link ${active?.href === n.href ? "active" : ""}`}
               href={n.href}
               key={n.href}
+              aria-label={n.label}
               aria-current={active?.href === n.href ? "page" : undefined}
             >
               <n.icon />
@@ -101,12 +107,13 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             ))}
         </nav>
         <div className="sidebar-bottom">
-          <Link href="/reviews" className="nav-link">
+          <Link href="/reviews" className="nav-link" aria-label="Weekly review">
             <BookOpen />
             <span>Weekly review</span>
           </Link>
           <Link
             href="/settings"
+            aria-label="Settings"
             className={`nav-link ${path === "/settings" ? "active" : ""}`}
           >
             <Settings />
@@ -124,6 +131,16 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="main-shell">
         <header className="topbar">
+          <Button
+            className="sidebar-toggle"
+            variant="ghost"
+            size="icon"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            <PanelLeftClose size={17} />
+          </Button>
           <div className="breadcrumb">
             <span>My workspace</span>
             <span className="breadcrumb-slash">/</span>
@@ -163,6 +180,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="content" id="main-content">
+          <OfflineNotice />
           {children}
           <div className="footer-note">
             <ShieldCheck size={11} />
