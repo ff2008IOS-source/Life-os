@@ -4,6 +4,8 @@ import { dbError, failure } from "@/lib/http";
 const tables = [
   "profiles",
   "dashboard_preferences",
+  "source_execution_settings",
+  "source_execution_links",
   "focus_sessions",
   "briefing_settings",
   "briefing_actions",
@@ -92,38 +94,41 @@ export async function GET() {
           "canvas_documents",
           "canvas_document_chunks",
         ].includes(table);
-        const key =
-          table === "sheet_rest_project_links"
-            ? "row_id"
-            : table === "daily_check_ins"
-              ? "day"
-              : table === "briefing_settings"
-                ? "user_id"
-                : table === "review_chat_links"
-                  ? "review_id"
-                  : documents
-                    ? "course_canvas_id"
-                    : table === "managed_calendar_state"
-                      ? "block_id"
-                      : ["canvas_records", "canvas_mappings"].includes(table)
-                        ? "canvas_id"
-                        : table === "assistant_usage"
-                          ? "usage_day"
-                          : table === "personal_workflow_settings"
-                            ? "workflow_type"
-                            : table === "canvas_sync_jobs"
-                              ? "job_key"
-                              : [
-                                    "profiles",
-                                    "assistant_settings",
-                                    "dashboard_preferences",
-                                  ].includes(table)
-                                ? "user_id"
-                                : table === "goal_tasks"
-                                  ? "goal_id"
-                                  : table === "task_dependencies"
-                                    ? "predecessor_task_id"
-                                    : "id";
+        const key = [
+          "sheet_rest_project_links",
+          "source_execution_links",
+        ].includes(table)
+          ? "row_id"
+          : table === "daily_check_ins"
+            ? "day"
+            : table === "briefing_settings"
+              ? "user_id"
+              : table === "review_chat_links"
+                ? "review_id"
+                : documents
+                  ? "course_canvas_id"
+                  : table === "managed_calendar_state"
+                    ? "block_id"
+                    : ["canvas_records", "canvas_mappings"].includes(table)
+                      ? "canvas_id"
+                      : table === "assistant_usage"
+                        ? "usage_day"
+                        : table === "personal_workflow_settings"
+                          ? "workflow_type"
+                          : table === "canvas_sync_jobs"
+                            ? "job_key"
+                            : [
+                                  "profiles",
+                                  "assistant_settings",
+                                  "dashboard_preferences",
+                                  "source_execution_settings",
+                                ].includes(table)
+                              ? "user_id"
+                              : table === "goal_tasks"
+                                ? "goal_id"
+                                : table === "task_dependencies"
+                                  ? "predecessor_task_id"
+                                  : "id";
         let query = db
           .from(table)
           .select("*")
@@ -134,6 +139,8 @@ export async function GET() {
           query = query.order("chunk_index");
         if (["canvas_records", "canvas_mappings"].includes(table))
           query = query.order("resource_type");
+        if (table === "source_execution_links")
+          query = query.order("dataset_id").order("kind");
         if (table === "goal_tasks") query = query.order("task_id");
         if (table === "task_dependencies")
           query = query.order("successor_task_id");

@@ -1,4 +1,9 @@
 "use client";
+import {
+  type AssessmentGroup,
+  assessmentStatus,
+  reconcileAssessments,
+} from "@/lib/assessment-identity";
 import { useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import type { AcademicRow } from "./academic-editor";
@@ -11,7 +16,7 @@ import { AssessmentPreparation } from "./assessment-preparation";
 import { Button } from "./ui/button";
 import { Modal } from "./dialog";
 export function AssessmentTable({
-  rows,
+  rows: sourceRows,
   initialAssessment,
   onEdit,
   onSaved,
@@ -21,9 +26,12 @@ export function AssessmentTable({
   onEdit: (row: AcademicRow) => void;
   onSaved: () => Promise<void>;
 }) {
+  const rows = reconcileAssessments(sourceRows);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState<AcademicRow | null>(null);
+  const [selected, setSelected] = useState<AssessmentGroup<AcademicRow> | null>(
+    null,
+  );
   const [count, setCount] = useState(12);
   const duplicates = possibleAssessmentDuplicates(rows);
   const detail = selected
@@ -31,10 +39,14 @@ export function AssessmentTable({
     : null;
   const shown = rows.filter(
     (a) =>
-      String(a.title).toLowerCase().includes(query.toLowerCase()) &&
+      [a.title, ...(a.source_records ?? []).map((r) => r.title)]
+        .join(" ")
+        .toLowerCase()
+        .includes(query.toLowerCase()) &&
       (filter === "all" ||
         (filter === "graded"
-          ? typeof a.earned_score === "number"
+          ? typeof a.earned_score === "number" ||
+            a.components?.some((r) => typeof r.earned_score === "number")
           : filter === "submitted"
             ? a.submission_state === "submitted" ||
               a.submission_state === "returned"
@@ -130,7 +142,8 @@ export function AssessmentTable({
                 key={a.id}
                 id={`assessment-${a.id}`}
                 className={
-                  a.id === initialAssessment
+                  a.id === initialAssessment ||
+                  a.source_records?.some((r) => r.id === initialAssessment)
                     ? "assessment-highlight"
                     : undefined
                 }
@@ -151,11 +164,17 @@ export function AssessmentTable({
                   <span
                     className={`status-pill ${["submitted", "returned"].includes(String(a.submission_state)) ? "status-positive" : ""}`}
                   >
-                    {submissionLabel(a.submission_state)}
+                    {assessmentStatus(a) ?? submissionLabel(a.submission_state)}
                   </span>
                 </td>
                 <td data-label="Result" className="assessment-result">
                   {assessmentResult(a)}
+                  {(a.components?.length ?? 0) > 1 && (
+                    <span className="small muted">
+                      {" "}
+                      · {a.components!.length} parts
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -191,7 +210,10 @@ export function AssessmentTable({
               </div>
               <div>
                 <dt>Submission</dt>
-                <dd>{submissionLabel(detail.submission_state)}</dd>
+                <dd>
+                  {assessmentStatus(detail) ??
+                    submissionLabel(detail.submission_state)}
+                </dd>
               </div>
               <div>
                 <dt>Result</dt>
@@ -209,6 +231,45 @@ export function AssessmentTable({
             {detail.notes ? (
               <p className="preserve-lines">{String(detail.notes)}</p>
             ) : null}
+            {detail.source_records && (
+              <section aria-label="Matched assessment records">
+                <p className="small muted">{detail.identity_note}</p>
+                {detail.components?.map((part) => (
+                  <div className="assessment-component" key={part.id}>
+                    <strong>{String(part.title)}</strong>
+                    <span>{assessmentResult(part)}</span>
+                  </div>
+                ))}
+                {detail.alternatives?.length ? (
+                  <details>
+                    <summary>Makeup options</summary>
+                    <p className="small muted">
+                      These are alternatives, not additional required exams.
+                    </p>
+                    {detail.alternatives.map((a) => (
+                      <p key={a.id}>
+                        {String(a.title)} · {assessmentResult(a)}
+                      </p>
+                    ))}
+                  </details>
+                ) : null}
+                <details>
+                  <summary>Original records</summary>
+                  {detail.source_records.map((source) => (
+                    <Button
+                      variant="outline"
+                      key={source.id}
+                      onClick={() => {
+                        onEdit(source);
+                        setSelected(null);
+                      }}
+                    >
+                      Edit {String(source.title)}
+                    </Button>
+                  ))}
+                </details>
+              </section>
+            )}
             <AssessmentPreparation assessment={detail} onSaved={onSaved} />
             <details className="briefing-detail">
               <summary>Source & verification</summary>
@@ -225,14 +286,16 @@ export function AssessmentTable({
                 <p>{String(detail.source_status)}</p>
               ) : null}
             </details>
-            <Button
-              onClick={() => {
-                onEdit(detail);
-                setSelected(null);
-              }}
-            >
-              Edit assessment
-            </Button>
+            {!detail.source_records && (
+              <Button
+                onClick={() => {
+                  onEdit(detail);
+                  setSelected(null);
+                }}
+              >
+                Edit assessment
+              </Button>
+            )}
           </div>
         </Modal>
       )}

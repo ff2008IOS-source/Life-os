@@ -7,6 +7,7 @@ export type GradeAssessment = {
   dropped: boolean;
   submission_state: string;
   verification_status?: string;
+  score_conflict?: boolean;
 };
 export type GradeCategory = {
   id: string;
@@ -59,6 +60,12 @@ export function academicGrade(
       "Overall grade unavailable: confirm the full assessment inventory, grading rules and score sources. Recorded-score averages are not final course grades.",
     );
   if (!active.length) return result;
+  if (active.some((a) => a.score_conflict)) {
+    result.warnings.push(
+      "Source results conflict; review the original records before calculating standing.",
+    );
+    return result;
+  }
   if (method === "unknown") {
     result.warnings.push(
       "The grading formula is not confirmed. Recorded scores are shown without a course average.",

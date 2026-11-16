@@ -1,3 +1,4 @@
+import { reconcileAssessments } from "../assessment-identity";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dbError } from "../http";
@@ -23,7 +24,7 @@ export async function assistantAcademicContext(
     db
       .from("assessments")
       .select(
-        "id,course_id,title,due_at,due_date,verification_status,source_key",
+        "id,course_id,title,due_at,due_date,verification_status,source_key,earned_score,maximum_score,submission_state,weight",
       )
       .eq("user_id", user)
       .eq("dropped", false)
@@ -45,12 +46,20 @@ export async function assistantAcademicContext(
   ]);
   for (const r of [courses, native, canvasCourses, assignments])
     dbError(r.error);
+  const resolved = reconcileAssessments(native.data ?? []);
+  const groupedSources = new Set(
+    resolved.flatMap((a) => a.source_records?.map((r) => r.source_key) ?? []),
+  );
   const candidates: AcademicCandidate[] = [];
   for (const a of assignments.data ?? []) {
     const c = canvasCourses.data?.find(
       (c) => c.canvas_id === a.course_canvas_id,
     );
-    if (a.payload.published === false) continue;
+    if (
+      a.payload.published === false ||
+      groupedSources.has(`canvas:${a.canvas_id}`)
+    )
+      continue;
     candidates.push({
       id: `canvas:assignment:${a.canvas_id}`,
       course_id: a.course_canvas_id,
@@ -67,8 +76,8 @@ export async function assistantAcademicContext(
       url: `https://canvas.sfu.ca/courses/${a.course_canvas_id}/assignments/${a.payload.id}`,
     });
   }
-  for (const a of native.data ?? []) {
-    if (a.source_key?.startsWith("canvas:")) continue;
+  for (const a of resolved) {
+    if (a.source_key?.startsWith("canvas:") && !a.source_records) continue;
     const c = courses.data?.find((c) => c.id === a.course_id);
     candidates.push({
       id: `assessment:${a.id}`,
@@ -78,6 +87,19 @@ export async function assistantAcademicContext(
       due_at: a.due_at,
       due_date: a.due_date,
       verification: a.verification_status,
+      description: a.identity_note
+        ? JSON.stringify({
+            identity: a.identity_note,
+            state: a.submission_state,
+            earned: a.earned_score,
+            maximum: a.maximum_score,
+            parts: a.components?.map((p) => ({
+              title: p.title,
+              earned: p.earned_score,
+              maximum: p.maximum_score,
+            })),
+          })
+        : undefined,
       url: "/areas/academics",
     });
   }

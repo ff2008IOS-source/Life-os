@@ -1,4 +1,6 @@
 "use client";
+import { ActivityReset } from "./activity-reset";
+import { ConnectedSyncAll } from "./connected-sync-all";
 import { CanvasConnectionSettings } from "./canvas-panel";
 import { NotificationsPanel } from "./notifications-panel";
 import { SheetRestPanel } from "./sheet-rest-panel";
@@ -154,6 +156,7 @@ export function SettingsPage({
         )}
         {section === "integrations" && (
           <div>
+            <ConnectedSyncAll />
             <div className="settings-grid">
               <CanvasConnectionSettings initialOpen={initialCanvasOpen} />
               <GoogleCalendarPanel settings />
@@ -193,6 +196,7 @@ export function SettingsPage({
               </section>
               <MfaPanel />
               <PasswordForm />
+              <ActivityReset />
               <AccountDeletion />
               <section className="panel settings-panel">
                 <h2>Privacy & recovery</h2>

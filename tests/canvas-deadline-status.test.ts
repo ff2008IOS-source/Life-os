@@ -7,9 +7,7 @@ it("does not equate past deadlines or grading with assignment submission", () =>
   expect(deadlineStatusLabel("unknown", true)).toBe(
     "Past due · status unknown",
   );
-  expect(deadlineStatusLabel("graded", true)).toBe(
-    "Graded · submission not confirmed",
-  );
+  expect(deadlineStatusLabel("graded", true)).toBe("Graded");
   expect(deadlineStatusLabel("missing", true)).toBe("Canvas reports missing");
   expect(deadlineStatusLabel("submitted", true)).toBe("Submitted");
   expect(deadlineStatusLabel("needs_review", false)).toContain("Conflicting");

@@ -45,6 +45,39 @@ it("bounds owner-specific selected-week evidence across Vancouver DST and carrie
                   completed_at: null,
                 },
               ];
+        if (url.pathname.endsWith("assessments"))
+          data = [
+            {
+              id: "before",
+              course_id: "c",
+              title: "Outside before",
+              due_at: "2025-10-27T06:59:59Z",
+            },
+            {
+              id: "start",
+              course_id: "c",
+              title: "At window start",
+              due_at: "2025-10-27T07:00:00Z",
+            },
+            {
+              id: "end",
+              course_id: "c",
+              title: "Before window end",
+              due_at: "2025-11-10T07:59:59Z",
+            },
+            {
+              id: "after",
+              course_id: "c",
+              title: "Outside after",
+              due_at: "2025-11-10T08:00:00Z",
+            },
+            {
+              id: "date",
+              course_id: "c",
+              title: "Date only",
+              due_date: "2025-11-09",
+            },
+          ];
         if (url.pathname.endsWith("tasks"))
           data = [{ title: "Recorded task", actual_minutes: null }];
         return new Response(
@@ -69,13 +102,14 @@ it("bounds owner-specific selected-week evidence across Vancouver DST and carrie
     "gte.2025-10-27T07:00:00.000Z",
     "lt.2025-11-03T08:00:00.000Z",
   ]);
-  const assessment = calls.find(
-    (x) => x.pathname.endsWith("assessments") && x.searchParams.has("due_at"),
-  )!;
-  expect(assessment.searchParams.getAll("due_at")).toEqual([
-    "gte.2025-10-27T07:00:00.000Z",
-    "lt.2025-11-10T08:00:00.000Z",
-  ]);
+  const evidence = JSON.parse(
+    sources.find((s) => s.id === "review:evidence")!.text,
+  );
+  expect(
+    evidence.review_and_next_week_assessments.map(
+      (a: { title: string }) => a.title,
+    ),
+  ).toEqual(["At window start", "Before window end", "Date only"]);
 });
 
 it("retrieves only the owner's completed review for general assistant recall and labels its limits", async () => {

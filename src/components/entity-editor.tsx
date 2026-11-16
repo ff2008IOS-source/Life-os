@@ -248,6 +248,9 @@ export function EntityEditor({
                 </>
               ) : (
                 <>
+                  {state.kind === "projects" && (
+                    <option value="planned">Not started</option>
+                  )}
                   <option value="active">Active</option>
                   <option value="paused">Paused</option>
                   <option value="completed">Completed</option>
