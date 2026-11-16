@@ -12,10 +12,13 @@ import {
   standingLabel,
   possibleAssessmentDuplicates,
 } from "@/lib/academic-display";
-export function AcademicProgressSummary() {
-  const [data, setData] = useState<AcademicData | null>(null);
+export function AcademicProgressSummary({
+  provided,
+}: { provided?: AcademicData } = {}) {
+  const [loaded, setData] = useState<AcademicData | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
+    if (provided) return;
     let live = true;
     void calendarRequest<AcademicData>("/api/v1/academics")
       .then((d) => {
@@ -27,7 +30,8 @@ export function AcademicProgressSummary() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [provided]);
+  const data = provided ?? loaded;
   if (error) return <p role="alert">{error}</p>;
   if (!data?.courses.length) return null;
   return (

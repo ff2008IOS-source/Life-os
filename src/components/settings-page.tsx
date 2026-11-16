@@ -117,7 +117,7 @@ export function SettingsPage({
                       </select>
                     </label>
                     <label>
-                      Density
+                      List density
                       <select
                         name="density"
                         defaultValue={data.profile.density}

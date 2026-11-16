@@ -1,3 +1,4 @@
+import { defaultLayout } from "@/lib/dashboard-layout";
 import { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -140,6 +141,13 @@ beforeAll(async () => {
       `insert into sheet_rest_tests(id,user_id,connection_id,dataset_id,status)values(gen_random_uuid(),$1,$2,$3,'ready')`,
       [owner, connection, dataset],
     );
+    await source.query(
+      "insert into dashboard_preferences(user_id,settings)values($1,$2)",
+      [owner, JSON.stringify(defaultLayout("study"))],
+    );
+    await source.query(
+      "insert into focus_sessions(user_id,task_id,request_id,status,running_since,actual_minutes,work_block_id,elapsed_seconds) select user_id,task_id,gen_random_uuid(),'finished',null,actual_minutes,work_block_id,actual_minutes*60 from work_completions limit 1",
+    );
     const tables = await source.query<{ table_name: string }>(
       "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts')",
     );
@@ -160,6 +168,8 @@ describe("offline JSON user-export recovery", () => {
     const result = await verifyUserExport(fixture);
     expect(result.content_matches).toBe(true);
     expect(result.table_counts.tasks).toBe(2);
+    expect(result.table_counts.dashboard_preferences).toBe(1);
+    expect(result.table_counts.focus_sessions).toBe(1);
     expect(result.table_counts.review_snapshots).toBe(1);
     expect(result.table_counts.review_items).toBe(1);
     expect(result.table_counts.work_completions).toBe(1);

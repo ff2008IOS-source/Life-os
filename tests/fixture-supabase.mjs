@@ -180,6 +180,7 @@ const server = createServer((req, res) => {
             ![
               "prepare_assessment",
               "complete_work_session",
+              "change_focus_session",
               "work_progress_summary",
               "prepare_my_workflow",
               "assistant_rate_status",
@@ -204,6 +205,8 @@ const server = createServer((req, res) => {
         const table = url.pathname.split("/").at(-1);
         const tables = [
           "profiles",
+          "dashboard_preferences",
+          "focus_sessions",
           "briefing_settings",
           "briefing_actions",
           "daily_check_ins",

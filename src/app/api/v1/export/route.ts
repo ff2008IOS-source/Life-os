@@ -3,6 +3,8 @@ import { authorized } from "@/lib/auth";
 import { dbError, failure } from "@/lib/http";
 const tables = [
   "profiles",
+  "dashboard_preferences",
+  "focus_sessions",
   "briefing_settings",
   "briefing_actions",
   "daily_check_ins",
@@ -111,9 +113,11 @@ export async function GET() {
                             ? "workflow_type"
                             : table === "canvas_sync_jobs"
                               ? "job_key"
-                              : ["profiles", "assistant_settings"].includes(
-                                    table,
-                                  )
+                              : [
+                                    "profiles",
+                                    "assistant_settings",
+                                    "dashboard_preferences",
+                                  ].includes(table)
                                 ? "user_id"
                                 : table === "goal_tasks"
                                   ? "goal_id"

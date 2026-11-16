@@ -1,3 +1,10 @@
+import { readSavedPlans } from "@/lib/services/saved-plans";
+import { loadBriefing } from "@/lib/briefing-server";
+import { readAcademics } from "@/lib/services/academics";
+import { authorized } from "@/lib/auth";
+import { dbError } from "@/lib/http";
+import type { Session } from "@/components/focus-session-provider";
+import { FocusSessionProvider } from "@/components/focus-session-provider";
 import { ConversationArchive } from "@/components/conversation-archive";
 import { notFound, redirect } from "next/navigation";
 import { loadWorkspace } from "@/lib/services/workspace";
@@ -61,45 +68,100 @@ export default async function Page({
       redirect("/login");
     throw e;
   }
+  const { db, user } = await authorized();
+  const [initialBriefing, initialAcademic, initialFocus, initialPlans] =
+    await Promise.all([
+      page === "home" ? loadBriefing(undefined, data).catch(() => null) : null,
+      page === "home" &&
+      data.dashboard?.enabled &&
+      data.dashboard.settings.mode === "custom" &&
+      data.dashboard.settings.widgets.some(
+        (w) => w.visible && ["academics", "learning"].includes(w.id),
+      )
+        ? readAcademics(db, user.id).catch(() => null)
+        : null,
+      (async () => {
+        try {
+          const result = await db
+            .from("focus_sessions")
+            .select("*")
+            .eq("user_id", user.id)
+            .in("status", ["running", "paused"])
+            .maybeSingle();
+          dbError(result.error);
+          return {
+            session: result.data as Session | null,
+            server_time: new Date().toISOString(),
+          };
+        } catch {
+          return undefined;
+        }
+      })(),
+      page === "home" &&
+      data.dashboard?.enabled &&
+      data.dashboard.settings.mode === "custom" &&
+      data.dashboard.settings.widgets.some(
+        (w) => w.visible && ["career", "learning"].includes(w.id),
+      )
+        ? (async () => {
+            const sources = await db
+              .from("sheet_rest_datasets")
+              .select("*")
+              .eq("user_id", user.id)
+              .order("created_at")
+              .limit(21);
+            dbError(sources.error);
+            if ((sources.data?.length ?? 0) > 20)
+              throw new Error("Too many saved sources");
+            return readSavedPlans(db, user.id, sources.data ?? [], true);
+          })().catch(() => null)
+        : null,
+    ]);
   return (
     <WorkspaceProvider initial={data}>
-      <WorkspaceShell>
-        {page === "home" ? (
-          <HomePage />
-        ) : page === "planner" ? (
-          <PlannerPage initialSection={query.section} />
-        ) : page === "areas" ? (
-          <AreasPage
-            slug={path[1]}
-            initialView={query.view}
-            initialCourse={
-              typeof query.course === "string" ? query.course : undefined
-            }
-            initialAssessment={
-              typeof query.assessment === "string"
-                ? query.assessment
-                : undefined
-            }
-          />
-        ) : page === "goals" ? (
-          <GoalsPage />
-        ) : page === "reviews" ? (
-          <ReviewsPage />
-        ) : page === "assistant" ? (
-          <ConversationArchive />
-        ) : page === "insights" ? (
-          <InsightsPage />
-        ) : page === "settings" ? (
-          <SettingsPage
-            initialCanvasOpen={query.canvas === "manage"}
-            initialSection={
-              query.google ? "integrations" : (query.section ?? "profile")
-            }
-          />
-        ) : (
-          <MorePage />
-        )}
-      </WorkspaceShell>
+      <FocusSessionProvider initial={initialFocus}>
+        <WorkspaceShell>
+          {page === "home" ? (
+            <HomePage
+              initialBriefing={initialBriefing}
+              initialAcademic={initialAcademic}
+              initialPlans={initialPlans}
+            />
+          ) : page === "planner" ? (
+            <PlannerPage initialSection={query.section} />
+          ) : page === "areas" ? (
+            <AreasPage
+              slug={path[1]}
+              initialView={query.view}
+              initialCourse={
+                typeof query.course === "string" ? query.course : undefined
+              }
+              initialAssessment={
+                typeof query.assessment === "string"
+                  ? query.assessment
+                  : undefined
+              }
+            />
+          ) : page === "goals" ? (
+            <GoalsPage />
+          ) : page === "reviews" ? (
+            <ReviewsPage />
+          ) : page === "assistant" ? (
+            <ConversationArchive />
+          ) : page === "insights" ? (
+            <InsightsPage />
+          ) : page === "settings" ? (
+            <SettingsPage
+              initialCanvasOpen={query.canvas === "manage"}
+              initialSection={
+                query.google ? "integrations" : (query.section ?? "profile")
+              }
+            />
+          ) : (
+            <MorePage />
+          )}
+        </WorkspaceShell>
+      </FocusSessionProvider>
     </WorkspaceProvider>
   );
 }

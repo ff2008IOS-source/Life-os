@@ -199,6 +199,11 @@ export type Profile = {
   version: number;
 };
 export type Workspace = {
+  dashboard?: {
+    settings: import("./dashboard-layout").DashboardLayout;
+    version: number;
+    enabled: boolean;
+  };
   tasks: Task[];
   projects: Project[];
   goals: Goal[];

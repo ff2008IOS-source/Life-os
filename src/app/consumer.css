@@ -63,6 +63,12 @@ h1 {
 .panel-description {
   padding-inline: 22px;
 }
+.top-actions > .text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 6px;
+}
 .text-link {
   font-size: 12px;
   font-weight: 550;
@@ -951,4 +957,270 @@ summary:focus-visible {
   .calendar-kind-legend button {
     min-height: 40px;
   }
+}
+
+/* Account-saved dashboard layouts keep Daily Focus outside the customizable grid. */
+.dashboard-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 16px;
+}
+.personal-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--dashboard-gap, 20px);
+  margin-bottom: 24px;
+  align-items: start;
+}
+.dashboard-widget {
+  grid-column: span 6;
+  min-width: 0;
+  position: relative;
+}
+.dashboard-widget.widget-wide {
+  grid-column: 1/-1;
+}
+.dashboard-domain-card {
+  padding: var(--dashboard-padding, 22px);
+}
+.dashboard-domain-card .panel-heading {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dashboard-domain-card h2 {
+  font-size: 16px;
+}
+.dashboard-domain-card .panel {
+  box-shadow: none;
+  border-color: transparent;
+  padding: 0;
+  margin: 12px 0 0;
+}
+.dashboard-records {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.dashboard-records li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dashboard-records li:last-child {
+  border-bottom: 0;
+}
+.dashboard-records a {
+  display: block;
+}
+.dashboard-records span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.widget-pin {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.dashboard-density-compact {
+  --dashboard-gap: 12px;
+  --dashboard-padding: 16px;
+}
+.dashboard-density-balanced {
+  --dashboard-gap: 20px;
+  --dashboard-padding: 22px;
+}
+.dashboard-density-spacious {
+  --dashboard-gap: 28px;
+  --dashboard-padding: 28px;
+}
+.dashboard-accent-blue {
+  --blue: #2563aa;
+  --blue-soft: #dceaff;
+}
+.dashboard-accent-violet {
+  --blue: #7353be;
+  --blue-soft: #f0eaff;
+}
+.dark .dashboard-accent-blue {
+  --blue: #a9caff;
+  --blue-soft: #a9caff12;
+}
+.dark .dashboard-accent-violet {
+  --blue: #d6baff;
+  --blue-soft: #d6baff12;
+}
+.dashboard-accent-blue .focus-card.panel {
+  background: linear-gradient(130deg, #153e70, #14213f);
+}
+.dashboard-accent-violet .focus-card.panel {
+  background: linear-gradient(130deg, #3b2568, #20203f);
+}
+.landscape-banner {
+  height: 88px;
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--blue);
+  background: var(--blue-soft);
+  margin-bottom: 20px;
+}
+.landscape-banner svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.widget-control {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.widget-control-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.widget-control-actions label {
+  font-size: 12px;
+  margin: 0;
+}
+.widget-control-actions select {
+  width: auto;
+}
+.dashboard-customizer fieldset {
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 12px;
+  min-width: 0;
+}
+.dashboard-customizer input[type="checkbox"] {
+  margin-right: 8px;
+}
+.focus-dock {
+  position: fixed;
+  z-index: 40;
+  bottom: 16px;
+  right: 24px;
+  width: min(720px, calc(100vw - 280px));
+  background: var(--surface);
+  border: 1px solid var(--blue);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px #0004;
+  padding: 16px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.focus-dock strong {
+  display: block;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.focus-dock p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+.focus-dock-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.focus-error {
+  position: fixed;
+  right: 20px;
+  top: 76px;
+  max-width: 360px;
+  z-index: 45;
+}
+body:has(.focus-dock) .content {
+  padding-bottom: 180px;
+}
+@media (max-width: 1100px) {
+  .focus-dock {
+    width: calc(100vw - 120px);
+  }
+}
+@media (max-width: 700px) {
+  .personal-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dashboard-widget,
+  .dashboard-widget.widget-wide {
+    grid-column: 1;
+  }
+  .focus-dock {
+    bottom: 78px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    flex-wrap: wrap;
+    padding: 14px;
+  }
+  .focus-dock strong {
+    max-width: calc(100vw - 60px);
+  }
+  .focus-error {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+  body:has(.focus-dock) .content {
+    padding-bottom: 270px;
+  }
+  .widget-control-actions .button {
+    min-width: 44px;
+  }
+}
+.focus-start-action {
+  align-self: flex-start;
+  margin: 12px 0;
+}
+.dashboard-domain-card {
+  min-height: 200px;
+}
+.dashboard-domain-card .academic-standing-cards {
+  max-height: 320px;
+  overflow: auto;
+}
+.insight-next-actions {
+  padding: 22px;
+  margin-bottom: 20px;
+}
+.insight-next-action {
+  display: block;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.insight-next-action p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+@media (max-width: 700px) {
+  .dashboard-customizer select,
+  .dashboard-customizer input:not([type="checkbox"]),
+  .focus-dock .button {
+    min-height: 44px;
+  }
+}
+.insight-bars-dense {
+  gap: 6px;
+}
+.insight-bars-dense .bar-column small {
+  width: 44px;
+  white-space: nowrap;
+  text-align: center;
+}
+.focus-calendar-context {
+  margin: 10px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e0e7ff;
+}
+.focus-calendar-context a {
+  color: inherit;
 }
