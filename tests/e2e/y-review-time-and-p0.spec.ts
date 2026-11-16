@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect, setBrowserTestTime } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 test("Sunday-only review, past-exam wording, unified status and responsive P0 shell", async ({
   page,
@@ -22,7 +22,7 @@ test("Sunday-only review, past-exam wording, unified status and responsive P0 sh
   ).toBeVisible();
   const headers = { Origin: "http://127.0.0.1:3000" };
   await page.request.post("/api/v1/workspace/initialize", { headers });
-  await page.clock.setFixedTime(new Date("2026-11-15T05:00Z"));
+  await setBrowserTestTime(page, new Date("2026-11-15T05:00Z"));
   await page.goto("/reviews");
   await expect(
     page.getByRole("heading", { name: "Your review opens on Sunday" }),
@@ -33,7 +33,7 @@ test("Sunday-only review, past-exam wording, unified status and responsive P0 sh
       exact: true,
     }),
   ).toHaveCount(0);
-  await page.clock.setFixedTime(new Date("2026-11-15T20:00Z"));
+  await setBrowserTestTime(page, new Date("2026-11-15T20:00Z"));
   await page.reload();
   const create = async (table: string, data: unknown) => {
     const r = await page.request.post("/api/v1/" + table, { headers, data });

@@ -1,4 +1,8 @@
 "use client";
+import { activityTrend, progressActions } from "@/lib/activity-trends";
+import { useCurrentTime } from "./use-current-time";
+import { formatInTimeZone } from "date-fns-tz";
+import Link from "next/link";
 import { AcademicProgressSummary } from "./academic-progress-summary";
 import { visibleArea } from "@/lib/visible-areas";
 import { WeeklyInsights } from "./weekly-insights";
@@ -14,7 +18,9 @@ export function InsightsPage() {
   const { data: raw } = useWorkspace();
   const data = realWorkspace(raw);
   const [range, setRange] = useState("week");
-  const end = localDate();
+  const now = useCurrentTime();
+  const zone = data.profile.timezone;
+  const end = formatInTimeZone(now, zone, "yyyy-MM-dd");
   const start = format(
     addDays(
       new Date(end + "T12:00:00"),
@@ -31,12 +37,15 @@ export function InsightsPage() {
   const completed = data.tasks.filter(
     (t) =>
       !t.deleted_at &&
+      !t.recurrence_rule_id &&
+      t.status === "completed" &&
       t.completed_at &&
       localDate(t.completed_at) >= start &&
       localDate(t.completed_at) <= end,
   );
   const recurringCompletions = data.occurrences.filter(
     (o) =>
+      o.status === "completed" &&
       o.completed_at &&
       localDate(o.completed_at) >= start &&
       localDate(o.completed_at) <= end,
@@ -49,13 +58,9 @@ export function InsightsPage() {
       localDate(m.completed_at) >= start &&
       localDate(m.completed_at) <= end,
   );
-  const days = Array.from({ length: 7 }, (_, i) =>
-    format(addDays(new Date(end + "T12:00:00"), i - 6), "yyyy-MM-dd"),
-  );
-  const bars = days.map((day) => ({
-    day,
-    count: completed.filter((t) => localDate(t.completed_at!) === day).length,
-  }));
+  const trend = activityTrend(data, start, end, zone);
+  const nextActions = progressActions(data, now, zone);
+  const bars = trend.buckets.map((b) => ({ ...b, day: b.start }));
   const max = Math.max(1, ...bars.map((b) => b.count));
   return (
     <>
@@ -77,6 +82,27 @@ export function InsightsPage() {
           <option value="year">Last 365 days</option>
         </select>
       </div>
+      {nextActions.length > 0 && (
+        <section className="panel insight-next-actions">
+          <div className="panel-heading">
+            <h2>Useful next steps</h2>
+          </div>
+          {nextActions.map((action) => (
+            <Link
+              className="insight-next-action"
+              key={action.title}
+              href={action.href}
+            >
+              <strong>{action.title}</strong>
+              <p>{action.detail}</p>
+            </Link>
+          ))}
+          <p className="small muted">
+            Based on current deadlines, milestone dates and task links—not a
+            productivity score.
+          </p>
+        </section>
+      )}
       <WorkSessionsPanel
         compact
         start={start}
@@ -126,18 +152,20 @@ export function InsightsPage() {
       <div className="dashboard-grid">
         <section className="panel">
           <div className="panel-heading">
-            <h2>Daily task completions</h2>
-            <span className="badge">Last 7 days</span>
+            <h2>Recorded completion trend</h2>
+            <span className="badge">
+              {start}–{end}
+            </span>
           </div>
           <div className="panel-body">
-            {completed.length ? (
+            {trend.total > 0 ? (
               <>
                 <div
-                  className="insight-bars"
+                  className={`insight-bars ${bars.length > 7 ? "insight-bars-dense" : ""}`}
                   role="img"
-                  aria-label={`Daily completed tasks: ${bars.map((b) => `${b.day}: ${b.count}`).join(", ")}`}
+                  aria-label={`Completed tasks and recurring occurrences: ${bars.map((b) => `${b.day}: ${b.count}`).join(", ")}`}
                 >
-                  {bars.map((b) => (
+                  {bars.map((b, i) => (
                     <div className="bar-column" key={b.day}>
                       <span>{b.count}</span>
                       <div
@@ -145,32 +173,52 @@ export function InsightsPage() {
                         style={{ height: `${(b.count / max) * 105}px` }}
                       />
                       <small>
-                        {format(new Date(b.day + "T12:00:00"), "EEE")}
+                        {i % Math.ceil(bars.length / 7) === 0
+                          ? format(
+                              new Date(b.day + "T12:00:00"),
+                              trend.bucketDays === 1 ? "EEE" : "MMM d",
+                            )
+                          : " "}
                       </small>
                     </div>
                   ))}
                 </div>
                 <details style={{ marginTop: 15 }}>
                   <summary className="text-link">View chart data</summary>
-                  <table>
-                    <caption className="sr-only">
-                      Daily task completions in Vancouver
-                    </caption>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Completed</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bars.map((b) => (
-                        <tr key={b.day}>
-                          <td>{b.day}</td>
-                          <td>{b.count}</td>
+                  <div
+                    className="table-wrap"
+                    role="region"
+                    aria-label="Completion trend data"
+                    tabIndex={0}
+                  >
+                    {" "}
+                    <table>
+                      <caption className="sr-only">
+                        Recorded task and occurrence completions in {zone}
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Completed</th>
+                          <th>Tasks</th>
+                          <th>Recurring occurrences</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {bars.map((b) => (
+                          <tr key={b.day}>
+                            <td>
+                              {b.start}
+                              {b.end !== b.start ? `–${b.end}` : ""}
+                            </td>
+                            <td>{b.count}</td>
+                            <td>{b.tasks}</td>
+                            <td>{b.occurrences}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </details>
               </>
             ) : (
@@ -182,8 +230,10 @@ export function InsightsPage() {
               />
             )}
             <p className="data-source">
-              Source: user-entered task completion timestamps · last 7 days ·
-              America/Vancouver. Based on what you’ve logged in Life OS.
+              Source: task and recurring-occurrence completion timestamps ·{" "}
+              {start}–{end} · {zone}. Each completed record counts once. Missing
+              history is not evidence that no work happened. Timer totals are
+              shown separately as owner-confirmed actual minutes.
             </p>
           </div>
         </section>

@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useCurrentTime } from "./use-current-time";
+import { useFocusSession } from "./focus-session-provider";
 import { consumerReason } from "@/lib/consumer-copy";
 import { useState, useRef } from "react";
 import {
@@ -35,7 +37,21 @@ export function BriefingPanel({
   hideConnectionAlerts?: boolean;
 }) {
   const { data: w, mutate, notify } = useWorkspace();
+  const focus = useFocusSession();
+  const now = useCurrentTime();
   const d = c.data;
+  const primary = d?.recommendations[0];
+  const activeTask = focus?.session
+    ? w.tasks.find((t) => t.id === focus.session?.task_id)
+    : null;
+  const nextCommitment = d?.calendar.reliable
+    ? d.calendar.events
+        .filter(
+          (e) =>
+            e.start_at && (!e.end_at || Date.parse(e.end_at) > now.getTime()),
+        )
+        .sort((a, b) => Date.parse(a.start_at!) - Date.parse(b.start_at!))[0]
+    : null;
   const attention =
     d?.attention.filter(
       (a) => !hideConnectionAlerts || a.kind !== "connection",
@@ -248,7 +264,56 @@ export function BriefingPanel({
           <div className="focus-art" aria-hidden="true">
             <Focus size={42} strokeWidth={1.2} />
           </div>
-          {d.recommendations[0] ? (
+          {focus?.session ? (
+            <div>
+              <h3>
+                {w.tasks.find((t) => t.id === focus.session?.task_id)?.title ??
+                  "Your current focus"}
+              </h3>
+              <p className="focus-description">
+                Your chosen focus ·{" "}
+                {focus.session.status === "running" ? "In progress" : "Paused"}
+              </p>
+              {activeTask?.estimated_minutes != null && (
+                <p className="focus-description">
+                  About{" "}
+                  {Math.max(
+                    0,
+                    activeTask.estimated_minutes -
+                      (activeTask.actual_minutes ?? 0),
+                  )}{" "}
+                  min left, based on logged work.
+                </p>
+              )}
+              <div className="focus-dock-actions">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || focus.busy}
+                  onClick={() => {
+                    if (focus.session) open(focus.session.task_id);
+                  }}
+                >
+                  Edit current task
+                </Button>
+                <Button
+                  disabled={focus.busy}
+                  onClick={() => void focus.toggle()}
+                >
+                  {focus.session.status === "running"
+                    ? "Pause current focus"
+                    : "Resume current focus"}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={focus.busy}
+                  onClick={focus.finish}
+                >
+                  Finish current focus
+                </Button>
+              </div>
+            </div>
+          ) : d.recommendations[0] ? (
             <>
               <h3>{d.recommendations[0].title}</h3>
               <p className="focus-description">
@@ -256,6 +321,24 @@ export function BriefingPanel({
                   ? "A close deadline makes this a good place to start."
                   : "A focused step toward what matters to you."}
               </p>
+              {focus && primary && (
+                <div className="focus-start-action">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    disabled={
+                      focus.busy ||
+                      !focus.canStart ||
+                      !!focus.session ||
+                      !!w.tasks.find((t) => t.id === primary.task_id)
+                        ?.recurrence_rule_id
+                    }
+                    onClick={() => void focus.start(primary.task_id)}
+                  >
+                    Start focus
+                  </Button>
+                </div>
+              )}
               <div className="focus-meta">
                 {d.recommendations[0].remaining_minutes !== null && (
                   <span>
@@ -363,6 +446,29 @@ export function BriefingPanel({
                 </Link>
               </Button>
             </div>
+          )}
+          {nextCommitment && (
+            <p className="focus-calendar-context">
+              <Link href="/planner?section=calendar">
+                {Date.parse(nextCommitment.start_at!) <= now.getTime()
+                  ? "On your calendar now"
+                  : "Next commitment"}
+                : {nextCommitment.title} ·{" "}
+                {formatInTimeZone(
+                  nextCommitment.start_at!,
+                  d.timezone,
+                  "h:mm a",
+                )}
+              </Link>
+            </p>
+          )}
+          {d.weekly.calendar_reliable && d.weekly.conflict_count > 0 && (
+            <p className="focus-calendar-context">
+              <Link href="/planner?section=calendar">
+                {d.weekly.conflict_count} overlapping commitments this week ·
+                Review planner
+              </Link>
+            </p>
           )}
           <div className="focus-footer">
             <span>

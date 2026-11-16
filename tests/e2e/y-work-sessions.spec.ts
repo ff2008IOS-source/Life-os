@@ -18,6 +18,9 @@ test("synthetic reservation → actual completion → academic history and revie
     await initialize.click();
     await expect(initialize).toHaveCount(0);
   }
+  const previousMinutes = (
+    await (await page.request.get("/api/v1/work/sessions")).json()
+  ).summary.actual_minutes;
   const create = async (entity: string, data: Record<string, unknown>) => {
     const response = await page.request.post(`/api/v1/${entity}`, {
       data,
@@ -253,13 +256,13 @@ test("synthetic reservation → actual completion → academic history and revie
     await expect(
       page
         .getByRole("region", { name: "Work history", exact: true })
-        .getByText(/45 minutes logged/),
+        .getByText(new RegExp(`${previousMinutes + 45} minutes logged`)),
     ).toBeVisible();
     await page.reload();
     await expect(
       page
         .getByRole("region", { name: "Work history", exact: true })
-        .getByText(/45 minutes logged/),
+        .getByText(new RegExp(`${previousMinutes + 45} minutes logged`)),
     ).toBeVisible();
   }
 });

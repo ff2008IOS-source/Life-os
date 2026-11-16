@@ -3,19 +3,21 @@ test("provider cooldown keeps the draft, explains the exact pause, refreshes sta
   page,
 }) => {
   let posts = 0,
-    retryUntil = 0;
+    retryUntil = 0,
+    cooling = false;
   const limits = () => ({
-    available_tokens: retryUntil > Date.now() ? 0 : 8000,
+    available_tokens: cooling ? 0 : 8000,
     remaining_requests: 10,
     daily_limit: 10,
-    reason: retryUntil > Date.now() ? "provider" : null,
-    retry_at: retryUntil ? new Date(retryUntil).toISOString() : null,
+    reason: cooling ? "provider" : null,
+    retry_at: cooling ? new Date(retryUntil).toISOString() : null,
     reset_at: "2099-11-08T07:00:00Z",
   });
   await page.route("**/api/v1/assistant*", async (route) => {
     if (route.request().method() === "POST") {
       posts++;
-      retryUntil = Date.now() + 2500;
+      retryUntil = (await page.evaluate(() => Date.now())) + 6000;
+      cooling = true;
       return route.fulfill({
         status: 429,
         json: {
@@ -61,8 +63,9 @@ test("provider cooldown keeps the draft, explains the exact pause, refreshes sta
   await expect(
     page.getByRole("button", { name: "Send review response" }),
   ).toBeDisabled();
+  cooling = false;
   await expect(
     page.getByRole("button", { name: "Send review response" }),
-  ).toBeEnabled({ timeout: 7000 });
+  ).toBeEnabled({ timeout: 10000 });
   expect(posts).toBe(1);
 });

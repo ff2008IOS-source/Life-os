@@ -1,4 +1,5 @@
 import "server-only";
+import { migrateLayout } from "../dashboard-layout";
 import { schedulingIdentity } from "./scheduling-identity";
 import { dbError } from "@/lib/http";
 import type { Workspace } from "@/lib/schemas";
@@ -22,13 +23,14 @@ async function readWorkspace(workerUserId?: string): Promise<Workspace> {
     "goal_tasks",
     "recurrence_rules",
     "task_occurrences",
+    "dashboard_preferences",
   ] as const;
   const results = await Promise.all(
     tables.map(async (table) => {
       const rows: Record<string, unknown>[] = [];
       for (let page = 0; page < 20; page++) {
         const key =
-          table === "profiles"
+          table === "profiles" || table === "dashboard_preferences"
             ? "user_id"
             : table === "goal_tasks"
               ? "goal_id"
@@ -73,6 +75,11 @@ async function readWorkspace(workerUserId?: string): Promise<Workspace> {
     milestones,
     reviews,
     areas,
+    dashboard: {
+      settings: migrateLayout(results[11][0]?.settings),
+      version: results[11][0]?.version ?? 0,
+      enabled: process.env.LIFE_OS_DASHBOARD_V2 !== "false",
+    },
     profile: profiles[0] ?? {
       display_name: "",
       timezone: "America/Vancouver",

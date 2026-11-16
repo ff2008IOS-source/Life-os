@@ -1,0 +1,480 @@
+"use client";
+import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import {
+  displayedWidgets,
+  widgetNames,
+  type DashboardLayout,
+} from "@/lib/dashboard-layout";
+import { goalProgress } from "@/lib/insights";
+import { realWorkspace } from "@/lib/real-workspace";
+import { availableProject, visibleArea } from "@/lib/visible-areas";
+import { useWorkspace } from "./workspace-provider";
+import { calendarRequest } from "./use-calendar";
+import { QuickCapture, TaskList } from "./task-list";
+import { GoogleCalendarPanel } from "./google-calendar-panel";
+import { AcademicProgressSummary } from "./academic-progress-summary";
+import { WorkSessionsPanel } from "./work-sessions-panel";
+import { useFocusSession } from "./focus-session-provider";
+import { Button } from "./ui/button";
+import type { AcademicData } from "./academic-editor";
+import type { BriefingController } from "./use-briefing";
+import type { Dataset, Row } from "./sheet-rest-panel";
+import type { Task } from "@/lib/schemas";
+import { reviewAvailability } from "@/lib/temporal-context";
+import { useCurrentTime } from "./use-current-time";
+import { formatInTimeZone } from "date-fns-tz";
+function Card({
+  title,
+  href,
+  children,
+}: {
+  title: string;
+  href: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="panel dashboard-domain-card">
+      <div className="panel-heading">
+        <h2>{title}</h2>
+        <Link className="text-link" href={href}>
+          Open {title} →
+        </Link>
+      </div>
+      {children}
+    </section>
+  );
+}
+export function DashboardWidgets({
+  layout,
+  briefing,
+  priorities,
+}: {
+  layout: DashboardLayout;
+  briefing: BriefingController;
+  priorities: Task[];
+}) {
+  const { data: raw } = useWorkspace();
+  const data = realWorkspace(raw),
+    now = useCurrentTime();
+  const shown = displayedWidgets(layout),
+    needsAcademics = shown.some((w) =>
+      ["academics", "learning"].includes(w.id),
+    );
+  const [academic, setAcademic] = useState<AcademicData | null>(null),
+    [academicError, setAcademicError] = useState("");
+  useEffect(() => {
+    if (!needsAcademics) return;
+    let live = true;
+    const load = () => {
+      void calendarRequest<AcademicData>("/api/v1/academics")
+        .then((r) => {
+          if (live) {
+            setAcademic(r);
+            setAcademicError("");
+          }
+        })
+        .catch(() => {
+          if (live)
+            setAcademicError(
+              "Course data could not refresh. Open Academics to check your records.",
+            );
+        });
+    };
+    load();
+    window.addEventListener("lifeos:changed", load);
+    return () => {
+      live = false;
+      window.removeEventListener("lifeos:changed", load);
+    };
+  }, [needsAcademics]);
+  const needsCareer = shown.some((w) => ["career", "learning"].includes(w.id));
+  const [plans, setPlans] = useState<{
+      datasets: Dataset[];
+      overview: {
+        dataset_id: string;
+        rows: Row[];
+        error?: string;
+        more: boolean;
+      }[];
+    } | null>(null),
+    [planError, setPlanError] = useState("");
+  useEffect(() => {
+    if (!needsCareer) return;
+    let live = true;
+    const load = () => {
+      void calendarRequest<NonNullable<typeof plans>>(
+        "/api/v1/sheets/tables?overview=true",
+      )
+        .then((r) => {
+          if (live) {
+            setPlans(r);
+            setPlanError("");
+          }
+        })
+        .catch(() => {
+          if (live)
+            setPlanError(
+              "Your saved skill plan could not load. Open Career to check it.",
+            );
+        });
+    };
+    load();
+    window.addEventListener("lifeos:changed", load);
+    return () => {
+      live = false;
+      window.removeEventListener("lifeos:changed", load);
+    };
+  }, [needsCareer]);
+  const skillSourceError = plans?.datasets.some(
+    (d) =>
+      d.config.columns.some((c) => /^skill$/i.test(c.header)) &&
+      plans.overview.find((x) => x.dataset_id === d.id)?.error,
+  )
+    ? "Your saved skill entries could not load. Check the Career page."
+    : "";
+  const skills =
+    plans?.datasets
+      .filter((d) => d.config.columns.some((c) => /^skill$/i.test(c.header)))
+      .flatMap((d) => {
+        const section = plans.overview.find((x) => x.dataset_id === d.id);
+        const title = d.config.columns.find((c) => /^skill$/i.test(c.header));
+        const status = d.config.columns.find((c) =>
+          /^(status|level|progress|current level)$/i.test(c.header),
+        );
+        return (section?.rows ?? [])
+          .filter((r) => !["deleted", "remote_deleted"].includes(r.state))
+          .slice(0, 4)
+          .map((r) => ({
+            id: r.id,
+            title: String(
+              r.local_values[title!.key] ?? "Skill name not recorded",
+            ),
+            status: status
+              ? String(r.local_values[status.key] ?? "Not recorded")
+              : null,
+            error: section?.error,
+          }));
+      }) ?? [];
+  const projects = data.projects.filter(
+    (p) =>
+      availableProject(p) &&
+      p.status === "active" &&
+      data.areas.some((a) => a.id === p.area_id && visibleArea(a)),
+  );
+  const basketball = projects.filter((p) =>
+    /\b(basketball|hoops|shooting|MBB)\b/i.test(`${p.name} ${p.description}`),
+  );
+  const careerArea = data.areas.find((a) => a.slug === "career");
+  const career = projects.filter(
+    (p) =>
+      p.area_id === careerArea?.id && !basketball.some((b) => b.id === p.id),
+  );
+  const projectArea = data.areas.find((a) => a.slug === "projects");
+  const personalProjects = projects.filter(
+    (p) => p.area_id === projectArea?.id,
+  );
+  const upcoming = briefing.data?.assessments
+    .filter(
+      (a) =>
+        !a.dropped &&
+        !["submitted", "returned", "excused"].includes(a.submission_state) &&
+        (a.due_at
+          ? Date.parse(a.due_at) >= now.getTime()
+          : !!a.due_date &&
+            a.due_date >=
+              formatInTimeZone(now, data.profile.timezone, "yyyy-MM-dd")),
+    )
+    .slice(0, 5);
+  const taskOptions = data.tasks.filter(
+    (t) =>
+      !t.deleted_at &&
+      !["completed", "cancelled"].includes(t.status) &&
+      !t.recurrence_rule_id,
+  );
+  const focus = useFocusSession();
+  const [choice, setChoice] = useState("");
+  const projectLinks = (rows: typeof projects) =>
+    rows.length ? (
+      <ul className="dashboard-records">
+        {rows.slice(0, 4).map((p) => (
+          <li key={p.id}>
+            <Link
+              href={`/areas/${data.areas.find((a) => a.id === p.area_id)?.slug ?? "projects"}#project-${p.id}`}
+            >
+              {p.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="muted">No active projects recorded here.</p>
+    );
+  const academicContent = academicError ? (
+    <p role="alert">{academicError}</p>
+  ) : !academic ? (
+    <p className="muted">Loading your courses…</p>
+  ) : academic.courses.length ? (
+    <AcademicProgressSummary provided={academic} />
+  ) : (
+    <p className="muted">No courses recorded yet.</p>
+  );
+  const contents: Record<string, ReactNode> = {
+    plan: (
+      <Card title="Today’s tasks" href="/planner">
+        {priorities.length ? (
+          <TaskList tasks={priorities} />
+        ) : (
+          <p className="muted">No next tasks selected. Capture one below.</p>
+        )}
+        <QuickCapture />
+      </Card>
+    ),
+    schedule: (
+      <GoogleCalendarPanel
+        start={formatInTimeZone(now, data.profile.timezone, "yyyy-MM-dd")}
+        end={new Date(
+          Date.parse(
+            formatInTimeZone(now, data.profile.timezone, "yyyy-MM-dd") +
+              "T12:00Z",
+          ) + 86400000,
+        )
+          .toISOString()
+          .slice(0, 10)}
+      />
+    ),
+    upcoming: (
+      <Card title="Upcoming" href="/planner">
+        {briefing.error ? (
+          <p role="alert">Deadlines could not refresh.</p>
+        ) : !briefing.data ? (
+          <p>Loading deadlines…</p>
+        ) : upcoming?.length ? (
+          <ul className="dashboard-records">
+            {upcoming.map((a) => (
+              <li key={a.id}>
+                <Link
+                  href={`/areas/academics?course=${a.course_id}&assessment=${a.id}`}
+                >
+                  <strong>
+                    {a.course} · {a.title}
+                  </strong>
+                  <span>
+                    {a.due_at
+                      ? formatInTimeZone(
+                          a.due_at,
+                          data.profile.timezone,
+                          "EEE, MMM d · h:mm a",
+                        )
+                      : a.due_date}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">
+            No upcoming course deadlines in the loaded planning window.
+          </p>
+        )}
+      </Card>
+    ),
+    academics: (
+      <Card title="Academics" href="/areas/academics">
+        {academicContent}
+      </Card>
+    ),
+    basketball: (
+      <Card title="Basketball operations" href="/areas/career">
+        {projectLinks(basketball)}
+        <p className="small muted">
+          Active projects mentioning basketball, hoops or shooting. No
+          performance statistics are inferred.
+        </p>
+      </Card>
+    ),
+    career: (
+      <Card title="Career" href="/areas/career">
+        {projectLinks(career)}
+        <p className="small muted">
+          {career.length} active projects in your Career area.
+        </p>
+      </Card>
+    ),
+    projects: (
+      <Card title="Projects" href="/areas/projects">
+        {projectLinks(personalProjects)}
+        <p className="small muted">
+          {personalProjects.length} active projects in your Projects area.
+        </p>
+      </Card>
+    ),
+    goals: (
+      <Card title="Goals" href="/goals">
+        <ul className="dashboard-records">
+          {data.goals
+            .filter((g) => g.status === "active")
+            .slice(0, 4)
+            .map((g) => (
+              <li key={g.id}>
+                <Link href={`/goals#goal-${g.id}`}>
+                  {g.title}
+                  <span>
+                    {goalProgress(g, data.milestones).percent === null
+                      ? "Active"
+                      : goalProgress(g, data.milestones).label}
+                  </span>
+                </Link>
+              </li>
+            ))}
+        </ul>
+        {!data.goals.some((g) => g.status === "active") && (
+          <p className="muted">No active goals recorded.</p>
+        )}
+      </Card>
+    ),
+    learning: (
+      <Card title="Learning" href="/areas/academics?view=study">
+        <h3>Career skills</h3>
+        {planError || skillSourceError ? (
+          <p role="alert">{planError || skillSourceError}</p>
+        ) : !plans ? (
+          <p>Loading saved skills…</p>
+        ) : skills.length ? (
+          <ul className="dashboard-records">
+            {skills.slice(0, 4).map((skill) => (
+              <li key={skill.id}>
+                <Link href="/areas/career#connected-roadmap">
+                  {skill.title}
+                  {skill.status ? ` · ${skill.status}` : ""}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="small muted">
+            No saved skill entries are available in this preview.
+          </p>
+        )}
+        <p className="small muted">
+          A preview of saved skill entries; open Career for the complete plan.
+        </p>
+        <h3>Study topics</h3>
+
+        {academicError ? (
+          <p role="alert">{academicError}</p>
+        ) : !academic ? (
+          <p>Loading study topics…</p>
+        ) : (
+          <>
+            {academic.study_topics.length > 0 && (
+              <p>
+                {
+                  academic.study_topics.filter((t) => t.mastery === "mastered")
+                    .length
+                }{" "}
+                of {academic.study_topics.length} topics marked mastered
+              </p>
+            )}
+            <p className="small muted">
+              Your recorded study status; this is separate from earned grades.
+            </p>
+            <ul className="dashboard-records">
+              {academic.study_topics
+                .filter((t) => t.mastery === "needs_review")
+                .slice(0, 4)
+                .map((t) => (
+                  <li key={String(t.id)}>
+                    <Link
+                      href={`/areas/academics?course=${t.course_id}&view=study`}
+                    >
+                      {String(t.title)} · Needs review
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+            {!academic.study_topics.length && (
+              <p className="muted">
+                Add study topics in a course to track learning.
+              </p>
+            )}
+          </>
+        )}
+      </Card>
+    ),
+    review: (
+      <Card title="Weekly review" href="/reviews">
+        <p>
+          {reviewAvailability(now, data.profile.timezone).open
+            ? "Your Sunday review is open."
+            : "Your next review opens on Sunday."}
+        </p>
+        <p className="small muted">
+          Reflect on recorded outcomes, then choose next week’s priorities.
+        </p>
+      </Card>
+    ),
+    insights: (
+      <Card title="Progress" href="/insights">
+        {briefing.data ? (
+          <>
+            <p>
+              {briefing.data.weekly.completed_tasks} tasks completed this week
+            </p>
+            <p className="small muted">
+              Recorded completion dates within the current review week.
+            </p>
+          </>
+        ) : (
+          <p className="muted">Weekly progress is not available yet.</p>
+        )}
+      </Card>
+    ),
+    sessions: (
+      <Card title="Work sessions" href="/planner?section=schedule">
+        <label>
+          Choose a task to focus on
+          <select value={choice} onChange={(e) => setChoice(e.target.value)}>
+            <option value="">Choose a task</option>
+            {taskOptions.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button
+          disabled={
+            !choice ||
+            !focus ||
+            !focus.canStart ||
+            focus.busy ||
+            !!focus.session
+          }
+          onClick={() => void focus?.start(choice)}
+        >
+          Start selected task
+        </Button>
+        <WorkSessionsPanel compact />
+      </Card>
+    ),
+  };
+  return (
+    <div
+      className="personal-dashboard-grid"
+      aria-label="Your dashboard widgets"
+    >
+      {shown.map((w) => (
+        <div
+          key={w.id}
+          data-widget={w.id}
+          className={`dashboard-widget widget-${w.size}`}
+          aria-label={`${widgetNames[w.id]} widget`}
+        >
+          {w.pinned && <span className="widget-pin">Pinned</span>}
+          {contents[w.id]}
+        </div>
+      ))}
+    </div>
+  );
+}

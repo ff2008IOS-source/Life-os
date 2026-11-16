@@ -1,3 +1,4 @@
+import { FocusSessionProvider } from "@/components/focus-session-provider";
 import { ConversationArchive } from "@/components/conversation-archive";
 import { notFound, redirect } from "next/navigation";
 import { loadWorkspace } from "@/lib/services/workspace";
@@ -63,43 +64,45 @@ export default async function Page({
   }
   return (
     <WorkspaceProvider initial={data}>
-      <WorkspaceShell>
-        {page === "home" ? (
-          <HomePage />
-        ) : page === "planner" ? (
-          <PlannerPage initialSection={query.section} />
-        ) : page === "areas" ? (
-          <AreasPage
-            slug={path[1]}
-            initialView={query.view}
-            initialCourse={
-              typeof query.course === "string" ? query.course : undefined
-            }
-            initialAssessment={
-              typeof query.assessment === "string"
-                ? query.assessment
-                : undefined
-            }
-          />
-        ) : page === "goals" ? (
-          <GoalsPage />
-        ) : page === "reviews" ? (
-          <ReviewsPage />
-        ) : page === "assistant" ? (
-          <ConversationArchive />
-        ) : page === "insights" ? (
-          <InsightsPage />
-        ) : page === "settings" ? (
-          <SettingsPage
-            initialCanvasOpen={query.canvas === "manage"}
-            initialSection={
-              query.google ? "integrations" : (query.section ?? "profile")
-            }
-          />
-        ) : (
-          <MorePage />
-        )}
-      </WorkspaceShell>
+      <FocusSessionProvider>
+        <WorkspaceShell>
+          {page === "home" ? (
+            <HomePage />
+          ) : page === "planner" ? (
+            <PlannerPage initialSection={query.section} />
+          ) : page === "areas" ? (
+            <AreasPage
+              slug={path[1]}
+              initialView={query.view}
+              initialCourse={
+                typeof query.course === "string" ? query.course : undefined
+              }
+              initialAssessment={
+                typeof query.assessment === "string"
+                  ? query.assessment
+                  : undefined
+              }
+            />
+          ) : page === "goals" ? (
+            <GoalsPage />
+          ) : page === "reviews" ? (
+            <ReviewsPage />
+          ) : page === "assistant" ? (
+            <ConversationArchive />
+          ) : page === "insights" ? (
+            <InsightsPage />
+          ) : page === "settings" ? (
+            <SettingsPage
+              initialCanvasOpen={query.canvas === "manage"}
+              initialSection={
+                query.google ? "integrations" : (query.section ?? "profile")
+              }
+            />
+          ) : (
+            <MorePage />
+          )}
+        </WorkspaceShell>
+      </FocusSessionProvider>
     </WorkspaceProvider>
   );
 }

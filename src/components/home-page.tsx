@@ -1,4 +1,7 @@
 "use client";
+import { DashboardCustomizer } from "./dashboard-customizer";
+import dynamic from "next/dynamic";
+import { migrateLayout } from "@/lib/dashboard-layout";
 import { reviewAvailability } from "@/lib/temporal-context";
 import { SyncHealth } from "./sync-health";
 import { useCurrentTime } from "./use-current-time";
@@ -9,13 +12,7 @@ import { BriefingPanel } from "./briefing-page";
 import { useBriefing } from "./use-briefing";
 import { todayPriorities, personalGreeting } from "@/lib/today-priorities";
 
-import { useEffect, useState } from "react";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
-import { groupCalendarEvents } from "@/lib/integrations/calendar-layout";
-import type {
-  CalendarEvent,
-  ConnectionState,
-} from "@/lib/integrations/calendar-view";
 import {
   CalendarDays,
   CheckCheck,
@@ -36,86 +33,33 @@ import { EmptyState, QuickCapture, TaskList } from "./task-list";
 import { Button } from "./ui/button";
 import { goalProgress, taskSummary } from "@/lib/insights";
 import { TIMEZONE, localDate, friendlyDate } from "@/lib/dates";
+const DashboardWidgets = dynamic(
+  () => import("./dashboard-widgets").then((module) => module.DashboardWidgets),
+  {
+    loading: () => (
+      <section className="panel" role="status">
+        Loading your personal dashboard…
+      </section>
+    ),
+  },
+);
+
 export function HomePage() {
   const { data: raw, request, refresh, notify, pending } = useWorkspace();
   const data = realWorkspace(raw);
-  const [calendarSummary, setCalendarSummary] = useState<{
-    count: number | null;
-    note: string;
-  }>({ count: null, note: "Checking calendar connection…" });
-  useEffect(() => {
-    let live = true;
-    void (async () => {
-      try {
-        const response = await fetch("/api/v1/calendar/connections", {
-          cache: "no-store",
-        });
-        if (!response.ok) throw Error();
-        const state = (await response.json()) as ConnectionState;
-        const selected = state.calendars.filter(
-          (c) =>
-            c.sync_enabled &&
-            state.connections.some(
-              (x) => x.id === c.connection_id && x.status === "connected",
-            ),
-        );
-        if (!selected.length) {
-          if (live)
-            setCalendarSummary({
-              count: null,
-              note: "Choose calendars in Settings",
-            });
-          return;
-        }
-        const start = localDate();
-        const end = new Date(
-          new Date(start + "T12:00Z").getTime() + 7 * 86400000,
-        )
-          .toISOString()
-          .slice(0, 10);
-        if (
-          selected.some(
-            (c) =>
-              c.sync_error ||
-              !c.last_synced_at ||
-              Date.now() - new Date(c.last_synced_at).getTime() >
-                26 * 3600000 ||
-              !c.coverage_start ||
-              !c.coverage_end ||
-              localDate(c.coverage_start) > start ||
-              localDate(c.coverage_end) < end,
-          )
-        ) {
-          if (live)
-            setCalendarSummary({ count: null, note: "Calendar sync needed" });
-          return;
-        }
-        const eventsResponse = await fetch(
-          `/api/v1/calendar/events?start=${start}&end=${end}`,
-          { cache: "no-store" },
-        );
-        if (!eventsResponse.ok) throw Error();
-        const result = (await eventsResponse.json()) as {
-          events: CalendarEvent[];
-        };
-        if (live)
-          setCalendarSummary({
-            count: groupCalendarEvents(result.events).length,
-            note: "In the next 7 days",
-          });
-      } catch {
-        if (live)
-          setCalendarSummary({
-            count: null,
-            note: "Calendar status unavailable",
-          });
-      }
-    })();
-    return () => {
-      live = false;
-    };
-  }, []);
+  const layout = migrateLayout(raw.dashboard?.settings);
+  const custom = raw.dashboard?.enabled !== false && layout.mode === "custom";
   const briefing = useBriefing();
+  const calendarSummary = {
+    count: briefing.data?.weekly.calendar_reliable
+      ? briefing.data.weekly.commitment_count
+      : null,
+    note: briefing.data?.weekly.calendar_reliable
+      ? "This review week"
+      : briefing.error
+        ? "Calendar status unavailable"
+        : "Check your calendar connection",
+  };
   const now = useCurrentTime();
   const summary = taskSummary(data.tasks, now);
   const ranked = todayPriorities(data, now);
@@ -173,7 +117,10 @@ export function HomePage() {
     },
   ];
   return (
-    <div className="home-experience" id="daily-briefing">
+    <div
+      className={`home-experience dashboard-density-${layout.density} dashboard-accent-${layout.accent}`}
+      id="daily-briefing"
+    >
       {needsInit && (
         <div className="notice">
           <Layers3 />
@@ -204,13 +151,34 @@ export function HomePage() {
         <div>
           <span className="eyebrow">A LITTLE SPACE TO THINK AHEAD</span>
           <h1>A little clarity for today.</h1>
-          <p>{personalGreeting(data.profile.display_name, now)}</p>
+          {layout.greeting && (
+            <p>{personalGreeting(data.profile.display_name, now)}</p>
+          )}
         </div>
         <span className="date-chip">
           <CalendarDays size={12} />
           {formatInTimeZone(now, TIMEZONE, "EEE, MMM d")}
         </span>
       </div>
+      <div className="dashboard-tools">
+        <DashboardCustomizer />
+      </div>
+      {layout.banner && (
+        <div className="landscape-banner" aria-hidden="true">
+          <svg viewBox="0 0 1000 100" preserveAspectRatio="none">
+            <path
+              d="M0 100 170 20 330 100 540 5 790 100 900 25 1000 100Z"
+              fill="currentColor"
+              opacity=".28"
+            />
+            <path
+              d="M0 100 110 50 250 100 410 35 600 100 780 45 1000 100Z"
+              fill="currentColor"
+              opacity=".4"
+            />
+          </svg>
+        </div>
+      )}
       <div className="home-overview">
         <BriefingPanel controller={briefing} compact hideConnectionAlerts />
         <div className="stats-grid">
@@ -229,163 +197,177 @@ export function HomePage() {
       <div id="connected-data">
         <SyncHealth controller={briefing} />
       </div>
-      <div className="dashboard-grid">
-        <div className="stack home-work-column">
-          <section className="panel">
-            <div className="panel-heading">
-              <div className="panel-title">
-                <Sun />
-                <h2>On your list</h2>
-                {priorities.length > 0 && (
-                  <span className="count-pill">{priorities.length}</span>
-                )}
-              </div>
-              <Link href="/planner" className="text-link">
-                All tasks
-                <ArrowUpRight size={12} />
-              </Link>
-            </div>
-
-            {priorities.length ? (
-              <TaskList tasks={priorities} />
-            ) : (
-              <div className="home-capture-empty">
-                <span className="capture-mark" aria-hidden="true">
-                  <Plus size={20} />
-                </span>
-                <p>
-                  Something on your mind?
-                  <small>Give it a place. You can organize it later.</small>
-                </p>
-              </div>
-            )}
-            <QuickCapture />
-          </section>
-          {(summary.overdue.length > 0 || summary.dueToday.length > 0) && (
-            <section className="panel">
-              <div className="panel-heading">
-                <div className="panel-title">
-                  <Flag />
-                  <h2>Coming up</h2>
-                </div>
-                <Link href="/planner" className="text-link">
-                  Open planner
-                  <ArrowUpRight size={12} />
-                </Link>
-              </div>
-              {summary.overdue.length || summary.dueToday.length ? (
-                <TaskList
-                  tasks={[...summary.overdue, ...summary.dueToday].slice(0, 5)}
-                />
-              ) : (
-                <EmptyState
-                  compact
-                  icon={CalendarCheck2}
-                  title="A little breathing room"
-                  description="No tasks are due today or overdue. Course deadlines are in Academics."
-                />
-              )}
-            </section>
-          )}
-          <section className="review-banner">
-            <span className="section-icon">
-              <BookOpen size={19} />
-            </span>
-            <div>
-              <h2>Make space for a fresh week.</h2>
-              <p>
-                A few minutes to reflect, reset and choose what comes next.
-                {recentReview
-                  ? ` Last completed: ${friendlyDate(recentReview.completed_at)}.`
-                  : " Your review opens on Sunday."}
-              </p>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/reviews">
-                  {reviewAvailability(now, data.profile.timezone).open
-                    ? "Start weekly review"
-                    : "View review history"}
-                  <ArrowRight size={12} />
-                </Link>
-              </Button>
-            </div>
-          </section>
-        </div>
-        <div className="stack home-day-column">
-          <GoogleCalendarPanel
-            start={localDate()}
-            end={new Date(
-              new Date(localDate() + "T12:00Z").getTime() + 86400000,
-            )
-              .toISOString()
-              .slice(0, 10)}
-          />
-          <section className="panel">
-            <div className="panel-heading">
-              <div className="panel-title">
-                <Target />
-                <h2>The bigger picture</h2>
-              </div>
-              <Link href="/goals" className="text-link">
-                Goals
-                <ArrowUpRight size={12} />
-              </Link>
-            </div>
-            {data.goals
-              .filter((g) => g.status === "active")
-              .slice(0, 3)
-              .map((g) => {
-                const progress = goalProgress(g, data.milestones);
-                return (
-                  <Link
-                    href={`/goals#goal-${g.id}`}
-                    className="goal-row"
-                    style={{ display: "block" }}
-                    key={g.id}
-                  >
-                    <h3>{g.title}</h3>
-                    <div className="flex-between">
-                      <p>{progress.label}</p>
-                      {progress.percent !== null && (
-                        <span className="small muted">
-                          {Math.round(progress.percent)}%
-                        </span>
-                      )}
-                    </div>
-                    {progress.percent !== null && (
-                      <div
-                        className="progress-track"
-                        role="progressbar"
-                        aria-label={g.title}
-                        aria-valuenow={Math.round(progress.percent)}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                      >
-                        <div
-                          className="progress-fill"
-                          style={{ width: `${progress.percent}%` }}
-                        />
-                      </div>
+      {custom ? (
+        <DashboardWidgets
+          layout={layout}
+          briefing={briefing}
+          priorities={ranked.slice(0, 3).map((x) => x.task)}
+        />
+      ) : (
+        <>
+          {" "}
+          <div className="dashboard-grid">
+            <div className="stack home-work-column">
+              <section className="panel">
+                <div className="panel-heading">
+                  <div className="panel-title">
+                    <Sun />
+                    <h2>On your list</h2>
+                    {priorities.length > 0 && (
+                      <span className="count-pill">{priorities.length}</span>
                     )}
+                  </div>
+                  <Link href="/planner" className="text-link">
+                    All tasks
+                    <ArrowUpRight size={12} />
                   </Link>
-                );
-              })}
-            {!data.goals.some((g) => g.status === "active") && (
-              <EmptyState
-                compact
-                icon={Target}
-                title="Start with what matters"
-                description="Connect your everyday actions to a goal you care about."
-                action={
-                  <Link href="/goals" className="text-link">
-                    Set a goal
-                    <Plus size={12} />
-                  </Link>
-                }
+                </div>
+
+                {priorities.length ? (
+                  <TaskList tasks={priorities} />
+                ) : (
+                  <div className="home-capture-empty">
+                    <span className="capture-mark" aria-hidden="true">
+                      <Plus size={20} />
+                    </span>
+                    <p>
+                      Something on your mind?
+                      <small>Give it a place. You can organize it later.</small>
+                    </p>
+                  </div>
+                )}
+                <QuickCapture />
+              </section>
+              {(summary.overdue.length > 0 || summary.dueToday.length > 0) && (
+                <section className="panel">
+                  <div className="panel-heading">
+                    <div className="panel-title">
+                      <Flag />
+                      <h2>Coming up</h2>
+                    </div>
+                    <Link href="/planner" className="text-link">
+                      Open planner
+                      <ArrowUpRight size={12} />
+                    </Link>
+                  </div>
+                  {summary.overdue.length || summary.dueToday.length ? (
+                    <TaskList
+                      tasks={[...summary.overdue, ...summary.dueToday].slice(
+                        0,
+                        5,
+                      )}
+                    />
+                  ) : (
+                    <EmptyState
+                      compact
+                      icon={CalendarCheck2}
+                      title="A little breathing room"
+                      description="No tasks are due today or overdue. Course deadlines are in Academics."
+                    />
+                  )}
+                </section>
+              )}
+              <section className="review-banner">
+                <span className="section-icon">
+                  <BookOpen size={19} />
+                </span>
+                <div>
+                  <h2>Make space for a fresh week.</h2>
+                  <p>
+                    A few minutes to reflect, reset and choose what comes next.
+                    {recentReview
+                      ? ` Last completed: ${friendlyDate(recentReview.completed_at)}.`
+                      : " Your review opens on Sunday."}
+                  </p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/reviews">
+                      {reviewAvailability(now, data.profile.timezone).open
+                        ? "Start weekly review"
+                        : "View review history"}
+                      <ArrowRight size={12} />
+                    </Link>
+                  </Button>
+                </div>
+              </section>
+            </div>
+            <div className="stack home-day-column">
+              <GoogleCalendarPanel
+                start={localDate()}
+                end={new Date(
+                  new Date(localDate() + "T12:00Z").getTime() + 86400000,
+                )
+                  .toISOString()
+                  .slice(0, 10)}
               />
-            )}
-          </section>
-        </div>
-      </div>
+              <section className="panel">
+                <div className="panel-heading">
+                  <div className="panel-title">
+                    <Target />
+                    <h2>The bigger picture</h2>
+                  </div>
+                  <Link href="/goals" className="text-link">
+                    Goals
+                    <ArrowUpRight size={12} />
+                  </Link>
+                </div>
+                {data.goals
+                  .filter((g) => g.status === "active")
+                  .slice(0, 3)
+                  .map((g) => {
+                    const progress = goalProgress(g, data.milestones);
+                    return (
+                      <Link
+                        href={`/goals#goal-${g.id}`}
+                        className="goal-row"
+                        style={{ display: "block" }}
+                        key={g.id}
+                      >
+                        <h3>{g.title}</h3>
+                        <div className="flex-between">
+                          <p>{progress.label}</p>
+                          {progress.percent !== null && (
+                            <span className="small muted">
+                              {Math.round(progress.percent)}%
+                            </span>
+                          )}
+                        </div>
+                        {progress.percent !== null && (
+                          <div
+                            className="progress-track"
+                            role="progressbar"
+                            aria-label={g.title}
+                            aria-valuenow={Math.round(progress.percent)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                          >
+                            <div
+                              className="progress-fill"
+                              style={{ width: `${progress.percent}%` }}
+                            />
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  })}
+                {!data.goals.some((g) => g.status === "active") && (
+                  <EmptyState
+                    compact
+                    icon={Target}
+                    title="Start with what matters"
+                    description="Connect your everyday actions to a goal you care about."
+                    action={
+                      <Link href="/goals" className="text-link">
+                        Set a goal
+                        <Plus size={12} />
+                      </Link>
+                    }
+                  />
+                )}
+              </section>
+            </div>
+          </div>
+        </>
+      )}
       <BriefingPanel controller={briefing} hideConnectionAlerts />
       <AttentionHistory />
     </div>
