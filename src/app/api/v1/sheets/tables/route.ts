@@ -1,3 +1,4 @@
+import { readSavedPlans } from "@/lib/services/saved-plans";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authorized, ApiError } from "@/lib/auth";
@@ -161,27 +162,11 @@ export async function GET(request: Request) {
     if ((sources.data?.length ?? 0) > 20)
       throw new ApiError(422, "More than 20 tables require a narrower query.");
     if (new URL(request.url).searchParams.get("overview") === "true") {
-      const datasets = (sources.data ?? []).filter(
-        (source) => !source.test_only && source.mode !== "paused",
-      );
-      const overview = await Promise.all(
-        datasets.map(async (source) => {
-          const result = await db
-            .from("sheet_rest_rows")
-            .select("id,version,local_values,state")
-            .eq("user_id", user.id)
-            .eq("dataset_id", source.id)
-            .order("id")
-            .limit(26);
-          return {
-            dataset_id: source.id,
-            rows: result.error ? [] : (result.data ?? []).slice(0, 25),
-            more: (result.data?.length ?? 0) > 25,
-            ...(result.error
-              ? { error: "This section could not refresh." }
-              : {}),
-          };
-        }),
+      const { datasets, overview } = await readSavedPlans(
+        db,
+        user.id,
+        sources.data ?? [],
+        new URL(request.url).searchParams.get("skills") === "true",
       );
       return NextResponse.json(
         { datasets, overview },

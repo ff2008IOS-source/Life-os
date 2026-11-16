@@ -63,6 +63,12 @@ h1 {
 .panel-description {
   padding-inline: 22px;
 }
+.top-actions > .text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 6px;
+}
 .text-link {
   font-size: 12px;
   font-weight: 550;

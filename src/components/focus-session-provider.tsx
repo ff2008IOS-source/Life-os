@@ -11,7 +11,7 @@ import { calendarRequest } from "./use-calendar";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
 import { Modal } from "./dialog";
-type Session = {
+export type Session = {
   id: string;
   task_id: string;
   version: number;
@@ -29,13 +29,21 @@ type FocusContext = {
 };
 const Context = createContext<FocusContext | null>(null);
 export const useFocusSession = () => useContext(Context);
-export function FocusSessionProvider({ children }: { children: ReactNode }) {
+export function FocusSessionProvider({
+  children,
+  initial,
+}: {
+  children: ReactNode;
+  initial?: { session: Session | null; server_time: string };
+}) {
   const { data, refresh } = useWorkspace();
-  const [session, setSession] = useState<Session | null>(null),
+  const [session, setSession] = useState<Session | null>(
+      initial?.session ?? null,
+    ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [offset, setOffset] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(!!initial);
   const [finishing, setFinishing] = useState<Session | null>(null),
     [minutes, setMinutes] = useState(""),
     [finishTask, setFinishTask] = useState(false),
@@ -212,8 +220,12 @@ export function FocusSessionProvider({ children }: { children: ReactNode }) {
           <div>
             <strong>{title}</strong>
             <p>
-              <FocusClock session={session} offset={offset} /> ·{" "}
-              {session.status === "running" ? "Focusing" : "Paused"}
+              <FocusClock
+                session={session}
+                offset={offset}
+                initialTime={initial?.server_time}
+              />{" "}
+              · {session.status === "running" ? "Focusing" : "Paused"}
             </p>
           </div>
           <div className="focus-dock-actions">
@@ -329,8 +341,18 @@ function trackedSeconds(session: Session, now: number) {
       : 0)
   );
 }
-function FocusClock({ session, offset }: { session: Session; offset: number }) {
-  const [now, setNow] = useState(() => Date.now());
+function FocusClock({
+  session,
+  offset,
+  initialTime,
+}: {
+  session: Session;
+  offset: number;
+  initialTime?: string;
+}) {
+  const [now, setNow] = useState(() =>
+    initialTime ? Date.parse(initialTime) : Date.now(),
+  );
   useEffect(() => {
     if (session.status !== "running") return;
     const timer = setInterval(() => {

@@ -44,9 +44,12 @@ export async function loadBriefingRows<T>(
   }
   throw new ApiError(422, `${table} exceeds the briefing collection limit.`);
 }
-export async function loadBriefing(week?: string) {
+export async function loadBriefing(
+  week?: string,
+  initialWorkspace?: Awaited<ReturnType<typeof loadWorkspace>>,
+) {
   const { db, user } = await authorized();
-  const workspace = await loadWorkspace();
+  const workspace = initialWorkspace ?? (await loadWorkspace());
   const errors: string[] = [];
   async function optional<T>(
     name: string,

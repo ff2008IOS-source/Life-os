@@ -2,10 +2,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { calendarRequest } from "./use-calendar";
 import type { LiveBriefing } from "@/lib/briefing-server";
-export function useBriefing(week?: string) {
-  const [data, setData] = useState<LiveBriefing | null>(null),
+export function useBriefing(week?: string, initial?: LiveBriefing | null) {
+  const [data, setData] = useState<LiveBriefing | null>(initial ?? null),
     [error, setError] = useState(""),
-    [loading, setLoading] = useState(true);
+    [loading, setLoading] = useState(!initial);
   const pending = useRef(false),
     alive = useRef(true),
     queued = useRef(false);

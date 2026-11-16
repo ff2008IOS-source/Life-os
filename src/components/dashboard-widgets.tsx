@@ -19,7 +19,7 @@ import { useFocusSession } from "./focus-session-provider";
 import { Button } from "./ui/button";
 import type { AcademicData } from "./academic-editor";
 import type { BriefingController } from "./use-briefing";
-import type { Dataset, Row } from "./sheet-rest-panel";
+import type { SavedPlans } from "@/lib/services/saved-plans";
 import type { Task } from "@/lib/schemas";
 import { reviewAvailability } from "@/lib/temporal-context";
 import { useCurrentTime } from "./use-current-time";
@@ -47,10 +47,14 @@ function Card({
 }
 export function DashboardWidgets({
   layout,
+  initialAcademic,
+  initialPlans,
   briefing,
   priorities,
 }: {
   layout: DashboardLayout;
+  initialAcademic?: AcademicData | null;
+  initialPlans?: SavedPlans | null;
   briefing: BriefingController;
   priorities: Task[];
 }) {
@@ -61,7 +65,9 @@ export function DashboardWidgets({
     needsAcademics = shown.some((w) =>
       ["academics", "learning"].includes(w.id),
     );
-  const [academic, setAcademic] = useState<AcademicData | null>(null),
+  const [academic, setAcademic] = useState<AcademicData | null>(
+      initialAcademic ?? null,
+    ),
     [academicError, setAcademicError] = useState("");
   useEffect(() => {
     if (!needsAcademics) return;
@@ -89,22 +95,14 @@ export function DashboardWidgets({
     };
   }, [needsAcademics]);
   const needsCareer = shown.some((w) => ["career", "learning"].includes(w.id));
-  const [plans, setPlans] = useState<{
-      datasets: Dataset[];
-      overview: {
-        dataset_id: string;
-        rows: Row[];
-        error?: string;
-        more: boolean;
-      }[];
-    } | null>(null),
+  const [plans, setPlans] = useState<SavedPlans | null>(initialPlans ?? null),
     [planError, setPlanError] = useState("");
   useEffect(() => {
     if (!needsCareer) return;
     let live = true;
     const load = () => {
       void calendarRequest<NonNullable<typeof plans>>(
-        "/api/v1/sheets/tables?overview=true",
+        "/api/v1/sheets/tables?overview=true&skills=true",
       )
         .then((r) => {
           if (live) {

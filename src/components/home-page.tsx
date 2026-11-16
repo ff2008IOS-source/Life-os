@@ -1,4 +1,7 @@
 "use client";
+import type { SavedPlans } from "@/lib/services/saved-plans";
+import type { LiveBriefing } from "@/lib/briefing-server";
+import type { AcademicData } from "./academic-editor";
 import { DashboardCustomizer } from "./dashboard-customizer";
 import dynamic from "next/dynamic";
 import { migrateLayout } from "@/lib/dashboard-layout";
@@ -44,12 +47,20 @@ const DashboardWidgets = dynamic(
   },
 );
 
-export function HomePage() {
+export function HomePage({
+  initialBriefing,
+  initialAcademic,
+  initialPlans,
+}: {
+  initialBriefing?: LiveBriefing | null;
+  initialAcademic?: AcademicData | null;
+  initialPlans?: SavedPlans | null;
+}) {
   const { data: raw, request, refresh, notify, pending } = useWorkspace();
   const data = realWorkspace(raw);
   const layout = migrateLayout(raw.dashboard?.settings);
   const custom = raw.dashboard?.enabled !== false && layout.mode === "custom";
-  const briefing = useBriefing();
+  const briefing = useBriefing(undefined, initialBriefing);
   const calendarSummary = {
     count: briefing.data?.weekly.calendar_reliable
       ? briefing.data.weekly.commitment_count
@@ -199,6 +210,8 @@ export function HomePage() {
       </div>
       {custom ? (
         <DashboardWidgets
+          initialAcademic={initialAcademic}
+          initialPlans={initialPlans}
           layout={layout}
           briefing={briefing}
           priorities={ranked.slice(0, 3).map((x) => x.task)}
