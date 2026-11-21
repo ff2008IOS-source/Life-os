@@ -58,3 +58,10 @@ it("escapes spreadsheet formulas and preserves CSV quoting", () => {
   expect(csv).toContain('"\'=SUM(1,2)"""');
   expect(csv).toContain('"50.0"');
 });
+
+it("also escapes formulas preceded by whitespace in player names", () => {
+  const csv = reportCsv([
+    { player: "\t =1+2", made: 1, attempts: 2, accuracy: 50 },
+  ]);
+  expect(csv).toContain('"\'\t =1+2"');
+});

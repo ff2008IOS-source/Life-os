@@ -76,7 +76,7 @@ export function reportCsv(
   const cell = (v: unknown) =>
     '"' +
     String(v ?? "")
-      .replace(/^[=+@\-]/, "'$&")
+      .replace(/^\s*[=+@\-]/, "'$&")
       .replaceAll('"', '""') +
     '"';
   return [
