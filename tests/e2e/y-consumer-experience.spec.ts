@@ -11,7 +11,7 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.request.post("/api/v1/workspace/initialize", { headers: origin });
   const create = async (entity: string, data: unknown) => {
@@ -130,9 +130,9 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
       },
     }),
   );
-  await expect(page.locator(".focus-update")).not.toContainText(
-    /null min|undefined min|NaN min/,
-  );
+  await expect(
+    page.getByRole("region", { name: "Focus", exact: true }),
+  ).not.toContainText(/null min|undefined min|NaN min/);
   for (const theme of ["light", "dark"] as const) {
     const saved = await page.request.patch("/api/v1/profile", {
       headers: origin,
@@ -148,7 +148,7 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
       await expect(page.locator("html")).toHaveClass(/dark/);
     else await expect(page.locator("html")).not.toHaveClass(/dark/);
     await expect(
-      page.getByRole("region", { name: "Next best action", exact: true }),
+      page.getByRole("region", { name: "Focus", exact: true }),
     ).toContainText(assessment.title);
     await expect(
       page.locator("main").filter({ visible: true }),

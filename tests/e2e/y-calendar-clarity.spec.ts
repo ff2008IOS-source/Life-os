@@ -74,7 +74,7 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.goto("/planner");
   const calendar = page.locator(".planner-calendar");

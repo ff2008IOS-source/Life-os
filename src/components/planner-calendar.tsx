@@ -80,8 +80,7 @@ export function PlannerCalendar({
   const name = (id: string) =>
     data?.calendars.find((c) => c.id === id)?.name ?? "Calendar";
   const color = (g: EventGroup) =>
-    data?.calendars.find((c) => c.id === g.event.calendar_id)?.color ??
-    "#407BEE";
+    `color-mix(in srgb, ${data?.calendars.find((c) => c.id === g.event.calendar_id)?.color ?? "var(--accent)"} 50%, var(--secondary))`;
   const due = (day: string) =>
     tasks.filter(
       (t) =>
@@ -215,7 +214,9 @@ export function PlannerCalendar({
             >
               <span
                 className="calendar-source-dot"
-                style={{ background: c.color ?? "#407BEE" }}
+                style={{
+                  background: `color-mix(in srgb, ${c.color ?? "var(--accent)"} 50%,var(--secondary))`,
+                }}
               />
               {c.name}
             </button>

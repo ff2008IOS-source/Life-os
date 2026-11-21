@@ -65,7 +65,6 @@ export function CanvasDeadlines() {
   return (
     <section className="panel settings-panel">
       <h2>Canvas deadlines</h2>
-      <p className="form-hint">Your assessments at a glance.</p>
       <div className="record-search">
         <label>
           Find a deadline

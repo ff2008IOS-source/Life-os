@@ -18,6 +18,12 @@ import { localDate, friendlyDate } from "@/lib/dates";
 export function ReviewsPage() {
   const { data, mutate, pending, notify } = useWorkspace();
   const summaryId = useId();
+  const [historyQuery, setHistoryQuery] = useState("");
+  const history = data.reviews.filter((r) =>
+    `${r.period_start} ${r.achievements} ${r.priorities} ${r.conversation_summary}`
+      .toLowerCase()
+      .includes(historyQuery.toLowerCase()),
+  );
   const now = useCurrentTime();
   const gate = reviewAvailability(
     now,
@@ -123,8 +129,7 @@ export function ReviewsPage() {
       <>
         <div className="page-heading">
           <div>
-            <h1>Your weekly review</h1>
-            <p>Reflect on the week, then plan what comes next.</p>
+            <h1>Reviews</h1>
           </div>
         </div>
         <section className="panel settings-panel">
@@ -147,7 +152,16 @@ export function ReviewsPage() {
             </Button>
           )}
         </section>
-        {data.reviews
+        <label className="review-search">
+          Find a review
+          <input
+            type="search"
+            value={historyQuery}
+            onChange={(e) => setHistoryQuery(e.target.value)}
+            placeholder="Search reviews…"
+          />
+        </label>
+        {history
           .slice()
           .sort((a, b) => b.period_start.localeCompare(a.period_start))
           .map((r) => (
@@ -170,16 +184,13 @@ export function ReviewsPage() {
       <div className="page-heading">
         <div>
           <span className="eyebrow">REFLECT. DECIDE. FOLLOW THROUGH.</span>
-          <h1>Your weekly review</h1>
-          <p>A conversation about your actual progress and what comes next.</p>
+          <h1>Reviews</h1>
         </div>
       </div>
       <section className="panel weekly-review-start">
         <div>
           <strong>Week of {friendlyDate(week)}</strong>
-          <p className="small muted">
-            A little perspective, then a realistic plan.
-          </p>
+          <p className="small muted"></p>
         </div>
         {review ? (
           <Button
@@ -292,8 +303,17 @@ export function ReviewsPage() {
       ) : (
         <section className="panel settings-panel">
           <h2>Saved weekly conversations</h2>
-          {data.reviews.length ? (
-            data.reviews
+          <label className="review-search">
+            Find a review
+            <input
+              type="search"
+              value={historyQuery}
+              onChange={(e) => setHistoryQuery(e.target.value)}
+              placeholder="Search reviews…"
+            />
+          </label>
+          {history.length ? (
+            history
               .slice()
               .sort((a, b) => b.period_start.localeCompare(a.period_start))
               .slice(0, 12)

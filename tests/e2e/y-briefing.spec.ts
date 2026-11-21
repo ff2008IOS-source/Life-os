@@ -17,7 +17,7 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   const init = page.getByRole("button", { name: /Set up my space/ });
   if (await init.isVisible()) {
@@ -46,7 +46,7 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   await page.goto("/assistant");
   await expect(page).toHaveURL(/\/#daily-briefing$/);
   await expect(
-    page.getByRole("heading", { name: "Next best action", exact: true }),
+    page.getByRole("heading", { name: "Focus", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Your question")).toHaveCount(0);
   await expect(
@@ -62,6 +62,9 @@ test("deterministic briefing saves check-ins, performs approved task actions and
     "Enable scheduling eligibility",
   );
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Daily check-in", exact: true })
+    .click();
   await page
     .getByLabel("Check-in answer")
     .fill("[TEST] Prepared the verified course material.");
@@ -81,6 +84,9 @@ test("deterministic briefing saves check-ins, performs approved task actions and
     .getByRole("button", { name: "Finish check-in", exact: true })
     .click();
   await page.reload();
+  await page
+    .getByRole("button", { name: "Daily check-in", exact: true })
+    .click();
   await page
     .getByText("View saved responses", { exact: true })
     .filter({ visible: true })
@@ -189,7 +195,7 @@ test("profile picture is resized, saved privately, survives refresh and can be r
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.goto("/settings");
   await page

@@ -80,8 +80,7 @@ export function ConnectedCareerRecords() {
       className="panel settings-panel"
       aria-label="Connected career and project records"
     >
-      <h2>Connected plan details</h2>
-      <p className="small muted">Your spreadsheet plans, in one place.</p>
+      <h2>Plan details</h2>
       <label>
         Plan source
         <select

@@ -1,13 +1,27 @@
+import localFont from "next/font/local";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./consumer.css";
+import "./warm.css";
 import { Providers } from "@/components/providers";
+const interfaceFont = localFont({
+  src: "./fonts/inter-latin.woff2",
+  variable: "--font-interface",
+  weight: "400 600",
+  display: "swap",
+});
+const editorialFont = localFont({
+  src: "./fonts/instrument-serif-latin.woff2",
+  variable: "--font-editorial",
+  weight: "400",
+  display: "swap",
+});
 export const metadata: Metadata = {
   title: {
-    default: "Life OS — Your life, organized",
+    default: "Life OS",
     template: "%s · Life OS",
   },
-  description: "Your private space for a more intentional day.",
+  description: "Your tasks, schedule and workspaces.",
   robots: { index: false, follow: false },
   applicationName: "Life OS",
 };
@@ -15,8 +29,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f7fc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1020" },
+    { media: "(prefers-color-scheme: light)", color: "#f6f3ed" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1a18" },
   ],
 };
 export default function RootLayout({
@@ -26,7 +40,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${interfaceFont.variable} ${editorialFont.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>

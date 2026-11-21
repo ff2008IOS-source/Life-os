@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { BasketballPage, LearningPage } from "@/components/domain-workspaces";
 import { readSavedPlans } from "@/lib/services/saved-plans";
 import { loadBriefing } from "@/lib/briefing-server";
 import { readAcademics } from "@/lib/services/academics";
@@ -40,6 +42,8 @@ export default async function Page({
   if (
     ![
       "home",
+      "basketball",
+      "learning",
       "assistant",
       "briefing",
       "planner",
@@ -117,16 +121,22 @@ export default async function Page({
           })().catch(() => null)
         : null,
     ]);
+  const sidebarCollapsed =
+    (await cookies()).get("lifeos_sidebar_collapsed")?.value === "true";
   return (
     <WorkspaceProvider initial={data}>
       <FocusSessionProvider initial={initialFocus}>
-        <WorkspaceShell>
+        <WorkspaceShell initialCollapsed={sidebarCollapsed}>
           {page === "home" ? (
             <HomePage
               initialBriefing={initialBriefing}
               initialAcademic={initialAcademic}
               initialPlans={initialPlans}
             />
+          ) : page === "basketball" ? (
+            <BasketballPage />
+          ) : page === "learning" ? (
+            <LearningPage />
           ) : page === "planner" ? (
             <PlannerPage initialSection={query.section} />
           ) : page === "areas" ? (

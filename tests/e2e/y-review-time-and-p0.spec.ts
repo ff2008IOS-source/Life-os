@@ -18,7 +18,7 @@ test("Sunday-only review, past-exam wording, unified status and responsive P0 sh
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   const headers = { Origin: "http://127.0.0.1:3000" };
   await page.request.post("/api/v1/workspace/initialize", { headers });

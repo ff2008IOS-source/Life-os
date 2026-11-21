@@ -39,7 +39,7 @@ test("Canvas deadlines default to upcoming and separate unknown past-due work fr
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   // APIRequestContext bypasses page.route: exercise the actual Next.js route
   // against the RLS-backed synthetic database, not only mocked browser data.

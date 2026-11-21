@@ -638,9 +638,6 @@ export function AssistantPage({
           {error}
         </p>
       )}
-      <p className="assistant-footnote">
-        A little perspective, based on your week. Check important details.
-      </p>
     </section>
   );
 }

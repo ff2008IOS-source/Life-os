@@ -83,7 +83,7 @@ test("read-only calendar controls select, sync and show a cached recurring insta
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.goto("/settings?section=integrations");
   await page.getByRole("checkbox", { name: "[TEST] Study Not synced" }).check();

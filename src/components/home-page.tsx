@@ -1,52 +1,41 @@
 "use client";
-import type { SavedPlans } from "@/lib/services/saved-plans";
-import type { LiveBriefing } from "@/lib/briefing-server";
-import type { AcademicData } from "./academic-editor";
-import { DashboardCustomizer } from "./dashboard-customizer";
-import dynamic from "next/dynamic";
-import { migrateLayout } from "@/lib/dashboard-layout";
-import { reviewAvailability } from "@/lib/temporal-context";
-import { SyncHealth } from "./sync-health";
-import { useCurrentTime } from "./use-current-time";
-import { realWorkspace } from "@/lib/real-workspace";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AttentionHistory } from "./attention-history";
-import { BriefingPanel } from "./briefing-page";
-import { useBriefing } from "./use-briefing";
-import { todayPriorities, personalGreeting } from "@/lib/today-priorities";
-
-import { GoogleCalendarPanel } from "./google-calendar-panel";
+import dynamic from "next/dynamic";
 import {
-  CalendarDays,
-  CheckCheck,
-  ArrowUpRight,
-  ArrowRight,
-  Flag,
-  Target,
-  Clock3,
-  BookOpen,
-  Sun,
-  CalendarCheck2,
-  Layers3,
+  ChevronLeft,
+  ChevronRight,
   Plus,
+  ArrowUpRight,
+  BookOpen,
 } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
+import type { LiveBriefing } from "@/lib/briefing-server";
+import type { SavedPlans } from "@/lib/services/saved-plans";
+import type { AcademicData } from "./academic-editor";
+import { migrateLayout } from "@/lib/dashboard-layout";
+import { realWorkspace } from "@/lib/real-workspace";
+import { todayPriorities } from "@/lib/today-priorities";
+import { reviewAvailability } from "@/lib/temporal-context";
 import { useWorkspace } from "./workspace-provider";
-import { EmptyState, QuickCapture, TaskList } from "./task-list";
+import { useCurrentTime } from "./use-current-time";
+import { useFocusSession } from "./focus-session-provider";
+import { useBriefing } from "./use-briefing";
+import { BriefingPanel } from "./briefing-page";
+import { TaskList, QuickCapture } from "./task-list";
+import { GoogleCalendarPanel } from "./google-calendar-panel";
+import { DashboardCustomizer } from "./dashboard-customizer";
+import { SyncHealth } from "./sync-health";
+import { AttentionHistory } from "./attention-history";
 import { Button } from "./ui/button";
-import { goalProgress, taskSummary } from "@/lib/insights";
-import { TIMEZONE, localDate, friendlyDate } from "@/lib/dates";
-const DashboardWidgets = dynamic(
-  () => import("./dashboard-widgets").then((module) => module.DashboardWidgets),
-  {
-    loading: () => (
-      <section className="panel" role="status">
-        Loading your personal dashboard…
-      </section>
-    ),
-  },
+const DashboardWidgets = dynamic(() =>
+  import("./dashboard-widgets").then((m) => m.DashboardWidgets),
 );
-
+function shift(day: string, n: number) {
+  const d = new Date(day + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 export function HomePage({
   initialBriefing,
   initialAcademic,
@@ -57,88 +46,92 @@ export function HomePage({
   initialPlans?: SavedPlans | null;
 }) {
   const { data: raw, request, refresh, notify, pending } = useWorkspace();
-  const data = realWorkspace(raw);
-  const layout = migrateLayout(raw.dashboard?.settings);
-  const custom = raw.dashboard?.enabled !== false && layout.mode === "custom";
-  const briefing = useBriefing(undefined, initialBriefing);
-  const calendarSummary = {
-    count: briefing.data?.weekly.calendar_reliable
-      ? briefing.data.weekly.commitment_count
-      : null,
-    note: briefing.data?.weekly.calendar_reliable
-      ? "This review week"
-      : briefing.error
-        ? "Calendar status unavailable"
-        : "Check your calendar connection",
-  };
-  const now = useCurrentTime();
-  const summary = taskSummary(data.tasks, now);
+  const data = realWorkspace(raw),
+    now = useCurrentTime(),
+    zone = data.profile.timezone;
+  const today = formatInTimeZone(now, zone, "yyyy-MM-dd");
+  const [chosen, setChosen] = useState<string | null>(null),
+    [reviewOpen, setReviewOpen] = useState(false);
+  const day = chosen ?? today;
+  const focus = useFocusSession();
+  const briefing = useBriefing(undefined, initialBriefing),
+    layout = migrateLayout(raw.dashboard?.settings);
+  const dates = (t: { due_date: string | null; due_at: string | null }) =>
+    t.due_date ??
+    (t.due_at ? formatInTimeZone(t.due_at, zone, "yyyy-MM-dd") : null);
   const ranked = todayPriorities(data, now);
-  const priorities = briefing.data
-    ? briefing.data.recommendations.slice(1, 3).flatMap((x) => {
-        const task = data.tasks.find((t) => t.id === x.task_id);
-        return task ? [task] : [];
-      })
-    : ranked.slice(0, 3).map((x) => x.task);
-  const upcoming = data.milestones
+  const tasks = ranked
+    .map((r) => r.task)
     .filter(
-      (m) =>
-        m.status === "planned" && m.target_date && m.target_date >= localDate(),
-    )
-    .sort((a, b) => a.target_date!.localeCompare(b.target_date!))
-    .filter(
-      (m) =>
-        new Date(m.target_date! + "T12:00Z").getTime() - now.getTime() <=
-        7 * 86400000,
+      (t) =>
+        !t.recurrence_rule_id && (dates(t) ? dates(t)! <= day : day === today),
     );
-  const recentReview = data.reviews
-    .filter((r) => r.completed_at)
-    .sort((a, b) => b.period_start.localeCompare(a.period_start))[0];
-  const needsInit = data.areas.length === 0;
-  const stats = [
-    {
-      label: "Tasks due today",
-      value: summary.dueToday.length,
-      note: summary.dueToday.length
-        ? "Make time for these"
-        : "No tasks due today",
-      icon: CheckCheck,
-    },
-    {
-      label: "Your week",
-      value: calendarSummary.count ?? "—",
-      note: calendarSummary.note,
-      icon: CalendarDays,
-    },
-    {
-      label: "Overdue",
-      value: summary.overdue.length,
-      note: summary.overdue.length
-        ? "Ready for your attention"
-        : "Nothing overdue",
-      icon: Clock3,
-      className: summary.overdue.length ? "danger" : "",
-    },
-    {
-      label: "Milestones",
-      value: upcoming.length,
-      note: "Due in the next 7 days",
-      icon: Flag,
-      className: "success",
-    },
-  ];
+  const completed = data.tasks.filter(
+    (t) =>
+      !t.deleted_at &&
+      t.status === "completed" &&
+      t.completed_at &&
+      formatInTimeZone(t.completed_at, zone, "yyyy-MM-dd") === day,
+  );
+  const estimated = tasks.reduce((n, t) => n + (t.estimated_minutes ?? 0), 0),
+    unknown = tasks.filter((t) => t.estimated_minutes === null).length;
+  const week = reviewAvailability(now, zone);
+  const dueThisWeek = data.tasks.filter(
+    (t) =>
+      !t.deleted_at &&
+      !t.recurrence_rule_id &&
+      t.status !== "cancelled" &&
+      dates(t) &&
+      dates(t)! >= week.weekStart &&
+      dates(t)! <= week.weekEnd,
+  );
+  const finishedWeek = data.tasks.filter(
+    (t) =>
+      !t.deleted_at &&
+      t.status === "completed" &&
+      t.completed_at &&
+      formatInTimeZone(t.completed_at, zone, "yyyy-MM-dd") >= week.weekStart &&
+      formatInTimeZone(t.completed_at, zone, "yyyy-MM-dd") <= week.weekEnd,
+  );
+  const upcoming = briefing.data?.assessments
+    .filter(
+      (a) =>
+        !a.dropped &&
+        !["returned", "submitted", "excused"].includes(a.submission_state) &&
+        (a.due_at
+          ? Date.parse(a.due_at) >= now.getTime()
+          : !!a.due_date && a.due_date >= today),
+    )
+    .sort((a, b) =>
+      String(a.due_at ?? a.due_date).localeCompare(
+        String(b.due_at ?? b.due_date),
+      ),
+    )
+    .slice(0, 5);
+  const extras = {
+    ...layout,
+    widgets: layout.widgets.map((w) => ({
+      ...w,
+      visible:
+        w.visible && !["plan", "schedule", "upcoming", "review"].includes(w.id),
+    })),
+  };
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash === "#needs-attention") setReviewOpen(true);
+    };
+    onHash();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   return (
     <div
       className={`home-experience dashboard-density-${layout.density} dashboard-accent-${layout.accent}`}
       id="daily-briefing"
     >
-      {needsInit && (
+      {!data.areas.length && (
         <div className="notice">
-          <Layers3 />
-          <div>
-            <strong>Welcome to your private workspace</strong>
-            <p>Set up a space for your courses, projects and everyday plans.</p>
-          </div>
+          <span>Set up your workspace to add courses and projects.</span>
           <Button
             disabled={pending}
             onClick={async () => {
@@ -147,241 +140,244 @@ export function HomePage({
                   method: "POST",
                 });
                 await refresh();
-                notify("Your space is ready");
+                notify("Workspace ready");
               } catch (e) {
                 notify(e instanceof Error ? e.message : "Setup failed");
               }
             }}
           >
             Set up my space
-            <ArrowRight size={13} />
           </Button>
         </div>
       )}
-      <div className="page-heading home-welcome">
+      <div className="today-heading">
         <div>
-          <span className="eyebrow">A LITTLE SPACE TO THINK AHEAD</span>
-          <h1>A little clarity for today.</h1>
-          {layout.greeting && (
-            <p>{personalGreeting(data.profile.display_name, now)}</p>
+          <h1>
+            {day === today
+              ? "Today"
+              : formatInTimeZone(new Date(day + "T12:00:00Z"), "UTC", "EEEE")}
+          </h1>
+          <p className="today-summary">
+            {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+            {estimated > 0
+              ? ` · ${estimated >= 60 ? `${Math.floor(estimated / 60)}h${estimated % 60 ? ` ${estimated % 60}m` : ""}` : `${estimated} min`} estimated`
+              : ""}
+            {unknown ? ` · ${unknown} without estimates` : ""}
+          </p>
+        </div>
+        <div className="today-date">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Previous day"
+            onClick={() => setChosen(shift(day, -1))}
+          >
+            <ChevronLeft />
+          </Button>
+          <input
+            type="date"
+            aria-label="Dashboard date"
+            value={day}
+            onChange={(e) => setChosen(e.target.value || null)}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Next day"
+            onClick={() => setChosen(shift(day, 1))}
+          >
+            <ChevronRight />
+          </Button>
+          {day !== today && (
+            <Button size="sm" variant="ghost" onClick={() => setChosen(null)}>
+              Today
+            </Button>
           )}
         </div>
-        <span className="date-chip">
-          <CalendarDays size={12} />
-          {formatInTimeZone(now, TIMEZONE, "EEE, MMM d")}
-        </span>
       </div>
-      <div className="dashboard-tools">
-        <DashboardCustomizer />
-      </div>
-      {layout.banner && (
-        <div className="landscape-banner" aria-hidden="true">
-          <svg viewBox="0 0 1000 100" preserveAspectRatio="none">
-            <path
-              d="M0 100 170 20 330 100 540 5 790 100 900 25 1000 100Z"
-              fill="currentColor"
-              opacity=".28"
-            />
-            <path
-              d="M0 100 110 50 250 100 410 35 600 100 780 45 1000 100Z"
-              fill="currentColor"
-              opacity=".4"
-            />
-          </svg>
-        </div>
-      )}
-      <div className="home-overview">
-        <BriefingPanel controller={briefing} compact hideConnectionAlerts />
-        <div className="stats-grid">
-          {stats.map((s) => (
-            <div className={`stat-card ${s.className ?? ""}`} key={s.label}>
-              <div className="stat-label">
-                {s.label}
-                <s.icon />
-              </div>
-              <span className="stat-number">{s.value}</span>
-              <span className="stat-note">{s.note}</span>
+      <div className="today-layout">
+        <div className="today-primary">
+          {day === today &&
+          (focus?.session ||
+            briefing.data?.recommendations.length ||
+            briefing.data?.assessments.some(
+              (a) =>
+                !["returned", "submitted", "excused"].includes(
+                  a.submission_state,
+                ),
+            )) ? (
+            <div className="today-focus">
+              <BriefingPanel
+                controller={briefing}
+                compact
+                hideConnectionAlerts
+              />
             </div>
-          ))}
+          ) : null}
+          <section aria-label="Daily tasks">
+            <div className="panel-heading">
+              <h2>Tasks</h2>
+              <Link className="text-link" href="/planner?section=tasks">
+                All tasks <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            {!tasks.length && !completed.length && (
+              <p className="muted">
+                Nothing planned for{" "}
+                {day === today
+                  ? "today"
+                  : formatInTimeZone(
+                      new Date(day + "T12:00:00Z"),
+                      "UTC",
+                      "MMM d",
+                    )}
+                .
+              </p>
+            )}
+            <TaskList
+              tasks={[...tasks, ...completed]}
+              completedExpanded={false}
+            />
+            <QuickCapture dueDate={day === today ? undefined : day} />
+          </section>
+          <div className="today-actions">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/planner?section=calendar">
+                <Plus /> Calendar
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/areas/academics?view=study">
+                <BookOpen /> Study
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setReviewOpen((v) => !v)}
+            >
+              Daily check-in
+            </Button>
+            <DashboardCustomizer />
+          </div>
         </div>
+        <aside
+          className="today-secondary"
+          aria-label="Schedule and upcoming work"
+        >
+          <GoogleCalendarPanel start={day} end={shift(day, 1)} />
+          <section>
+            <div className="panel-heading">
+              <h2>Upcoming</h2>
+              <Link className="text-link" href="/areas/academics">
+                Academics <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            <div className="today-upcoming">
+              {upcoming?.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/areas/academics?course=${a.course_id}&assessment=${a.id}`}
+                >
+                  <strong>{a.title}</strong>
+                  <time>
+                    {a.due_at
+                      ? formatInTimeZone(a.due_at, zone, "EEE, MMM d · h:mm a")
+                      : formatInTimeZone(
+                          new Date(a.due_date! + "T12:00:00Z"),
+                          "UTC",
+                          "EEE, MMM d",
+                        )}
+                  </time>
+                </Link>
+              ))}
+              {upcoming?.length === 0 &&
+                !briefing.data?.source_errors.includes("academics") && (
+                  <p className="small muted">No upcoming assessments.</p>
+                )}
+              {(!upcoming ||
+                briefing.data?.source_errors.includes("academics")) && (
+                <p className="small muted">
+                  {briefing.error ||
+                  briefing.data?.source_errors.includes("academics")
+                    ? "Assessments couldn’t load."
+                    : "Loading assessments…"}
+                </p>
+              )}
+            </div>
+          </section>
+          <section>
+            <div className="panel-heading">
+              <h2>This week</h2>
+              <Link className="text-link" href="/insights">
+                Activity <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            {dueThisWeek.length > 0 ? (
+              <div className="today-week-row">
+                <span>Tasks due this week</span>
+                <span>
+                  {dueThisWeek.filter((t) => t.status === "completed").length} /{" "}
+                  {dueThisWeek.length} complete
+                </span>
+              </div>
+            ) : (
+              <div className="today-week-row">
+                <span>Completed tasks</span>
+                <span>{finishedWeek.length}</span>
+              </div>
+            )}
+            {dueThisWeek.length > 0 && (
+              <progress
+                className="weekly-progress"
+                max={dueThisWeek.length}
+                value={
+                  dueThisWeek.filter((t) => t.status === "completed").length
+                }
+                aria-label="Tasks due this week completed"
+              />
+            )}
+            <p className="small muted" style={{ marginTop: 12 }}>
+              {finishedWeek.length
+                ? `${finishedWeek.length} completed this week.`
+                : "No completed tasks this week."}
+            </p>
+          </section>
+          <section className="today-review">
+            <div>
+              <h2>Weekly review</h2>
+              <p>{week.open ? "Open for this week." : "Opens Sunday."}</p>
+            </div>
+            <Link className="text-link" href="/reviews">
+              {week.open ? "Open" : "History"} <ArrowUpRight size={14} />
+            </Link>
+          </section>
+        </aside>
       </div>
+      {raw.dashboard?.enabled !== false &&
+        layout.mode === "custom" &&
+        extras.widgets.some((w) => w.visible) && (
+          <div className="today-additional">
+            <DashboardWidgets
+              initialAcademic={initialAcademic}
+              initialPlans={initialPlans}
+              layout={extras}
+              briefing={briefing}
+              priorities={tasks.slice(0, 3)}
+            />
+          </div>
+        )}
+      <details
+        className="today-details"
+        open={reviewOpen}
+        onToggle={(e) => setReviewOpen(e.currentTarget.open)}
+      >
+        <summary>Day review & attention</summary>
+        <BriefingPanel controller={briefing} hideConnectionAlerts />
+      </details>
       <div id="connected-data">
         <SyncHealth controller={briefing} />
       </div>
-      {custom ? (
-        <DashboardWidgets
-          initialAcademic={initialAcademic}
-          initialPlans={initialPlans}
-          layout={layout}
-          briefing={briefing}
-          priorities={ranked.slice(0, 3).map((x) => x.task)}
-        />
-      ) : (
-        <>
-          {" "}
-          <div className="dashboard-grid">
-            <div className="stack home-work-column">
-              <section className="panel">
-                <div className="panel-heading">
-                  <div className="panel-title">
-                    <Sun />
-                    <h2>On your list</h2>
-                    {priorities.length > 0 && (
-                      <span className="count-pill">{priorities.length}</span>
-                    )}
-                  </div>
-                  <Link href="/planner" className="text-link">
-                    All tasks
-                    <ArrowUpRight size={12} />
-                  </Link>
-                </div>
-
-                {priorities.length ? (
-                  <TaskList tasks={priorities} />
-                ) : (
-                  <div className="home-capture-empty">
-                    <span className="capture-mark" aria-hidden="true">
-                      <Plus size={20} />
-                    </span>
-                    <p>
-                      Something on your mind?
-                      <small>Give it a place. You can organize it later.</small>
-                    </p>
-                  </div>
-                )}
-                <QuickCapture />
-              </section>
-              {(summary.overdue.length > 0 || summary.dueToday.length > 0) && (
-                <section className="panel">
-                  <div className="panel-heading">
-                    <div className="panel-title">
-                      <Flag />
-                      <h2>Coming up</h2>
-                    </div>
-                    <Link href="/planner" className="text-link">
-                      Open planner
-                      <ArrowUpRight size={12} />
-                    </Link>
-                  </div>
-                  {summary.overdue.length || summary.dueToday.length ? (
-                    <TaskList
-                      tasks={[...summary.overdue, ...summary.dueToday].slice(
-                        0,
-                        5,
-                      )}
-                    />
-                  ) : (
-                    <EmptyState
-                      compact
-                      icon={CalendarCheck2}
-                      title="A little breathing room"
-                      description="No tasks are due today or overdue. Course deadlines are in Academics."
-                    />
-                  )}
-                </section>
-              )}
-              <section className="review-banner">
-                <span className="section-icon">
-                  <BookOpen size={19} />
-                </span>
-                <div>
-                  <h2>Make space for a fresh week.</h2>
-                  <p>
-                    A few minutes to reflect, reset and choose what comes next.
-                    {recentReview
-                      ? ` Last completed: ${friendlyDate(recentReview.completed_at)}.`
-                      : " Your review opens on Sunday."}
-                  </p>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/reviews">
-                      {reviewAvailability(now, data.profile.timezone).open
-                        ? "Start weekly review"
-                        : "View review history"}
-                      <ArrowRight size={12} />
-                    </Link>
-                  </Button>
-                </div>
-              </section>
-            </div>
-            <div className="stack home-day-column">
-              <GoogleCalendarPanel
-                start={localDate()}
-                end={new Date(
-                  new Date(localDate() + "T12:00Z").getTime() + 86400000,
-                )
-                  .toISOString()
-                  .slice(0, 10)}
-              />
-              <section className="panel">
-                <div className="panel-heading">
-                  <div className="panel-title">
-                    <Target />
-                    <h2>The bigger picture</h2>
-                  </div>
-                  <Link href="/goals" className="text-link">
-                    Goals
-                    <ArrowUpRight size={12} />
-                  </Link>
-                </div>
-                {data.goals
-                  .filter((g) => g.status === "active")
-                  .slice(0, 3)
-                  .map((g) => {
-                    const progress = goalProgress(g, data.milestones);
-                    return (
-                      <Link
-                        href={`/goals#goal-${g.id}`}
-                        className="goal-row"
-                        style={{ display: "block" }}
-                        key={g.id}
-                      >
-                        <h3>{g.title}</h3>
-                        <div className="flex-between">
-                          <p>{progress.label}</p>
-                          {progress.percent !== null && (
-                            <span className="small muted">
-                              {Math.round(progress.percent)}%
-                            </span>
-                          )}
-                        </div>
-                        {progress.percent !== null && (
-                          <div
-                            className="progress-track"
-                            role="progressbar"
-                            aria-label={g.title}
-                            aria-valuenow={Math.round(progress.percent)}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                          >
-                            <div
-                              className="progress-fill"
-                              style={{ width: `${progress.percent}%` }}
-                            />
-                          </div>
-                        )}
-                      </Link>
-                    );
-                  })}
-                {!data.goals.some((g) => g.status === "active") && (
-                  <EmptyState
-                    compact
-                    icon={Target}
-                    title="Start with what matters"
-                    description="Connect your everyday actions to a goal you care about."
-                    action={
-                      <Link href="/goals" className="text-link">
-                        Set a goal
-                        <Plus size={12} />
-                      </Link>
-                    }
-                  />
-                )}
-              </section>
-            </div>
-          </div>
-        </>
-      )}
-      <BriefingPanel controller={briefing} hideConnectionAlerts />
       <AttentionHistory />
     </div>
   );

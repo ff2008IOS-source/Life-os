@@ -52,12 +52,17 @@ export function AreasPage({
   const data = realWorkspace(raw);
   const [editor, setEditor] = useState<EntityEditorState | null>(null);
   const [tab, setTab] = useState("overview");
+  const [projectQuery, setProjectQuery] = useState("");
   const area = data.areas.find((a) => a.slug === slug);
   const projects = data.projects.filter(
     (p) =>
       !p.archived_at &&
       !p.deleted_at &&
-      (!slug || p.area_id === area?.id || slug === "projects"),
+      (!slug || p.area_id === area?.id || slug === "projects") &&
+      (slug !== "projects" ||
+        `${p.name} ${p.description}`
+          .toLowerCase()
+          .includes(projectQuery.toLowerCase())),
   );
   if (!slug)
     return (
@@ -65,8 +70,7 @@ export function AreasPage({
         <div className="page-heading">
           <div>
             <span className="eyebrow">ROOM FOR EVERY PART OF LIFE</span>
-            <h1>Your life areas</h1>
-            <p>Different responsibilities. One connected workspace.</p>
+            <h1>Workspaces</h1>
           </div>
         </div>
         {!data.areas.length ? (
@@ -153,7 +157,6 @@ export function AreasPage({
           </span>
           <div>
             <h1>{area.name}</h1>
-            <p>{descriptions[slug]}</p>
           </div>
         </div>
         {slug === "projects" && (
@@ -164,6 +167,17 @@ export function AreasPage({
         )}
       </div>
 
+      {slug === "projects" && (
+        <label className="project-search">
+          Find a project
+          <input
+            type="search"
+            placeholder="Search projects…"
+            value={projectQuery}
+            onChange={(e) => setProjectQuery(e.target.value)}
+          />
+        </label>
+      )}
       {!["academics", "career"].includes(slug) && (
         <div className="area-metrics">
           <div className="area-summary">
@@ -204,7 +218,7 @@ export function AreasPage({
           ) : (
             <EmptyState
               title="No tasks here yet"
-              description="Capture an action below when you’re ready."
+              description="Add a task below."
             />
           )}
           <QuickCapture areaId={area.id} />
@@ -251,8 +265,8 @@ export function AreasPage({
                 <section className="panel">
                   <EmptyState
                     icon={Layers3}
-                    title="Give your next project a home"
-                    description="Break an idea into a few achievable steps."
+                    title="No projects yet"
+                    description="Add a project to keep its tasks and milestones together."
                     action={
                       <Button onClick={() => setEditor({ kind: "projects" })}>
                         <Plus size={13} />
@@ -392,7 +406,7 @@ export function AreasPage({
     </>
   );
 }
-function ProjectCards({
+export function ProjectCards({
   projects,
   onEdit,
 }: {
@@ -413,11 +427,8 @@ function ProjectCards({
         return (
           <article className="entity-card" key={p.id} id={`project-${p.id}`}>
             <div className="flex-between full-width">
-              <span className="section-icon">
-                <Layers3 />
-              </span>
               <span className={`badge ${p.status === "active" ? "blue" : ""}`}>
-                {p.status}
+                {p.status === "planned" ? "Not started" : p.status}
               </span>
             </div>
             <button
@@ -434,7 +445,7 @@ function ProjectCards({
                 <span>
                   {tasks.length
                     ? `${done} of ${tasks.length} tasks complete`
-                    : "Add a first step when you’re ready"}
+                    : "No tasks"}
                 </span>
               </div>
               {tasks.length > 0 && (
@@ -446,21 +457,25 @@ function ProjectCards({
                 </div>
               )}
             </div>
-            {milestones.map((m) => (
-              <button
-                className="task-main"
-                key={m.id}
-                onClick={() => onEdit({ kind: "milestones", record: m })}
-              >
-                <span className="small">
-                  <Flag
-                    size={11}
-                    style={{ display: "inline", marginRight: 6 }}
-                  />
-                  {m.title} · {m.status}
-                </span>
-              </button>
-            ))}
+            <details className="project-milestones">
+              <summary>Tasks & milestones</summary>
+              <TaskList tasks={tasks} />
+              {milestones.map((m) => (
+                <button
+                  className="task-main"
+                  key={m.id}
+                  onClick={() => onEdit({ kind: "milestones", record: m })}
+                >
+                  <span className="small">
+                    <Flag
+                      size={11}
+                      style={{ display: "inline", marginRight: 6 }}
+                    />
+                    {m.title} · {m.status}
+                  </span>
+                </button>
+              ))}
+            </details>
             <Button
               variant="ghost"
               size="sm"
@@ -470,7 +485,11 @@ function ProjectCards({
               Add milestone
             </Button>
             <div className="card-footer">
-              <span>{friendlyDate(p.target_date)}</span>
+              <span>
+                {p.target_date
+                  ? `Due ${friendlyDate(p.target_date)}`
+                  : `Updated ${friendlyDate(p.updated_at)}`}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"

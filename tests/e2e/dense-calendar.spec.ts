@@ -85,7 +85,7 @@ test("dense schedules stay bounded on iPad and iPhone and calendar source contro
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.goto("/planner");
   await expect(page.locator(".time-event:visible").first()).toBeVisible();

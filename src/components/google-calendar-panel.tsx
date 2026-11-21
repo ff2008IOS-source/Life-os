@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarDays, RefreshCw, Link2, ChevronRight } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
+import { Modal } from "./dialog";
+import type { CalendarEvent } from "@/lib/integrations/calendar-view";
 import { Button } from "./ui/button";
 import { useCalendar, calendarRequest } from "./use-calendar";
 import { localDate } from "@/lib/dates";
@@ -27,11 +29,16 @@ export function GoogleCalendarPanel({
   start,
   end,
   settings = false,
+  heading,
+  calendarPattern,
 }: {
   start?: string;
   end?: string;
   settings?: boolean;
+  heading?: string;
+  calendarPattern?: string;
 }) {
+  const [detail, setDetail] = useState<CalendarEvent | null>(null);
   const today = localDate();
   const until =
     end ??
@@ -56,7 +63,10 @@ export function GoogleCalendarPanel({
     data?.connections.filter((c) => c.status === "connected") ?? [];
   const selected =
     data?.calendars.filter(
-      (c) => c.sync_enabled && connected.some((x) => x.id === c.connection_id),
+      (c) =>
+        c.sync_enabled &&
+        connected.some((x) => x.id === c.connection_id) &&
+        (!calendarPattern || new RegExp(calendarPattern, "i").test(c.name)),
     ) ?? [];
   const timestamps = selected
     .map((c) => c.last_synced_at)
@@ -71,7 +81,11 @@ export function GoogleCalendarPanel({
   if (!settings) {
     const upcoming = groupCalendarEvents(
       events.filter(
-        (e) => !e.end_at || new Date(e.end_at).getTime() > Date.now(),
+        (e) =>
+          (!calendarPattern || selected.some((c) => c.id === e.calendar_id)) &&
+          ((start && start !== today) ||
+            !e.end_at ||
+            new Date(e.end_at).getTime() > Date.now()),
       ),
     ).slice(0, 5);
     return (
@@ -79,7 +93,10 @@ export function GoogleCalendarPanel({
         <div className="panel-heading">
           <div className="panel-title">
             <CalendarDays />
-            <h2>Today’s schedule</h2>
+            <h2>
+              {heading ??
+                (!start || start === today ? "Today’s schedule" : "Schedule")}
+            </h2>
           </div>
           <Link className="text-link" href="/planner">
             Planner
@@ -99,7 +116,12 @@ export function GoogleCalendarPanel({
             </p>
           ) : upcoming.length ? (
             upcoming.map((g) => (
-              <Link key={g.id} href="/planner" className="agenda-compact-row">
+              <button
+                type="button"
+                key={g.id}
+                onClick={() => setDetail(g.event)}
+                className="agenda-compact-row"
+              >
                 <time>
                   {g.event.all_day_start
                     ? "All day"
@@ -116,17 +138,46 @@ export function GoogleCalendarPanel({
                       data?.calendars.find((c) => c.id === g.event.calendar_id)
                         ?.name
                     }
-                    {g.sources.length > 1 ? ` +${g.sources.length - 1}` : ""}
+                    {g.event.end_at
+                      ? ` · until ${formatInTimeZone(g.event.end_at, "America/Vancouver", "h:mm a")}`
+                      : ""}
                   </small>
                 </div>
-              </Link>
+              </button>
             ))
           ) : (
-            <p className="muted small">
-              Your schedule is clear for the rest of today.
-            </p>
+            <p className="muted small">No events on your calendar.</p>
           )}
         </div>
+        {detail && (
+          <Modal
+            open
+            title={detail.title || "Event"}
+            onOpenChange={(open) => {
+              if (!open) setDetail(null);
+            }}
+            description="Calendar event"
+          >
+            <p>
+              {detail.start_at
+                ? formatInTimeZone(
+                    detail.start_at,
+                    "America/Vancouver",
+                    "EEEE, MMM d · h:mm a",
+                  )
+                : detail.all_day_start}
+              {detail.end_at
+                ? ` – ${formatInTimeZone(detail.end_at, "America/Vancouver", "h:mm a")}`
+                : ""}
+            </p>
+            <p className="muted">
+              {data?.calendars.find((c) => c.id === detail.calendar_id)?.name}
+            </p>
+            <Button variant="outline" asChild>
+              <Link href="/planner?section=calendar">Open planner</Link>
+            </Button>
+          </Modal>
+        )}
         <div className="panel-footer">
           <span>{syncText}</span>
           <Link href="/planner" className="text-link">

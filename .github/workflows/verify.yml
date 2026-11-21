@@ -40,5 +40,6 @@ jobs:
           path: |
             test-results/**/dashboard-performance.json
             test-results/**/personal-*.png
+            test-results/**/warm-*.png
           if-no-files-found: ignore
           retention-days: 7

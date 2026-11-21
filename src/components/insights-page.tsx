@@ -67,8 +67,7 @@ export function InsightsPage() {
       <div className="page-heading">
         <div>
           <span className="eyebrow">PROGRESS, WITH PERSPECTIVE</span>
-          <h1>Your insights</h1>
-          <p>Useful patterns from what you actually record.</p>
+          <h1>Insights</h1>
         </div>
         <select
           style={{ width: 130, fontSize: 11, minHeight: 35 }}
