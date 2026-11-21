@@ -58,7 +58,7 @@ export const projectInput = z
     description: text,
     area_id: nullableId,
     status: z
-      .enum(["active", "paused", "completed", "cancelled"])
+      .enum(["planned", "active", "paused", "completed", "cancelled"])
       .default("active"),
     start_date: dateOnly.nullable().default(null),
     target_date: dateOnly.nullable().default(null),

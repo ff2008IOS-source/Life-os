@@ -1,3 +1,4 @@
+import { reconcileAssessments } from "./assessment-identity";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
@@ -250,7 +251,7 @@ export async function loadBriefing(
   const facts = buildBriefing({
     workspace,
     sheet_health: sheetHealth,
-    assessments,
+    assessments: reconcileAssessments(assessments),
     courses,
     calendars,
     connections,

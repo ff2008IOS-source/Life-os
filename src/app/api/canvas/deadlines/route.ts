@@ -43,9 +43,9 @@ export async function GET(request: Request) {
         .in("submission_state", ["submitted", "graded", "excused"])
         .order("due_at", { ascending: false });
     else {
-      // A grade alone does not prove submission. Keep unconfirmed graded work
-      // visible here as well as in grade history.
-      query = query.not("submission_state", "in", "(submitted,excused)");
+      // Graded work belongs in results; a missing electronic-upload timestamp
+      // does not make an in-person exam outstanding.
+      query = query.not("submission_state", "in", "(submitted,graded,excused)");
       if (view === "upcoming")
         query = query
           .gte("due_at", new Date(now).toISOString())

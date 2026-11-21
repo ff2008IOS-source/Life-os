@@ -67,6 +67,100 @@ const server = createServer((req, res) => {
       };
       // Test-only synthetic provider confirmation; this server is loopback-only and never deployed.
       if (
+        url.pathname === "/__fixtures/fresh-workspace" &&
+        req.method === "POST"
+      ) {
+        const term = "aaaaaaaa-1111-4111-8111-111111111111",
+          course = "aaaaaaaa-2222-4222-8222-222222222222",
+          connection = "aaaaaaaa-3333-4333-8333-333333333333",
+          source = "aaaaaaaa-4444-4444-8444-444444444444";
+        await db.query(
+          "insert into academic_terms(id,user_id,name)values($1,$2,'[TEST] Identity term') on conflict do nothing",
+          [term, uid],
+        );
+        await db.query(
+          "insert into courses(id,user_id,term_id,code,title)values($1,$2,$3,'[TEST]IDENT','[TEST] Identity course') on conflict do nothing",
+          [course, uid, term],
+        );
+        for (const [, title, score, max, key] of [
+          [1, "Exam 2", null, null, "sheet:exam2"],
+          [2, "Exam 2 - Multiple Choice", 64, 80, "canvas:123:222"],
+          [3, "Exam 2 - Short Answer", 21, 45, "canvas:123:223"],
+        ])
+          await db.query(
+            "insert into assessments(user_id,course_id,title,earned_score,maximum_score,source_key,submission_state)values($1,$2,$3,$4,$5,$6,$7)",
+            [
+              uid,
+              course,
+              title,
+              score,
+              max,
+              key,
+              score === null ? "unknown" : "returned",
+            ],
+          );
+        await db.query(
+          "insert into calendar_connections(id,user_id,provider,provider_account_id)values($1,$2,'google','[TEST]') on conflict do nothing",
+          [connection, uid],
+        );
+        await db.query(
+          "insert into data_sources(id,user_id,provider,source_key)values($1,$2,'google_sheets','syntheticFresh001') on conflict do nothing",
+          [source, uid],
+        );
+        const datasets = [];
+        for (const kind of ["project", "task"]) {
+          const config = {
+            header_row: 0,
+            start_column: 0,
+            end_column: 2,
+            end_row: 10,
+            allow_insert: false,
+            allow_delete: false,
+            columns: [
+              {
+                key: kind,
+                header: kind === "project" ? "Project" : "Next Action",
+                type: "text",
+                key_part: true,
+                writable: false,
+              },
+              {
+                key: "status",
+                header: "Status",
+                type: "text",
+                key_part: false,
+                writable: false,
+              },
+            ],
+          };
+          const d = await db.query(
+            "insert into sheet_rest_datasets(user_id,connection_id,source_id,spreadsheet_id,worksheet_id,title,worksheet_title,config,last_read_at)values($1,$2,$3,'syntheticFresh001',$4,$5,$5,$6,now())returning id",
+            [
+              uid,
+              connection,
+              source,
+              kind === "project" ? 0 : 1,
+              "[TEST] Fresh " + kind,
+              JSON.stringify(config),
+            ],
+          );
+          const dataset = d.rows[0].id;
+          datasets.push(dataset);
+          await db.query(
+            "insert into sheet_rest_rows(user_id,dataset_id,external_key,key_values,local_values)values($1,$2,'stable','[\"stable\"]',$3)",
+            [
+              uid,
+              dataset,
+              JSON.stringify({
+                [kind]: "[TEST] Rebuilt " + kind,
+                status: "In Progress",
+              }),
+            ],
+          );
+        }
+        return send(200, { course, datasets });
+      }
+      if (
         url.pathname === "/__fixtures/reservation" &&
         req.method === "DELETE"
       ) {
@@ -181,6 +275,9 @@ const server = createServer((req, res) => {
               "prepare_assessment",
               "complete_work_session",
               "change_focus_session",
+              "preview_personal_activity_reset",
+              "reset_personal_activity",
+              "rebuild_source_execution",
               "work_progress_summary",
               "prepare_my_workflow",
               "assistant_rate_status",
@@ -207,6 +304,8 @@ const server = createServer((req, res) => {
           "profiles",
           "dashboard_preferences",
           "focus_sessions",
+          "source_execution_settings",
+          "source_execution_links",
           "briefing_settings",
           "briefing_actions",
           "daily_check_ins",

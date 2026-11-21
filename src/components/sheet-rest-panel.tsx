@@ -270,7 +270,7 @@ export function SheetRestPanel() {
         }
         onClick={() => void syncAll()}
       >
-        {batchRunning ? "Syncing tables…" : "Sync all"}
+        {batchRunning ? "Syncing tables…" : "Sync Sheets tables"}
       </Button>
       <p className="small muted">
         Updates all active tables using your existing permissions. Paused tables

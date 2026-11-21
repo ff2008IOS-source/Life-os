@@ -50,7 +50,9 @@ test("Sync all skips paused/test tables, continues on failure and displays hones
   });
   await page.goto("/settings?section=integrations");
   const panel = page.getByRole("region", { name: "Two-way Google Sheets" });
-  await panel.getByRole("button", { name: "Sync all", exact: true }).click();
+  await panel
+    .getByRole("button", { name: "Sync Sheets tables", exact: true })
+    .click();
   await expect(
     panel.getByRole("button", { name: "Syncing tables…" }),
   ).toBeDisabled();
@@ -66,9 +68,11 @@ test("Sync all skips paused/test tables, continues on failure and displays hones
   await expect(results.getByText("Synced", { exact: true })).toBeVisible();
   await expect(results).toContainText("Sync not confirmed");
   await expect(results).toContainText("Needs review");
-  await panel.getByRole("button", { name: "Sync all", exact: true }).click();
+  await panel
+    .getByRole("button", { name: "Sync Sheets tables", exact: true })
+    .click();
   await expect(
-    panel.getByRole("button", { name: "Sync all", exact: true }),
+    panel.getByRole("button", { name: "Sync Sheets tables", exact: true }),
   ).toBeEnabled();
   expect(calls).toEqual(["1", "2", "3", "1", "2", "3"]);
   expect(

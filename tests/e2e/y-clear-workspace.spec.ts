@@ -148,7 +148,7 @@ test("consumer collections support recoverable projects, separated results and o
     .getByRole("button", { name: "Midterm Exam (Fall 2026)", exact: true })
     .click();
   await expect(
-    page.getByRole("dialog").getByText("Returned", { exact: true }),
+    page.getByRole("dialog").getByText("Graded", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.getByLabel("Find an assessment").fill("not a real assessment");

@@ -1,6 +1,6 @@
 export function deadlineStatusLabel(state: string, pastDue: boolean) {
   if (state === "submitted") return "Submitted";
-  if (state === "graded") return "Graded · submission not confirmed";
+  if (state === "graded") return "Graded";
   if (state === "excused") return "Excused";
   if (state === "needs_review") return "Conflicting Canvas status · verify";
   if (state === "missing") return "Canvas reports missing";
