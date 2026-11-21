@@ -42,9 +42,7 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
   await daily
     .getByRole("combobox", { name: "Priority", exact: true })
     .selectOption("3");
-  await daily
-    .getByRole("button", { name: "Capture task", exact: true })
-    .click();
+  await daily.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(daily.getByText(title, { exact: true })).toBeVisible();
   await page.reload();
   await expect(daily.getByText(title, { exact: true })).toBeVisible();

@@ -104,7 +104,7 @@ export function QuickCapture({
               variant="ghost"
               type="submit"
               disabled={!title.trim() || pending}
-              aria-label="Capture task"
+              aria-label="Add task"
             >
               Add
             </Button>

@@ -19,7 +19,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await page
     .getByLabel("Quick capture task title")
     .fill("[TEST] Persistent browser task");
-  await page.getByRole("button", { name: "Capture task", exact: true }).click();
+  await page.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(
     page
       .getByRole("region", { name: "Daily tasks" })

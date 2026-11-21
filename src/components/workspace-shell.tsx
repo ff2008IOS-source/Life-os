@@ -114,7 +114,7 @@ export function WorkspaceShell({
               href={n.href}
               key={n.href}
               title={n.label}
-              aria-label={n.href === "/reviews" ? "Weekly review" : n.label}
+              aria-label={n.label}
               aria-current={active?.href === n.href ? "page" : undefined}
             >
               <n.icon />
