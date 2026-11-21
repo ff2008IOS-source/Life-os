@@ -566,6 +566,7 @@ input[type="radio"] {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 .today-date input {
   background: transparent;
@@ -1233,10 +1234,11 @@ thead {
     font-size: 40px;
   }
   .today-date {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
   }
   .today-date input {
+    width: 125px;
     max-width: 125px;
   }
   .workspace-columns {
