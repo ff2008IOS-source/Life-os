@@ -1,9 +1,11 @@
 "use client";
-import { visibleArea, availableProject } from "@/lib/visible-areas";
+import { availableProject } from "@/lib/visible-areas";
 import { OfflineNotice } from "./offline-notice";
 import Link from "next/link";
 import { AppLogo, ProfileAvatar } from "./profile-identity";
 import { usePathname, useRouter } from "next/navigation";
+import type { AcademicData } from "./academic-editor";
+import { calendarRequest } from "./use-calendar";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import {
@@ -17,11 +19,15 @@ import {
   Search,
   Settings,
   ChevronDown,
-  ShieldCheck,
   MoreHorizontal,
   BookOpen,
   ArrowUpRight,
   LogOut,
+  Briefcase,
+  GraduationCap,
+  NotebookPen,
+  CircleDot,
+  Inbox,
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
@@ -31,17 +37,41 @@ import type { Task } from "@/lib/schemas";
 const navigation = [
   { label: "Home", href: "/", icon: Home },
   { label: "Planner", href: "/planner", icon: CalendarDays },
-  { label: "Life Areas", href: "/areas", icon: Layers3 },
-  { label: "Goals", href: "/goals", icon: Target },
-  { label: "Insights", href: "/insights", icon: ChartNoAxesCombined },
+  { label: "Academics", href: "/areas/academics", icon: GraduationCap },
+  { label: "Basketball Ops", href: "/basketball", icon: CircleDot },
+  { label: "Career", href: "/areas/career", icon: Briefcase },
+  { label: "Learning", href: "/learning", icon: NotebookPen },
+  { label: "Projects", href: "/areas/projects", icon: Layers3 },
+  { label: "Reviews", href: "/reviews", icon: BookOpen },
 ];
-export function WorkspaceShell({ children }: { children: React.ReactNode }) {
+export function WorkspaceShell({
+  children,
+  initialCollapsed = false,
+}: {
+  children: React.ReactNode;
+  initialCollapsed?: boolean;
+}) {
   const { data } = useWorkspace();
   const path = usePathname();
   const [editor, setEditor] = useState<{ task: Task | null } | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchAcademic, setSearchAcademic] = useState<AcademicData | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!search || searchAcademic) return;
+    let live = true;
+    void calendarRequest<AcademicData>("/api/v1/academics")
+      .then((d) => {
+        if (live) setSearchAcademic(d);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [search, searchAcademic]);
   const { setTheme } = useTheme();
   useEffect(() => {
     setTheme(data.profile.theme);
@@ -83,6 +113,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               className={`nav-link ${active?.href === n.href ? "active" : ""}`}
               href={n.href}
               key={n.href}
+              title={n.label}
               aria-label={n.label}
               aria-current={active?.href === n.href ? "page" : undefined}
             >
@@ -94,25 +125,45 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <p className="sidebar-label">YOUR LIFE AREAS</p>
-        <nav aria-label="Life areas">
-          {data.areas
-            .filter(visibleArea)
-            .sort((a, b) => a.sort_order - b.sort_order)
-            .map((a) => (
-              <Link className="area-link" href={`/areas/${a.slug}`} key={a.id}>
-                <span className="area-dot" style={{ background: a.color }} />
-                {a.name}
-              </Link>
-            ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <Link href="/reviews" className="nav-link" aria-label="Weekly review">
-            <BookOpen />
-            <span>Weekly review</span>
+        <nav className="sidebar-utilities" aria-label="Utilities">
+          <button
+            className="nav-link"
+            title="Search"
+            onClick={() => setSearch(true)}
+          >
+            <Search />
+            <span>Search</span>
+          </button>
+          <Link
+            className="nav-link"
+            href="/planner?section=inbox"
+            title="Inbox"
+          >
+            <Inbox />
+            <span>Inbox</span>
+            {inbox > 0 && <span className="nav-count">{inbox}</span>}
           </Link>
           <Link
+            className={`nav-link ${path === "/goals" ? "active" : ""}`}
+            href="/goals"
+            title="Goals"
+          >
+            <Target />
+            <span>Goals</span>
+          </Link>
+          <Link
+            className={`nav-link ${path === "/insights" ? "active" : ""}`}
+            href="/insights"
+            title="Insights"
+          >
+            <ChartNoAxesCombined />
+            <span>Insights</span>
+          </Link>
+        </nav>
+        <div className="sidebar-bottom">
+          <Link
             href="/settings"
+            title="Settings"
             aria-label="Settings"
             className={`nav-link ${path === "/settings" ? "active" : ""}`}
           >
@@ -137,7 +188,12 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             size="icon"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-expanded={!collapsed}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => {
+              setCollapsed(!collapsed);
+              try {
+                document.cookie = `lifeos_sidebar_collapsed=${!collapsed}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+              } catch {}
+            }}
           >
             <PanelLeftClose size={17} />
           </Button>
@@ -150,7 +206,13 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                   ? "Weekly review"
                   : path === "/settings"
                     ? "Settings"
-                    : "More")}
+                    : path === "/goals"
+                      ? "Goals"
+                      : path === "/insights"
+                        ? "Insights"
+                        : path === "/areas"
+                          ? "Workspaces"
+                          : "More")}
             </strong>
           </div>
           <div className="top-actions">
@@ -160,7 +222,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               aria-label="Search workspace"
             >
               <Search size={15} />
-              Find tasks & goals<kbd>⌘ K</kbd>
+              Search<kbd>⌘ K</kbd>
             </button>
             <span className="top-divider" />
             <Button
@@ -182,10 +244,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <main className="content" id="main-content">
           <OfflineNotice />
           {children}
-          <div className="footer-note">
-            <ShieldCheck size={11} />
-            Your space. Your pace.
-          </div>
         </main>
       </div>
       <nav className="mobile-nav" aria-label="Mobile navigation">
@@ -236,20 +294,78 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       <Modal
         open={search}
         onOpenChange={setSearch}
-        title="Find your next step"
-        description="Search tasks, projects, and goals in your workspace."
+        title="Search"
+        description="Tasks, projects, goals and workspaces."
       >
         <label className="sr-only" htmlFor="workspace-search">
           Search
         </label>
         <input
           id="workspace-search"
-          placeholder="Search tasks, projects or goals…"
+          placeholder="Search…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              document
+                .querySelector<HTMLElement>(".search-results .search-result")
+                ?.focus();
+            }
+          }}
           autoFocus
         />
-        <div className="search-results">
+        <div
+          className="search-results"
+          onKeyDown={(e) => {
+            if (!["ArrowDown", "ArrowUp"].includes(e.key)) return;
+            const items = Array.from(
+              e.currentTarget.querySelectorAll<HTMLElement>(".search-result"),
+            );
+            const index = items.indexOf(document.activeElement as HTMLElement);
+            items[
+              (index + (e.key === "ArrowDown" ? 1 : -1) + items.length) %
+                items.length
+            ]?.focus();
+            e.preventDefault();
+          }}
+        >
+          {navigation
+            .filter(
+              (n) =>
+                !query.trim() ||
+                n.label.toLowerCase().includes(query.toLowerCase()),
+            )
+            .map((n) => (
+              <Link
+                className="search-result"
+                href={n.href}
+                key={n.href}
+                onClick={() => setSearch(false)}
+              >
+                {n.label}
+                <small>Workspace</small>
+              </Link>
+            ))}
+          {query.trim() &&
+            searchAcademic?.courses
+              .filter((c) =>
+                `${c.code} ${c.title}`
+                  .toLowerCase()
+                  .includes(query.toLowerCase()),
+              )
+              .slice(0, 8)
+              .map((c) => (
+                <Link
+                  className="search-result"
+                  key={c.id}
+                  href={`/areas/academics?course=${c.id}`}
+                  onClick={() => setSearch(false)}
+                >
+                  {String(c.code)} · {String(c.title)}
+                  <small>Course</small>
+                </Link>
+              ))}
           {query.trim() &&
             data.tasks
               .filter(
@@ -306,19 +422,21 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               ))}
           {query.trim() &&
             ![
+              ...navigation.map((n) => n.label),
+              ...(searchAcademic?.courses.map((c) => `${c.code} ${c.title}`) ??
+                []),
               ...data.tasks.filter((t) => !t.deleted_at).map((t) => t.title),
-              ...data.projects.map((p) => p.name),
+              ...data.projects.filter(availableProject).map((p) => p.name),
               ...data.goals.map((g) => g.title),
             ].some((title) =>
               title.toLowerCase().includes(query.toLowerCase()),
             ) && (
               <p className="muted small" role="status">
-                No matching tasks, projects or goals. Course materials and
-                source records are available in their own sections.
+                No results.
               </p>
             )}
           {!query.trim() && (
-            <p className="muted small">Find a task, project or goal.</p>
+            <p className="muted small">Search your workspace.</p>
           )}
         </div>
       </Modal>
@@ -332,12 +450,17 @@ export function MorePage() {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">YOUR WORKSPACE</span>
-          <h1>A little more</h1>
-          <p>Your goals, progress, and preferences.</p>
+          <h1>Workspaces</h1>
         </div>
       </div>
       <div className="more-list">
+        {navigation.map((n) => (
+          <Link key={n.href} href={n.href}>
+            <n.icon />
+            {n.label}
+            <ArrowUpRight size={14} />
+          </Link>
+        ))}
         <Link href="/goals">
           <Target />
           Goals
@@ -346,11 +469,6 @@ export function MorePage() {
         <Link href="/insights">
           <ChartNoAxesCombined />
           Insights
-          <ArrowUpRight size={14} />
-        </Link>
-        <Link href="/reviews">
-          <BookOpen />
-          Weekly reviews
           <ArrowUpRight size={14} />
         </Link>
         <Link href="/settings">

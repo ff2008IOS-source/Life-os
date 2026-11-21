@@ -67,7 +67,6 @@ export function SettingsPage({
         <div>
           <span className="eyebrow">MAKE IT YOURS</span>
           <h1>Settings</h1>
-          <p>Your preferences, privacy, and connected services.</p>
         </div>
       </div>
       <div className="tabs settings-tabs" aria-label="Settings sections">

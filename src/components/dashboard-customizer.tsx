@@ -10,6 +10,7 @@ import { useWorkspace } from "./workspace-provider";
 import { calendarRequest } from "./use-calendar";
 import { Button } from "./ui/button";
 import { Modal } from "./dialog";
+const fixedWidgets = ["plan", "schedule", "upcoming", "review"];
 export function DashboardCustomizer() {
   const { data, refresh } = useWorkspace();
   const [draft, setDraft] = useState<DashboardLayout | null>(null);
@@ -48,18 +49,23 @@ export function DashboardCustomizer() {
         ),
       });
   }
+  const editablePositions =
+    draft?.widgets.flatMap((w, i) =>
+      fixedWidgets.includes(w.id) ? [] : [i],
+    ) ?? [];
   function move(index: number, step: number) {
     if (!draft) return;
+    const position = editablePositions.indexOf(index),
+      target = editablePositions[position + step];
+    if (target === undefined) return;
     const widgets = [...draft.widgets];
-    [widgets[index], widgets[index + step]] = [
-      widgets[index + step],
-      widgets[index],
-    ];
+    [widgets[index], widgets[target]] = [widgets[target], widgets[index]];
     setDraft({ ...draft, widgets });
     setAnnouncement(
-      `${widgetNames[widgets[index + step].id]} moved to position ${index + step + 1} of ${widgets.length}.`,
+      `${widgetNames[widgets[target].id]} moved to position ${position + step + 1} of ${editablePositions.length}.`,
     );
   }
+
   async function save() {
     if (!draft) return;
     setBusy(true);
@@ -114,8 +120,8 @@ export function DashboardCustomizer() {
                   })
                 }
               >
-                <option value="classic">Original layout</option>
-                <option value="custom">Personal layout</option>
+                <option value="classic">Essentials</option>
+                <option value="custom">Custom sections</option>
               </select>
             </label>
             <label>
@@ -190,95 +196,77 @@ export function DashboardCustomizer() {
                     })
                   }
                 >
-                  <option value="indigo">Indigo</option>
-                  <option value="blue">Blue</option>
-                  <option value="violet">Violet</option>
+                  <option value="indigo">Sage</option>
+                  <option value="blue">Slate</option>
+                  <option value="violet">Clay</option>
                 </select>
               </label>
             </div>
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.greeting}
-                onChange={(e) =>
-                  setDraft({ ...draft, greeting: e.target.checked })
-                }
-              />{" "}
-              Show greeting
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.banner}
-                onChange={(e) =>
-                  setDraft({ ...draft, banner: e.target.checked })
-                }
-              />{" "}
-              Show landscape banner
-            </label>
             {draft.mode === "custom" && (
               <fieldset>
-                <legend>Widgets</legend>
+                <legend>Additional sections</legend>
                 <p className="small muted">
                   Pinned widgets appear first. Wide cards fill the desktop row;
                   phones keep one column.
                 </p>
-                {draft.widgets.map((w, i) => (
-                  <div className="widget-control" key={w.id}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={w.visible}
-                        onChange={(e) =>
-                          changeWidget(i, { visible: e.target.checked })
-                        }
-                      />
-                      {widgetNames[w.id]}
-                    </label>
-                    <div className="widget-control-actions">
+                {draft.widgets.map((w, i) =>
+                  fixedWidgets.includes(w.id) ? null : (
+                    <div className="widget-control" key={w.id}>
                       <label>
                         <input
                           type="checkbox"
-                          checked={w.pinned}
+                          checked={w.visible}
                           onChange={(e) =>
-                            changeWidget(i, { pinned: e.target.checked })
+                            changeWidget(i, { visible: e.target.checked })
                           }
-                        />{" "}
-                        Pin {widgetNames[w.id]}
+                        />
+                        {widgetNames[w.id]}
                       </label>
-                      <select
-                        aria-label={`${widgetNames[w.id]} size`}
-                        value={w.size}
-                        onChange={(e) =>
-                          changeWidget(i, {
-                            size: e.target.value as "standard" | "wide",
-                          })
-                        }
-                      >
-                        <option value="standard">Standard</option>
-                        <option value="wide">Wide</option>
-                      </select>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={i === 0}
-                        aria-label={`Move ${widgetNames[w.id]} up`}
-                        onClick={() => move(i, -1)}
-                      >
-                        ↑
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={i === draft.widgets.length - 1}
-                        aria-label={`Move ${widgetNames[w.id]} down`}
-                        onClick={() => move(i, 1)}
-                      >
-                        ↓
-                      </Button>
+                      <div className="widget-control-actions">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={w.pinned}
+                            onChange={(e) =>
+                              changeWidget(i, { pinned: e.target.checked })
+                            }
+                          />{" "}
+                          Pin {widgetNames[w.id]}
+                        </label>
+                        <select
+                          aria-label={`${widgetNames[w.id]} size`}
+                          value={w.size}
+                          onChange={(e) =>
+                            changeWidget(i, {
+                              size: e.target.value as "standard" | "wide",
+                            })
+                          }
+                        >
+                          <option value="standard">Standard</option>
+                          <option value="wide">Wide</option>
+                        </select>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={i === editablePositions[0]}
+                          aria-label={`Move ${widgetNames[w.id]} up`}
+                          onClick={() => move(i, -1)}
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={i === editablePositions.at(-1)}
+                          aria-label={`Move ${widgetNames[w.id]} down`}
+                          onClick={() => move(i, 1)}
+                        >
+                          ↓
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ),
+                )}
               </fieldset>
             )}
             <label>
@@ -351,7 +339,7 @@ export function DashboardCustomizer() {
                   })
                 }
               >
-                Reset to original
+                Reset layout
               </Button>
               <Button disabled={busy} onClick={() => void save()}>
                 {busy ? "Saving…" : "Save dashboard"}

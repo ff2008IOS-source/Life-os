@@ -1,11 +1,20 @@
 "use client";
 import { isExample } from "@/lib/real-workspace";
 import { useState } from "react";
-import { Check, Flag, Plus, Inbox, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Check,
+  Plus,
+  Inbox,
+  ArrowUp,
+  ArrowDown,
+  MoreHorizontal,
+} from "lucide-react";
 import type { Task } from "@/lib/schemas";
 import { friendlyDate, isOverdue } from "@/lib/dates";
 import { useWorkspace } from "./workspace-provider";
 import { TaskEditor, taskValues } from "./task-editor";
+import { availableProject } from "@/lib/visible-areas";
+import { DateField } from "./date-field";
 import { Button } from "./ui/button";
 export function EmptyState({
   icon: Icon = Inbox,
@@ -31,10 +40,19 @@ export function EmptyState({
     </div>
   );
 }
-export function QuickCapture({ areaId }: { areaId?: string }) {
-  const { mutate, notify, pending } = useWorkspace();
-  const [title, setTitle] = useState("");
-  const [error, setError] = useState("");
+export function QuickCapture({
+  areaId,
+  projectId,
+  dueDate,
+}: {
+  areaId?: string;
+  projectId?: string;
+  dueDate?: string;
+}) {
+  const { data, mutate, notify, pending } = useWorkspace();
+  const [revision, setRevision] = useState(0);
+  const [title, setTitle] = useState(""),
+    [error, setError] = useState("");
   return (
     <>
       <div className="quick-capture">
@@ -44,30 +62,97 @@ export function QuickCapture({ areaId }: { areaId?: string }) {
             e.preventDefault();
             setError("");
             if (!title.trim()) return;
+            const form = e.currentTarget,
+              f = new FormData(form);
+            const project = String(f.get("project_id") ?? projectId ?? "");
             try {
-              await mutate("tasks", null, { title, area_id: areaId ?? null });
+              await mutate("tasks", null, {
+                title,
+                description: String(f.get("description") ?? ""),
+                area_id:
+                  areaId ??
+                  data.projects.find((p) => p.id === project)?.area_id ??
+                  null,
+                project_id: project || null,
+                due_date: String(f.get("due_date") ?? dueDate ?? "") || null,
+                priority: Number(f.get("priority") ?? 2),
+                estimated_minutes: f.get("estimated_minutes")
+                  ? Number(f.get("estimated_minutes"))
+                  : null,
+              });
               setTitle("");
-              notify("Task captured in Inbox");
+              setRevision((n) => n + 1);
+              form.reset();
+              notify("Task added");
             } catch (e) {
-              setError(e instanceof Error ? e.message : "Capture failed");
+              setError(
+                e instanceof Error ? e.message : "Task could not be added.",
+              );
             }
           }}
         >
-          <input
-            aria-label="Quick capture task title"
-            placeholder="Capture a task, clear your mind…"
-            maxLength={200}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <Button
-            variant="ghost"
-            type="submit"
-            disabled={!title.trim() || pending}
-            aria-label="Capture task"
-          >
-            ↵
-          </Button>
+          <div className="quick-capture-line">
+            <input
+              name="title"
+              aria-label="Quick capture task title"
+              placeholder="Add a task…"
+              maxLength={200}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <Button
+              variant="ghost"
+              type="submit"
+              disabled={!title.trim() || pending}
+              aria-label="Add task"
+            >
+              Add
+            </Button>
+          </div>
+          <details>
+            <summary>Details</summary>
+            <label>
+              Description
+              <textarea name="description" rows={2} />
+            </label>
+            <div className="form-grid">
+              <DateField
+                key={revision}
+                name="due_date"
+                label="Due date"
+                defaultValue={dueDate}
+              />
+              <label>
+                Priority
+                <select name="priority" defaultValue="2">
+                  <option value="1">Low</option>
+                  <option value="2">Normal</option>
+                  <option value="3">High</option>
+                  <option value="4">Urgent</option>
+                </select>
+              </label>
+              <label>
+                Estimate (minutes)
+                <input
+                  name="estimated_minutes"
+                  type="number"
+                  min="1"
+                  max="100000"
+                />
+              </label>
+              <label>
+                Project
+                <select name="project_id" defaultValue={projectId ?? ""}>
+                  <option value="">No project</option>
+                  {data.projects.filter(availableProject).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </details>
         </form>
       </div>
       {error && (
@@ -170,7 +255,6 @@ export function TaskList({
           <span className="task-meta">
             {area && (
               <>
-                <span className="area-dot" style={{ background: area.color }} />
                 {area.name}
                 <span>·</span>
               </>
@@ -186,12 +270,25 @@ export function TaskList({
             )}
           </span>
         </button>
-        {task.priority >= 3 && <Flag className="priority-flag" />}
+        {task.priority >= 3 && (
+          <span className="task-priority">
+            {task.priority === 4 ? "Urgent" : "High"}
+          </span>
+        )}
         <span className={`task-due ${isOverdue(task) ? "overdue" : ""}`}>
           {task.deleted_at
             ? "Deleted"
             : friendlyDate(task.due_date ?? task.due_at)}
         </span>
+        <Button
+          className="task-actions"
+          variant="ghost"
+          size="icon"
+          aria-label={`Task actions: ${task.title}`}
+          onClick={() => setEditing(task)}
+        >
+          <MoreHorizontal />
+        </Button>
         {reorder && task.status !== "completed" && (
           <div className="inline">
             <Button

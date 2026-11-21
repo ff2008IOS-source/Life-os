@@ -9,7 +9,7 @@ export function WeeklyInsights() {
   if (!d)
     return (
       <p role={state.error ? "alert" : "status"}>
-        {state.error || "Loading your weekly progress…"}
+        {state.error || "Loading weekly activity…"}
       </p>
     );
   const goalEvidence = d.weekly.goals.filter(
@@ -21,7 +21,7 @@ export function WeeklyInsights() {
       <div className="panel-heading">
         <div>
           <span className="eyebrow">THIS WEEK</span>
-          <h2>What moved forward</h2>
+          <h2>This week</h2>
         </div>
         <span className="small muted">
           Updated{" "}
@@ -34,7 +34,7 @@ export function WeeklyInsights() {
           <span>
             {d.weekly.completed_tasks
               ? "tasks completed"
-              : "No task completions recorded yet"}
+              : "No completed tasks"}
           </span>
           {d.weekly.completed_tasks > 0 && (
             <small>
@@ -50,7 +50,7 @@ export function WeeklyInsights() {
           <span>
             {d.weekly.milestones.length
               ? "milestones reached"
-              : "No new milestones recorded"}
+              : "No new milestones"}
           </span>
         </div>
         {d.weekly.deferrals > 0 && (
@@ -70,7 +70,7 @@ export function WeeklyInsights() {
       )}
       {courses.length > 0 && (
         <section className="insight-section">
-          <h3>Where to focus your practice</h3>
+          <h3>Topics to review</h3>
           {courses.map((course) => (
             <details className="briefing-detail" key={course}>
               <summary>
@@ -121,7 +121,7 @@ export function WeeklyInsights() {
         <p className="small muted">{d.weekly.coverage}</p>
       </details>
       <Link href="/reviews" className="text-link">
-        Reflect on your week <ArrowRight size={12} />
+        Open review <ArrowRight size={12} />
       </Link>
     </section>
   );

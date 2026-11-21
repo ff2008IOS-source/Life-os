@@ -21,7 +21,7 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.request.post("/api/v1/workspace/initialize", { headers });
   for (const [path, target] of [
@@ -31,8 +31,12 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   ]) {
     await page.goto(path);
     await expect(page).toHaveURL(new RegExp(`/#[^/]*${target}$`));
+    if (target === "daily-briefing")
+      await page
+        .getByRole("button", { name: "Daily check-in", exact: true })
+        .click();
     await expect(
-      page.getByRole("heading", { name: "Needs Attention", exact: true }),
+      page.getByRole("heading", { name: "Needs attention", exact: true }),
     ).toBeVisible();
   }
   await expect(

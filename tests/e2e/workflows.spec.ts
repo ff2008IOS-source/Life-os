@@ -10,7 +10,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: /Set up my space/ }).click();
   await expect(
@@ -19,17 +19,17 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await page
     .getByLabel("Quick capture task title")
     .fill("[TEST] Persistent browser task");
-  await page.getByRole("button", { name: "Capture task", exact: true }).click();
+  await page.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(
     page
-      .getByText("[TEST] Persistent browser task", { exact: true })
-      .filter({ visible: true }),
+      .getByRole("region", { name: "Daily tasks" })
+      .getByText("[TEST] Persistent browser task", { exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(
     page
-      .getByText("[TEST] Persistent browser task", { exact: true })
-      .filter({ visible: true }),
+      .getByRole("region", { name: "Daily tasks" })
+      .getByText("[TEST] Persistent browser task", { exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", {
@@ -116,9 +116,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     page.getByText("Weekly review completed", { exact: true }),
   ).toBeVisible();
   await page.goto("/insights");
-  await expect(
-    page.getByRole("heading", { name: "Your insights" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Insights" })).toBeVisible();
   const exportResponse = await page.request.get("/api/v1/export");
   expect(exportResponse.status()).toBe(200);
   const exported = await exportResponse.json();
@@ -156,9 +154,7 @@ test("mobile setup and private routes fit an iPhone viewport", async ({
     .getByRole("navigation", { name: "Mobile navigation" })
     .getByRole("link", { name: "Planner", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "Your planner" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Planner" })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -183,7 +179,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   const initialize = page.getByRole("button", { name: /Set up my space/ });
   if (await initialize.count()) {

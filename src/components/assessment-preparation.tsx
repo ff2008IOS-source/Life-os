@@ -88,15 +88,13 @@ export function AssessmentPreparation({
         <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
           Prepare work
         </Button>
-      ) : (
-        <span className="small muted">No unfinished preparation assumed.</span>
-      )}
+      ) : null}
       {error && !open && <p role="alert">{error}</p>}
       <Modal
         open={open}
         onOpenChange={setOpen}
         title={`Prepare: ${String(a.title)}`}
-        description="Link one preparation task to this assessment. Canvas deadlines stay authoritative; no calendar event is created here."
+        description="Add a study task for this assessment."
       >
         <form
           onSubmit={(e) => {

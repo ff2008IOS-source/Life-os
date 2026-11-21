@@ -48,7 +48,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
       .fill("test-password-only");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: "A little clarity for today." }),
+      page.getByRole("heading", { name: "Today", exact: true }),
     ).toBeVisible();
   };
   await login();
@@ -77,7 +77,6 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   await dialog
     .getByRole("combobox", { name: "Accent", exact: true })
     .selectOption("violet");
-  await dialog.getByLabel("Show landscape banner", { exact: true }).check();
   await dialog.getByLabel("Pin Learning", { exact: true }).check();
   await dialog
     .getByRole("button", { name: "Move Learning up", exact: true })
@@ -104,7 +103,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
       .first()
       .getAttribute("data-widget"),
   ).toBe("learning");
-  await expect(page.locator(".landscape-banner")).toBeVisible();
+  await expect(page.locator(".landscape-banner")).toHaveCount(0);
   const saveDashboardMs = performance.now() - saveStarted;
   const current = await (
     await page.request.get("/api/v1/dashboard/preferences")
@@ -113,7 +112,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
     current.settings.widgets.findIndex(
       (w: { id: string }) => w.id === "learning",
     ),
-  ).toBe(2);
+  ).toBe(0); // Optional sections reorder independently of the fixed Today workspace.
   const update = await page.request.put("/api/v1/dashboard/preferences", {
     headers,
     data: current,
@@ -276,7 +275,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
     .getByRole("button", { name: "Customize dashboard", exact: true })
     .click();
   await dialog
-    .getByRole("button", { name: "Reset to original", exact: true })
+    .getByRole("button", { name: "Reset layout", exact: true })
     .click();
   await dialog
     .getByRole("button", { name: "Save dashboard", exact: true })

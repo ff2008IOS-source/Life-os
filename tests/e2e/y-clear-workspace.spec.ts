@@ -18,7 +18,7 @@ test("consumer collections support recoverable projects, separated results and o
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.request.post("/api/v1/workspace/initialize", { headers });
   const create = async (table: string, data: unknown) => {

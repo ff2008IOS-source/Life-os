@@ -1,28 +1,4 @@
 /* Shared product finish. Existing layout, provider colors and interaction rules remain intact. */
-:root {
-  --bg: #f5f7fc;
-  --sidebar: #ffffff;
-  --surface: #ffffff;
-  --elevated: #eef1fa;
-  --border: #dce2f0;
-  --text: #1c2540;
-  --muted: #52627d;
-  --blue: #4f5bc5;
-  --blue-soft: #e9edff;
-  --shadow: 0 4px 24px #193f2f05;
-}
-.dark {
-  --bg: #0b1020;
-  --sidebar: #10182b;
-  --surface: #151e33;
-  --elevated: #1c2942;
-  --border: #334361;
-  --text: #eef2ff;
-  --muted: #b2bfd8;
-  --blue: #a5b4fc;
-  --blue-soft: #a5b4fc12;
-  --shadow: 0 8px 28px #00000012;
-}
 body {
   letter-spacing: -0.12px;
 }
@@ -45,7 +21,7 @@ h1 {
 .panel,
 .entity-card {
   border-radius: 18px;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 .panel-title h2,
 .panel-heading h2 {
@@ -81,9 +57,9 @@ h1 {
     transform 160ms ease;
 }
 .button-primary {
-  background: #4f5bc5;
-  color: #ffffff;
-  box-shadow: 0 3px 9px #246b6012;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
 }
 .button:not(:disabled):hover {
   transform: translateY(-1px);
@@ -102,8 +78,8 @@ summary:focus-visible {
   letter-spacing: -0.8px;
 }
 .sidebar .logo {
-  background: linear-gradient(145deg, #596bc8, #202b57);
-  box-shadow: 0 4px 12px #1b574124;
+  background: var(--surface);
+  box-shadow: none;
   border-radius: 11px;
 }
 .nav-link {
@@ -126,7 +102,7 @@ summary:focus-visible {
 }
 .topbar {
   background: color-mix(in srgb, var(--bg) 93%, transparent);
-  backdrop-filter: blur(16px);
+  backdrop-filter: none;
   border-bottom-color: color-mix(in srgb, var(--border) 65%, transparent);
 }
 .search-trigger {
@@ -201,16 +177,16 @@ summary:focus-visible {
   padding: 27px 28px 20px;
   margin: 0;
   min-height: 280px;
-  background: #173b40;
-  color: #f5fbf6;
-  border: 1px solid #254e50;
-  box-shadow: 0 9px 28px #153c3814;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
 }
 .dark .focus-card.panel {
-  background: #1b4145;
-  border-color: #3c6262;
+  background: var(--surface);
+  border-color: var(--border);
 }
 .focus-card > :not(.focus-art) {
   position: relative;
@@ -226,10 +202,10 @@ summary:focus-visible {
   font-weight: 650;
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: #c3eab7;
+  color: var(--text);
 }
 .focus-card .panel-heading .text-link {
-  color: #d6eee0;
+  color: var(--text);
   font-size: 11px;
 }
 .focus-card h3 {
@@ -242,7 +218,7 @@ summary:focus-visible {
 }
 .focus-card .focus-description {
   font-size: 13px;
-  color: #d3e4de;
+  color: var(--text);
   max-width: 85%;
   margin-bottom: 14px;
   line-height: 1.6;
@@ -253,9 +229,9 @@ summary:focus-visible {
   height: 126px;
   top: 72px;
   right: -20px;
-  border: 1px solid #b2dbc033;
+  border: 1px solid var(--border);
   border-radius: 50%;
-  color: #c8e9b999;
+  color: var(--text);
   display: grid;
   place-items: center;
   pointer-events: none;
@@ -266,12 +242,12 @@ summary:focus-visible {
   content: "";
   position: absolute;
   inset: -25px;
-  border: 1px solid #b2dbc01a;
+  border: 1px solid var(--border);
   border-radius: inherit;
 }
 .focus-art:after {
   inset: -50px;
-  border-color: #b2dbc00d;
+  border-color: var(--border);
 }
 .focus-meta {
   display: flex;
@@ -283,34 +259,34 @@ summary:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid #9ec7bd45;
+  border: 1px solid var(--border);
   border-radius: 100px;
   padding: 5px 9px;
   font-size: 11px;
-  color: #e5f1e9;
-  background: #14383a;
+  color: var(--text);
+  background: var(--surface);
 }
 .focus-card .button-primary {
-  background: #c7d2fe;
-  color: #202b57;
-  border-color: #c7d2fe;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
   box-shadow: none;
 }
 .focus-card .button-primary:hover {
-  background: #e2facd;
+  background: var(--surface);
 }
 .focus-card .button-outline {
-  border-color: #81a89f;
-  color: #eff7f0;
+  border-color: var(--border);
+  color: var(--text);
   background: transparent;
 }
 .focus-card .button-outline:hover {
-  background: #ffffff12;
+  background: var(--accent-soft);
 }
 .focus-card .badge {
-  color: #d8efe4;
-  background: #ffffff0a;
-  border-color: #ffffff26;
+  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--border);
   margin: 0 6px 6px 0;
 }
 .focus-card .flex-between {
@@ -318,11 +294,11 @@ summary:focus-visible {
   gap: 8px;
 }
 .focus-card .text-link {
-  color: #c7d2fe;
+  color: var(--text);
 }
 .focus-explanation {
   font-size: 12px;
-  color: #d1e5da;
+  color: var(--text);
   margin: 0 0 14px;
 }
 .focus-explanation summary {
@@ -335,7 +311,7 @@ summary:focus-visible {
 }
 .focus-overline {
   display: block;
-  color: #c3eab7;
+  color: var(--text);
   font-size: 10px;
   letter-spacing: 1px;
   margin-bottom: 8px;
@@ -346,14 +322,14 @@ summary:focus-visible {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: #c5dcd2;
+  color: var(--text);
   font-size: 11px;
 }
 .focus-footer a {
   display: inline-flex;
   gap: 5px;
   align-items: center;
-  color: #c7d2fe;
+  color: var(--text);
 }
 .focus-card:has(.focus-explanation[open]) .focus-art {
   opacity: 0.3;
@@ -421,8 +397,8 @@ summary:focus-visible {
 .review-banner {
   border-radius: 18px;
   padding: 24px;
-  background: #e9edff;
-  border: 1px solid #cdd5f0;
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 .review-banner h2 {
   font-size: 19px;
@@ -432,8 +408,8 @@ summary:focus-visible {
   font-size: 12px;
 }
 .dark .review-banner {
-  background: #202c4a;
-  border-color: #475978;
+  background: var(--surface);
+  border-color: var(--border);
 }
 .goal-row h3 {
   font-size: 14px;
@@ -491,18 +467,18 @@ summary:focus-visible {
 }
 
 .button-primary:hover {
-  background: #404cae;
+  background: var(--surface);
 }
 .dark .button-primary {
-  background: #b9c5ff;
-  color: #182248;
+  background: var(--surface);
+  color: var(--text);
 }
 .dark .button-primary:hover {
-  background: #cad3ff;
+  background: var(--surface);
 }
 .dark .focus-card .button-primary {
-  background: #c7d2fe;
-  color: #202b57;
+  background: var(--surface);
+  color: var(--text);
 }
 .metric-details {
   margin-block: 10px;
@@ -520,7 +496,7 @@ summary:focus-visible {
 .focus-skeleton span {
   height: 12px;
   border-radius: 5px;
-  background: #e0f3e51c;
+  background: var(--accent-soft);
   width: 76%;
 }
 .focus-skeleton span:first-child {
@@ -540,14 +516,14 @@ summary:focus-visible {
 }
 
 .mobile-nav .mobile-add {
-  background: #4f5bc5;
+  background: var(--surface);
   color: white;
-  box-shadow: 0 3px 10px #173b4024;
+  box-shadow: none;
   border-radius: 11px;
 }
 .dark .mobile-nav .mobile-add {
-  background: #b9c5ff;
-  color: #182248;
+  background: var(--surface);
+  color: var(--text);
 }
 @media (max-width: 700px) {
   .content {
@@ -625,7 +601,7 @@ summary:focus-visible {
   }
   .mobile-nav {
     background: color-mix(in srgb, var(--sidebar) 96%, transparent);
-    backdrop-filter: blur(16px);
+    backdrop-filter: none;
   }
   .home-calendar .agenda-compact-row {
     min-height: 64px;
@@ -680,12 +656,10 @@ summary:focus-visible {
 }
 
 .login-story {
-  background:
-    radial-gradient(ellipse at 10% 60%, #4f5bc510, transparent 65%),
-    var(--sidebar);
+  background: var(--surface);
 }
 .login-story .logo {
-  background: linear-gradient(145deg, #596bc8, #202b57);
+  background: var(--surface);
   border-radius: 11px;
 }
 
@@ -792,16 +766,16 @@ summary:focus-visible {
   gap: 12px;
   align-items: center;
   justify-content: space-between;
-  color: #cee2da;
+  color: var(--text);
   font-size: 11px;
 }
 .focus-update .button-ghost,
 .focus-card .button-ghost {
-  color: #eff7f0;
+  color: var(--text);
 }
 .focus-update .button-ghost:hover,
 .focus-card .button-ghost:hover {
-  background: #ffffff12;
+  background: var(--accent-soft);
 }
 @media (max-width: 600px) {
   .focus-update {
@@ -814,17 +788,6 @@ summary:focus-visible {
   animation: none;
 }
 /* Life OS 2.0 P0: shared scale and a constrained, execution-first grid. */
-:root {
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --radius-control: 10px;
-  --radius-card: 18px;
-  --elevation-card: 0 6px 24px #0b102008;
-}
 .home-experience .home-overview {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -849,23 +812,23 @@ summary:focus-visible {
 }
 .home-experience .focus-card.panel {
   min-height: 220px;
-  background: linear-gradient(130deg, #202d60, #14213f);
-  border-color: #475d90;
+  background: var(--surface);
+  border-color: var(--border);
 }
 .focus-card .focus-meta span {
-  background: #17284a;
-  color: #e5ebff;
-  border-color: #7088bd;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
 }
 .focus-card .button-primary,
 .dark .focus-card .button-primary {
-  background: #c7d2fe;
-  color: #202b57;
-  border-color: #c7d2fe;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
 }
 .focus-card .button-primary:hover,
 .dark .focus-card .button-primary:hover {
-  background: #e0e7ff;
+  background: var(--surface);
 }
 .sync-health {
   padding: 20px 22px;
@@ -1036,26 +999,26 @@ summary:focus-visible {
   --dashboard-padding: 28px;
 }
 .dashboard-accent-blue {
-  --blue: #2563aa;
-  --blue-soft: #dceaff;
+  --blue: var(--accent);
+  --blue-soft: var(--accent);
 }
 .dashboard-accent-violet {
-  --blue: #7353be;
-  --blue-soft: #f0eaff;
+  --blue: var(--accent);
+  --blue-soft: var(--accent);
 }
 .dark .dashboard-accent-blue {
-  --blue: #a9caff;
-  --blue-soft: #a9caff12;
+  --blue: var(--accent);
+  --blue-soft: var(--accent);
 }
 .dark .dashboard-accent-violet {
-  --blue: #d6baff;
-  --blue-soft: #d6baff12;
+  --blue: var(--accent);
+  --blue-soft: var(--accent);
 }
 .dashboard-accent-blue .focus-card.panel {
-  background: linear-gradient(130deg, #153e70, #14213f);
+  background: var(--surface);
 }
 .dashboard-accent-violet .focus-card.panel {
-  background: linear-gradient(130deg, #3b2568, #20203f);
+  background: var(--surface);
 }
 .landscape-banner {
   height: 88px;
@@ -1105,7 +1068,7 @@ summary:focus-visible {
   background: var(--surface);
   border: 1px solid var(--blue);
   border-radius: 16px;
-  box-shadow: 0 12px 40px #0004;
+  box-shadow: none;
   padding: 16px 20px;
   display: flex;
   gap: 16px;
@@ -1219,7 +1182,7 @@ body:has(.focus-dock) .content {
   margin: 10px 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #e0e7ff;
+  color: var(--text);
 }
 .focus-calendar-context a {
   color: inherit;

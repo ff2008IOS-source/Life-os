@@ -8,7 +8,7 @@ test("Home recommends feasible work and follows durable task-goal links", async 
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Next best action", exact: true }),
+    page.getByRole("heading", { name: "Focus", exact: true }),
   ).toBeVisible();
   const create = async (entity: string, data: unknown) => {
     const r = await page.request.post(`/api/v1/${entity}`, {
@@ -48,7 +48,7 @@ test("Home recommends feasible work and follows durable task-goal links", async 
   }
   await page.reload();
   const action = page.getByRole("region", {
-    name: "Next best action",
+    name: "Focus",
     exact: true,
   });
   await expect(action).toContainText(next.title);

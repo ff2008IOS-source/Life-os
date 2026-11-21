@@ -1,37 +1,5 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
-:root {
-  --bg: #f5f7fb;
-  --sidebar: #fff;
-  --surface: #fff;
-  --elevated: #eef2f8;
-  --border: #dce3ed;
-  --text: #172334;
-  --muted: #59687d;
-  --blue: #2b61c6;
-  --blue-soft: #eaf0fe;
-  --success: #117358;
-  --danger: #b8404b;
-  --warning: #966019;
-  --shadow: 0 4px 20px #17233405;
-  color-scheme: light;
-}
-.dark {
-  --bg: #0b1018;
-  --sidebar: #0f151f;
-  --surface: #141b26;
-  --elevated: #1c2634;
-  --border: #2c394a;
-  --text: #f2f5fa;
-  --muted: #9aa9bc;
-  --blue: #6b9cff;
-  --blue-soft: #407bee19;
-  --success: #51c9aa;
-  --danger: #ee8e93;
-  --warning: #e6b36c;
-  --shadow: none;
-  color-scheme: dark;
-}
 * {
   box-sizing: border-box;
 }
@@ -141,11 +109,11 @@ small,
     color 0.15s;
 }
 .button-primary {
-  background: #326bd5;
-  color: #fff;
+  background: var(--surface);
+  color: var(--text);
 }
 .button-primary:hover {
-  background: #285bbd;
+  background: var(--surface);
 }
 .button-outline {
   border-color: var(--border);
@@ -162,7 +130,7 @@ small,
 }
 .button-danger {
   background: var(--danger);
-  color: #0b1018;
+  color: var(--danger);
 }
 .button-sm {
   padding: 5px 10px;
@@ -209,7 +177,7 @@ input[type="checkbox"] {
   width: 17px;
   height: 17px;
   min-height: 17px;
-  accent-color: #407bee;
+  accent-color: var(--surface);
 }
 input[type="range"] {
   padding: 0;
@@ -251,13 +219,13 @@ fieldset legend {
   width: 33px;
   height: 33px;
   border-radius: 10px;
-  background: #407bee;
+  background: var(--surface);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px #407bee25;
+  box-shadow: none;
 }
 .brand {
   font-size: 20px;
@@ -508,7 +476,7 @@ fieldset legend {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 .stat-label {
   display: flex;
@@ -556,7 +524,7 @@ fieldset legend {
   border-radius: 11px;
   background: var(--surface);
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 .panel-heading {
   padding: 18px 20px;
@@ -632,7 +600,7 @@ fieldset legend {
   border-color: var(--blue);
 }
 .task-check.checked {
-  background: #26a88618;
+  background: var(--accent-soft);
   border-color: var(--success);
 }
 .task-main {
@@ -790,7 +758,7 @@ fieldset legend {
 }
 .review-banner {
   padding: 20px;
-  background: linear-gradient(120deg, var(--surface), var(--blue-soft));
+  background: var(--surface);
   display: flex;
   gap: 15px;
   align-items: flex-start;
@@ -984,15 +952,15 @@ fieldset legend {
   color: var(--blue);
 }
 .badge.green {
-  background: #26a88619;
+  background: var(--accent-soft);
   color: var(--success);
 }
 .badge.amber {
-  background: #e6a34a18;
+  background: var(--accent-soft);
   color: var(--warning);
 }
 .badge.red {
-  background: #e66c7018;
+  background: var(--accent-soft);
   color: var(--danger);
 }
 .area-workspace-header {
@@ -1073,8 +1041,8 @@ fieldset legend {
   margin-bottom: 6px;
 }
 .today .day-number {
-  background: #407bee;
-  color: #fff;
+  background: var(--surface);
+  color: var(--text);
 }
 .calendar-task {
   font-size: 9px;
@@ -1172,8 +1140,8 @@ fieldset legend {
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: #0008;
-  backdrop-filter: blur(3px);
+  background: var(--surface);
+  backdrop-filter: none;
   z-index: 50;
   animation: fade-in 0.15s;
 }
@@ -1188,7 +1156,7 @@ fieldset legend {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 25px 100px #0004;
+  box-shadow: none;
   padding: 25px;
   z-index: 51;
   animation: fade-in 0.15s;
@@ -1232,10 +1200,10 @@ fieldset legend {
 .error-message {
   font-size: 12px;
   padding: 12px;
-  background: #e66c7015;
+  background: var(--danger);
   color: var(--danger);
   border-radius: 7px;
-  border: 1px solid #e66c7030;
+  border: 1px solid var(--danger);
 }
 .toast {
   position: fixed;
@@ -1250,7 +1218,7 @@ fieldset legend {
   background: var(--elevated);
   border: 1px solid var(--border);
   border-radius: 9px;
-  box-shadow: 0 6px 30px #0003;
+  box-shadow: none;
   font-size: 12px;
 }
 .toast svg {
@@ -1439,9 +1407,7 @@ th {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
-  background:
-    radial-gradient(ellipse at 10% 60%, #407bee12, transparent 65%),
-    var(--sidebar);
+  background: var(--surface);
 }
 .login-story-content {
   margin: auto 0;
@@ -1464,7 +1430,7 @@ th {
   border-radius: 12px;
   max-width: 400px;
   background: var(--surface);
-  box-shadow: 0 10px 35px #00000009;
+  box-shadow: none;
 }
 .example-line {
   display: flex;
@@ -1474,8 +1440,8 @@ th {
   font-size: 11px;
 }
 .example-check {
-  border: 1px solid #26a88640;
-  background: #26a88612;
+  border: 1px solid var(--border);
+  background: var(--accent-soft);
   color: var(--success);
   width: 23px;
   height: 23px;
@@ -1940,8 +1906,8 @@ th {
     color: var(--blue);
   }
   .mobile-nav .mobile-add {
-    background: #407bee;
-    color: #fff;
+    background: var(--surface);
+    color: var(--text);
     width: 35px;
     height: 31px;
     display: flex;
@@ -2219,7 +2185,7 @@ input[type="checkbox"] {
   min-height: 18px;
   padding: 0;
   flex: 0 0 18px;
-  accent-color: #407bee;
+  accent-color: var(--surface);
   cursor: pointer;
 }
 .inline-check,
@@ -2526,7 +2492,7 @@ input[type="checkbox"] {
 }
 .time-day-heading.is-today strong,
 .mobile-week-picker .active strong {
-  background: #407bee;
+  background: var(--surface);
   color: white;
 }
 .all-day-grid {
@@ -2621,7 +2587,7 @@ input[type="checkbox"] {
   position: absolute;
   overflow: hidden;
   border: 0;
-  border-left: 3px solid #407bee;
+  border-left: 3px solid var(--border);
   border-radius: 4px;
   text-align: left;
   color: var(--text);
@@ -2707,7 +2673,7 @@ input[type="checkbox"] {
   margin-bottom: 3px;
 }
 .is-today .month-date {
-  background: #407bee;
+  background: var(--surface);
   color: white;
 }
 .compact-agenda {
@@ -3848,8 +3814,8 @@ input[type="checkbox"] {
 }
 
 .time-day-heading.is-today > strong {
-  background: #2b61c6;
-  color: #fff;
+  background: var(--surface);
+  color: var(--text);
 }
 .assistant-chat[data-review="true"] {
   scroll-margin-top: 76px;

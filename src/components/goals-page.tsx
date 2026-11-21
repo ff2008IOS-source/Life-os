@@ -20,8 +20,7 @@ export function GoalsPage() {
       <div className="page-heading">
         <div>
           <span className="eyebrow">A DIRECTION THAT MATTERS</span>
-          <h1>Your goals</h1>
-          <p>Connect the things you do to the life you’re building.</p>
+          <h1>Goals</h1>
         </div>
         <Button onClick={() => setEditor({ kind: "goals" })}>
           <Plus size={14} />

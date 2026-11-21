@@ -9,6 +9,7 @@ import {
 import { CanvasMaterials } from "./canvas-materials";
 import { AssessmentPreparation } from "./assessment-preparation";
 import { formatInTimeZone } from "date-fns-tz";
+import { GradePlanner } from "./grade-planner";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, BookOpen } from "lucide-react";
 import { Button } from "./ui/button";
@@ -45,9 +46,14 @@ export function AcademicsPanel({
   const [view, setView] = useState(
     initialAssessment
       ? "assessments"
-      : ["overview", "assessments", "materials", "study"].includes(
-            initialView ?? "",
-          )
+      : [
+            "overview",
+            "assessments",
+            "materials",
+            "study",
+            "grades",
+            "notes",
+          ].includes(initialView ?? "")
         ? initialView!
         : "overview",
   );
@@ -140,7 +146,7 @@ export function AcademicsPanel({
       <div className="academic-toolbar">
         <div className="inline">
           <BookOpen size={17} />
-          <h2>Course workspace</h2>
+          <h2>Courses</h2>
         </div>
         <div className="inline">
           <Button
@@ -257,7 +263,9 @@ export function AcademicsPanel({
                 ["overview", "Overview"],
                 ["assessments", "Assessments"],
                 ["materials", "Materials"],
+                ["grades", "Grades"],
                 ["study", "Study"],
+                ["notes", "Notes"],
               ].map(([id, label]) => (
                 <button
                   key={id}
@@ -273,7 +281,35 @@ export function AcademicsPanel({
                 </button>
               ))}
             </div>
-            {view === "materials" ? (
+            {view === "grades" ? (
+              <GradePlanner
+                course={current}
+                assessments={assessments}
+                categories={categories}
+                onRules={() => {
+                  setView("assessments");
+                  setTab("categories");
+                }}
+              />
+            ) : view === "notes" ? (
+              <section>
+                <div className="panel-heading">
+                  <h2>Course notes</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setEdit({ kind: "courses", record: current })
+                    }
+                  >
+                    Edit notes
+                  </Button>
+                </div>
+                <p className="preserve-lines">
+                  {String(current.description || "No notes.")}
+                </p>
+              </section>
+            ) : view === "materials" ? (
               <CanvasMaterials
                 key={selected}
                 localCourseId={selected}

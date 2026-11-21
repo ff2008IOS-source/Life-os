@@ -4,14 +4,7 @@ import { useCurrentTime } from "./use-current-time";
 import { useFocusSession } from "./focus-session-provider";
 import { consumerReason } from "@/lib/consumer-copy";
 import { useState, useRef } from "react";
-import {
-  Focus,
-  CalendarDays,
-  RefreshCw,
-  ArrowRight,
-  AlertCircle,
-  Clock3,
-} from "lucide-react";
+import { CalendarDays, ArrowRight, AlertCircle, Clock3 } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { type BriefingController } from "./use-briefing";
 import { DailyCheckInPanel } from "./daily-check-in";
@@ -232,11 +225,11 @@ export function BriefingPanel({
           }
           aria-busy={c.loading}
         >
-          <h2>{compact ? "Next best action" : "Daily Briefing"}</h2>
+          <h2>{compact ? "Focus" : "Day review"}</h2>
           <p>
             {c.loading
-              ? "Getting your day ready…"
-              : "Your briefing couldn’t load. You can still open your planner."}
+              ? "Loading…"
+              : "Couldn’t refresh. Your planner is still available."}
           </p>
           {c.loading ? (
             <div className="focus-skeleton" aria-hidden="true">
@@ -256,13 +249,10 @@ export function BriefingPanel({
           aria-labelledby="next-action-title"
         >
           <div className="panel-heading">
-            <h2 id="next-action-title">Next best action</h2>
+            <h2 id="next-action-title">Focus</h2>
             <Link href="/#needs-attention" className="text-link">
               Review your day <ArrowRight size={12} />
             </Link>
-          </div>
-          <div className="focus-art" aria-hidden="true">
-            <Focus size={42} strokeWidth={1.2} />
           </div>
           {focus?.session ? (
             <div>
@@ -271,7 +261,7 @@ export function BriefingPanel({
                   "Your current focus"}
               </h3>
               <p className="focus-description">
-                Your chosen focus ·{" "}
+                Focus ·{" "}
                 {focus.session.status === "running" ? "In progress" : "Paused"}
               </p>
               {activeTask?.estimated_minutes != null && (
@@ -316,29 +306,6 @@ export function BriefingPanel({
           ) : d.recommendations[0] ? (
             <>
               <h3>{d.recommendations[0].title}</h3>
-              <p className="focus-description">
-                {d.recommendations[0].urgency >= 3
-                  ? "A close deadline makes this a good place to start."
-                  : "A focused step toward what matters to you."}
-              </p>
-              {focus && primary && (
-                <div className="focus-start-action">
-                  <Button
-                    size="sm"
-                    variant="default"
-                    disabled={
-                      focus.busy ||
-                      !focus.canStart ||
-                      !!focus.session ||
-                      !!w.tasks.find((t) => t.id === primary.task_id)
-                        ?.recurrence_rule_id
-                    }
-                    onClick={() => void focus.start(primary.task_id)}
-                  >
-                    Start focus
-                  </Button>
-                </div>
-              )}
               <div className="focus-meta">
                 {d.recommendations[0].remaining_minutes !== null && (
                   <span>
@@ -373,8 +340,27 @@ export function BriefingPanel({
                   ))}
                 </div>
                 <div className="briefing-actions">
+                  {focus && primary && (
+                    <div className="focus-start-action">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        disabled={
+                          focus.busy ||
+                          !focus.canStart ||
+                          !!focus.session ||
+                          !!w.tasks.find((t) => t.id === primary.task_id)
+                            ?.recurrence_rule_id
+                        }
+                        onClick={() => void focus.start(primary.task_id)}
+                      >
+                        Start focus
+                      </Button>
+                    </div>
+                  )}
                   <Button
                     size="sm"
+                    variant="ghost"
                     onClick={() => open(d.recommendations[0].task_id)}
                   >
                     Open task <ArrowRight size={12} />
@@ -416,9 +402,7 @@ export function BriefingPanel({
                 COMING UP IN {nextAssessment.course}
               </span>
               <h3>{nextAssessment.title}</h3>
-              <p className="focus-description">
-                Make a little room to prepare.
-              </p>
+              <p className="focus-description"></p>
               <div className="focus-meta">
                 <span>
                   <CalendarDays size={14} />
@@ -435,11 +419,8 @@ export function BriefingPanel({
             </div>
           ) : (
             <div className="focus-empty">
-              <h3>Your next move starts here.</h3>
-              <p className="focus-description">
-                Add one thing you want to make progress on, or take a look at
-                your week.
-              </p>
+              <h3>Nothing queued.</h3>
+              <p className="focus-description">Add a task or open Planner.</p>
               <Button asChild>
                 <Link href="/planner">
                   Plan your day <ArrowRight size={15} />
@@ -470,37 +451,6 @@ export function BriefingPanel({
               </Link>
             </p>
           )}
-          <div className="focus-footer">
-            <span>
-              {d.summary.commitments == null
-                ? "Calendar needs an update"
-                : `${d.summary.commitments} ${d.summary.commitments === 1 ? "commitment" : "commitments"} today`}
-            </span>
-            {attention.length > 0 && (
-              <Link href="/#needs-attention">
-                {attention.length} to review <ArrowRight size={12} />
-              </Link>
-            )}
-          </div>
-          <div className="focus-update">
-            <span>
-              Updated {formatInTimeZone(d.refreshed_at, d.timezone, "h:mm a")}
-              {d.calendar.reliable &&
-              typeof d.calendar.available_minutes === "number" &&
-              Number.isFinite(d.calendar.available_minutes)
-                ? ` · ${d.calendar.available_minutes} min available today`
-                : ""}
-            </span>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={c.loading}
-              onClick={() => void c.reload()}
-            >
-              <RefreshCw size={13} />
-              {c.loading ? "Refreshing…" : "Refresh day"}
-            </Button>
-          </div>
         </section>
       ) : (
         <>
@@ -508,7 +458,7 @@ export function BriefingPanel({
             <div className="stack">
               <section className="panel briefing-card">
                 <div className="panel-heading">
-                  <h2 id="needs-attention">Needs Attention</h2>
+                  <h2 id="needs-attention">Needs attention</h2>
                   <AlertCircle size={18} />
                 </div>
                 <p className="small muted">

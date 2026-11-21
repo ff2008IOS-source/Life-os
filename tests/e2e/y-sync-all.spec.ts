@@ -8,7 +8,7 @@ test("Sync all skips paused/test tables, continues on failure and displays hones
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   const datasets = [
     "Roadmap",

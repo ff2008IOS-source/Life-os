@@ -56,7 +56,7 @@ export function CareerRoadmap() {
   return (
     <section id="connected-roadmap" className="panel career-roadmap">
       <div className="panel-heading">
-        <h2>Your career roadmap</h2>
+        <h2>Roadmap</h2>
         <Button
           variant="ghost"
           size="sm"

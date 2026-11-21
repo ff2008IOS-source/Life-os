@@ -101,8 +101,7 @@ export function PlannerPage({
       <div className="page-heading">
         <div>
           <span className="eyebrow">TIME, WITH INTENTION</span>
-          <h1>Your planner</h1>
-          <p>See what’s due. Decide when to do it.</p>
+          <h1>Planner</h1>
         </div>
         <Button onClick={() => setEditor({ task: null })}>
           <Plus size={14} />

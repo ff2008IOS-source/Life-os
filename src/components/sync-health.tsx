@@ -26,8 +26,8 @@ export function SyncHealth({
               : h.status === "needs_attention"
                 ? `${h.affected} ${h.affected === 1 ? "source needs" : "sources need"} attention`
                 : h.status === "connected"
-                  ? "Your sources are connected"
-                  : "No connected sources yet"}
+                  ? "Connected"
+                  : "No connections"}
           </p>
         </div>
         <Button
@@ -43,8 +43,8 @@ export function SyncHealth({
         <>
           <p className="small muted">
             {h.last_coverage_at
-              ? `All sources last refreshed through ${formatInTimeZone(h.last_coverage_at, c.data!.timezone, "MMM d, h:mm a")}`
-              : "A successful refresh across every enabled source is not confirmed yet."}
+              ? `Updated through ${formatInTimeZone(h.last_coverage_at, c.data!.timezone, "MMM d, h:mm a")}`
+              : "No complete refresh yet."}
           </p>
           <details className="briefing-detail">
             <summary>Connection details</summary>

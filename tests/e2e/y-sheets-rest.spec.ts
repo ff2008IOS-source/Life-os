@@ -9,7 +9,7 @@ test("Sheets table controls preserve formulas, review conflicts and require expl
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   const dataset = "11111111-1111-4111-8111-111111111111",
     row = "22222222-2222-4222-8222-222222222222";

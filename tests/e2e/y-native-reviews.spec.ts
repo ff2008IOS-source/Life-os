@@ -8,7 +8,7 @@ test("native review snapshots persist and assistant remains disabled without a c
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.goto("/reviews");
   await page
@@ -39,11 +39,14 @@ test("native review snapshots persist and assistant remains disabled without a c
   await page.goto("/briefing");
   await expect(page).toHaveURL(/\/#daily-briefing$/);
   await expect(
-    page.getByRole("heading", { name: "A little clarity for today." }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Your question")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Daily check-in", exact: true })
+    .click();
   await expect(
-    page.getByRole("heading", { name: "Needs Attention", exact: true }),
+    page.getByRole("heading", { name: "Needs attention", exact: true }),
   ).toBeVisible();
   for (const viewport of [
     { width: 1280, height: 900 },
