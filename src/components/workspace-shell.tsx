@@ -26,7 +26,6 @@ import {
   Briefcase,
   GraduationCap,
   NotebookPen,
-  CircleDot,
   Inbox,
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
@@ -35,10 +34,9 @@ import { Modal } from "./dialog";
 import { TaskEditor } from "./task-editor";
 import type { Task } from "@/lib/schemas";
 const navigation = [
-  { label: "Home", href: "/", icon: Home },
+  { label: "Today", href: "/", icon: Home },
   { label: "Planner", href: "/planner", icon: CalendarDays },
   { label: "Academics", href: "/areas/academics", icon: GraduationCap },
-  { label: "Basketball Ops", href: "/basketball", icon: CircleDot },
   { label: "Career", href: "/areas/career", icon: Briefcase },
   { label: "Learning", href: "/learning", icon: NotebookPen },
   { label: "Projects", href: "/areas/projects", icon: Layers3 },
@@ -53,6 +51,26 @@ export function WorkspaceShell({
 }) {
   const { data } = useWorkspace();
   const path = usePathname();
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const adjust = () => {
+      const overlap = viewport
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+        : 0;
+      document.documentElement.style.setProperty(
+        "--keyboard-inset",
+        overlap > 120 ? `${overlap}px` : "0px",
+      );
+    };
+    adjust();
+    viewport?.addEventListener("resize", adjust);
+    viewport?.addEventListener("scroll", adjust);
+    return () => {
+      viewport?.removeEventListener("resize", adjust);
+      viewport?.removeEventListener("scroll", adjust);
+      document.documentElement.style.removeProperty("--keyboard-inset");
+    };
+  }, []);
   const [editor, setEditor] = useState<{ task: Task | null } | null>(null);
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [search, setSearch] = useState(false);
@@ -60,18 +78,25 @@ export function WorkspaceShell({
   const [searchAcademic, setSearchAcademic] = useState<AcademicData | null>(
     null,
   );
+  const [courseError, setCourseError] = useState(false),
+    [courseRetry, setCourseRetry] = useState(0);
   useEffect(() => {
     if (!search || searchAcademic) return;
     let live = true;
     void calendarRequest<AcademicData>("/api/v1/academics")
       .then((d) => {
-        if (live) setSearchAcademic(d);
+        if (live) {
+          setSearchAcademic(d);
+          setCourseError(false);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (live) setCourseError(true);
+      });
     return () => {
       live = false;
     };
-  }, [search, searchAcademic]);
+  }, [search, searchAcademic, courseRetry]);
   const { setTheme } = useTheme();
   useEffect(() => {
     setTheme(data.profile.theme);
@@ -249,7 +274,7 @@ export function WorkspaceShell({
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <Link href="/" className={path === "/" ? "active" : ""}>
           <Home />
-          Home
+          Today
         </Link>
         <Link href="/planner" className={path === "/planner" ? "active" : ""}>
           <CalendarDays />
@@ -300,6 +325,14 @@ export function WorkspaceShell({
         <label className="sr-only" htmlFor="workspace-search">
           Search
         </label>
+        {courseError && (
+          <p role="status">
+            Course search unavailable.{" "}
+            <button onClick={() => setCourseRetry((n) => n + 1)}>
+              Retry course search
+            </button>
+          </p>
+        )}
         <input
           id="workspace-search"
           placeholder="Search…"

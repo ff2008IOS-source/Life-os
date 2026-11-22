@@ -20,12 +20,14 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     .getByLabel("Quick capture task title")
     .fill("[TEST] Persistent browser task");
   await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await page.locator(".today-inbox > summary").click();
   await expect(
     page
       .getByRole("region", { name: "Daily tasks" })
       .getByText("[TEST] Persistent browser task", { exact: true }),
   ).toBeVisible();
   await page.reload();
+  await page.locator(".today-inbox > summary").click();
   await expect(
     page
       .getByRole("region", { name: "Daily tasks" })
@@ -33,12 +35,9 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   ).toBeVisible();
   await page
     .getByRole("button", {
-      name: "Mark Complete",
+      name: "Complete [TEST] Persistent browser task",
       exact: true,
     })
-    .click();
-  await page
-    .getByRole("button", { name: "Confirm task completion", exact: true })
     .click();
   await expect(page.getByText("Task completed", { exact: true })).toBeVisible();
   await page.goto("/planner");

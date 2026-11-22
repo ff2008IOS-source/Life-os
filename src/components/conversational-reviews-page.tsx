@@ -1,4 +1,5 @@
 "use client";
+import { PlanningDecisions } from "./planning-decisions";
 import { reviewAvailability } from "@/lib/temporal-context";
 import { useId, useState } from "react";
 import { useCurrentTime } from "./use-current-time";
@@ -127,6 +128,7 @@ export function ReviewsPage() {
   if (!gate.open || (review && review.period_start !== gate.weekStart))
     return (
       <>
+        <PlanningDecisions review />
         <div className="page-heading">
           <div>
             <h1>Reviews</h1>
@@ -181,6 +183,7 @@ export function ReviewsPage() {
     );
   return (
     <>
+      <PlanningDecisions review />
       <div className="page-heading">
         <div>
           <span className="eyebrow">REFLECT. DECIDE. FOLLOW THROUGH.</span>

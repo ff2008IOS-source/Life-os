@@ -38,6 +38,13 @@ export type ScheduleTask = {
   recurrence_rule_id?: string | null;
 };
 export type Busy = { start_at: string; end_at: string };
+/** Shared exclusion around flexible work: existing blocks keep their configured breaks. */
+export function workIntervals(blocks: Busy[], breakMinutes: number) {
+  return blocks.map((b) => ({
+    start: Date.parse(b.start_at) - breakMinutes * 60000,
+    end: Date.parse(b.end_at) + breakMinutes * 60000,
+  }));
+}
 export type ExistingBlock = Busy & {
   task_id: string;
   status: "planned" | "completed";
@@ -67,6 +74,7 @@ export type ScheduleResult = {
   warnings: ScheduleWarning[];
   policy: Policy;
   availability_source: "test" | "google_calendar";
+  task_ids?: string[];
   run_id?: string;
   expires_at?: string;
   calendar_count?: number;
@@ -282,11 +290,10 @@ export function schedule(input: ScheduleInput): ScheduleResult {
             })),
           ].sort((a, b) => a.start - b.start);
           // Breaks apply between automatically scheduled work blocks, including existing ones.
-          const auto = [...input.existing, ...blocks].map((b) => ({
-            start:
-              new Date(b.start_at).getTime() - policy.break_minutes * minute,
-            end: new Date(b.end_at).getTime() + policy.break_minutes * minute,
-          }));
+          const auto = workIntervals(
+            [...input.existing, ...blocks],
+            policy.break_minutes,
+          );
           const intervals = [...protectedIntervals, ...auto].sort(
             (a, b) => a.start - b.start,
           );

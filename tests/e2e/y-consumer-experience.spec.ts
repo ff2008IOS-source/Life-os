@@ -130,9 +130,9 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
       },
     }),
   );
-  await expect(
-    page.getByRole("region", { name: "Focus", exact: true }),
-  ).not.toContainText(/null min|undefined min|NaN min/);
+  await expect(page.locator(".today-capacity")).not.toContainText(
+    /null min|undefined min|NaN min/,
+  );
   for (const theme of ["light", "dark"] as const) {
     const saved = await page.request.patch("/api/v1/profile", {
       headers: origin,
@@ -147,9 +147,9 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
     if (theme === "dark")
       await expect(page.locator("html")).toHaveClass(/dark/);
     else await expect(page.locator("html")).not.toHaveClass(/dark/);
-    await expect(
-      page.getByRole("region", { name: "Focus", exact: true }),
-    ).toContainText(assessment.title);
+    await expect(page.locator(".today-upcoming")).toContainText(
+      assessment.title,
+    );
     await expect(
       page.locator("main").filter({ visible: true }),
     ).not.toContainText(/cached|outbox|deterministic|source-owned|ranked by/i);
@@ -161,7 +161,7 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
         ),
       ).toBe(true);
       if (width === 390) {
-        const focus = await page.locator(".focus-card").boundingBox();
+        const focus = await page.locator(".today-primary").boundingBox();
         const schedule = await page.locator(".home-calendar").boundingBox();
         expect(Math.abs(focus!.width - schedule!.width)).toBeLessThan(1);
         expect(Math.abs(focus!.x - schedule!.x)).toBeLessThan(1);
@@ -180,7 +180,9 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
     ).toEqual([]);
   }
   await page
-    .getByRole("link", { name: "Plan preparation", exact: true })
+    .locator(".today-upcoming")
+    .getByRole("link")
+    .filter({ hasText: assessment.title })
     .click();
   await expect(
     page.getByLabel("Selected course").filter({ visible: true }),
@@ -196,7 +198,7 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
   await expect(
     page
       .getByRole("dialog")
-      .getByRole("button", { name: "Prepare work", exact: true }),
+      .getByRole("button", { name: "Plan preparation", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await expect(

@@ -1,4 +1,5 @@
 import { requireSundayReview } from "@/lib/review-access";
+import { z } from "zod";
 import { NextResponse } from "next/server";
 import { authorized, ApiError } from "@/lib/auth";
 import { checkMutation, readJson, dbError, failure } from "@/lib/http";
@@ -57,11 +58,40 @@ export async function POST(request: Request, { params }: Context) {
       values.status === "completed"
         ? { completed_at: new Date().toISOString() }
         : {};
+    const operation = request.headers.get("Idempotency-Key");
+    if (operation) z.uuid().parse(operation);
     const { data, error } = await db
       .from(entity)
-      .insert({ ...values, ...stamp, user_id: user.id })
+      .insert({
+        ...values,
+        ...stamp,
+        ...(operation ? { id: operation } : {}),
+        user_id: user.id,
+      })
       .select()
       .single();
+    if (operation && error?.code === "23505") {
+      const existing = await db
+        .from(entity)
+        .select("*")
+        .eq("id", operation)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      dbError(existing.error);
+      if (
+        !existing.data ||
+        Object.entries(values).some(
+          ([key, value]) =>
+            JSON.stringify(existing.data[key]) !== JSON.stringify(value),
+        )
+      )
+        throw new ApiError(
+          409,
+          "This save identifier was already used. Reload the saved record before making another change.",
+          "OPERATION_CONFLICT",
+        );
+      return NextResponse.json({ data: existing.data, replayed: true });
+    }
     dbError(error);
     return NextResponse.json({ data }, { status: 201 });
   } catch (e) {

@@ -1,4 +1,5 @@
 "use client";
+import { remainingEffort } from "@/lib/today-plan";
 import { isExample } from "@/lib/real-workspace";
 import { useState } from "react";
 import {
@@ -49,7 +50,8 @@ export function QuickCapture({
   projectId?: string;
   dueDate?: string;
 }) {
-  const { data, mutate, notify, pending } = useWorkspace();
+  const { data, mutate, notify, isPending } = useWorkspace();
+  const pending = isPending("tasks", null);
   const [revision, setRevision] = useState(0);
   const [title, setTitle] = useState(""),
     [error, setError] = useState("");
@@ -167,12 +169,17 @@ export function TaskList({
   tasks,
   reorder = false,
   completedExpanded = false,
+  allocations,
+  referenceDate,
 }: {
   tasks: Task[];
   reorder?: boolean;
   completedExpanded?: boolean;
+  allocations?: Record<string, number>;
+  referenceDate?: Date;
 }) {
-  const { data, mutate, notify, pending, request, refresh } = useWorkspace();
+  const { data, mutate, notify, pending, isPending, request, refresh } =
+    useWorkspace();
   tasks = tasks.filter((t) => !isExample(t));
   const completed = tasks.filter(
     (t) => t.status === "completed" && !t.deleted_at,
@@ -244,7 +251,11 @@ export function TaskList({
       >
         <button
           className={`task-check ${task.status === "completed" ? "checked" : ""}`}
-          disabled={pending || !!task.deleted_at || !!task.recurrence_rule_id}
+          disabled={
+            isPending("tasks", task.id) ||
+            !!task.deleted_at ||
+            !!task.recurrence_rule_id
+          }
           aria-label={`${task.status === "completed" ? "Reopen" : "Complete"} ${task.title}`}
           onClick={() => complete(task)}
         >
@@ -259,9 +270,13 @@ export function TaskList({
                 <span>·</span>
               </>
             )}
-            {task.estimated_minutes
-              ? `${task.estimated_minutes} min`
-              : task.status.replaceAll("_", " ")}
+            {allocations?.[task.id] !== undefined
+              ? `${Math.round(allocations[task.id])} min planned${task.estimated_minutes === null ? " · full effort unknown" : ""}`
+              : task.estimated_minutes === null
+                ? "Estimate missing"
+                : remainingEffort(task) === 0 && task.status !== "completed"
+                  ? "Estimate used up · still open"
+                  : `${remainingEffort(task)} min remaining`}
             {task.scheduling_mode === "eligible" && (
               <>
                 <span>·</span>
@@ -275,10 +290,12 @@ export function TaskList({
             {task.priority === 4 ? "Urgent" : "High"}
           </span>
         )}
-        <span className={`task-due ${isOverdue(task) ? "overdue" : ""}`}>
+        <span
+          className={`task-due ${isOverdue(task, referenceDate) ? "overdue" : ""}`}
+        >
           {task.deleted_at
             ? "Deleted"
-            : friendlyDate(task.due_date ?? task.due_at)}
+            : friendlyDate(task.due_at ?? task.due_date)}
         </span>
         <Button
           className="task-actions"

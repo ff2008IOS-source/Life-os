@@ -30,13 +30,11 @@ export function GoogleCalendarPanel({
   end,
   settings = false,
   heading,
-  calendarPattern,
 }: {
   start?: string;
   end?: string;
   settings?: boolean;
   heading?: string;
-  calendarPattern?: string;
 }) {
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
   const today = localDate();
@@ -63,10 +61,7 @@ export function GoogleCalendarPanel({
     data?.connections.filter((c) => c.status === "connected") ?? [];
   const selected =
     data?.calendars.filter(
-      (c) =>
-        c.sync_enabled &&
-        connected.some((x) => x.id === c.connection_id) &&
-        (!calendarPattern || new RegExp(calendarPattern, "i").test(c.name)),
+      (c) => c.sync_enabled && connected.some((x) => x.id === c.connection_id),
     ) ?? [];
   const timestamps = selected
     .map((c) => c.last_synced_at)
@@ -82,10 +77,9 @@ export function GoogleCalendarPanel({
     const upcoming = groupCalendarEvents(
       events.filter(
         (e) =>
-          (!calendarPattern || selected.some((c) => c.id === e.calendar_id)) &&
-          ((start && start !== today) ||
-            !e.end_at ||
-            new Date(e.end_at).getTime() > Date.now()),
+          (start && start !== today) ||
+          !e.end_at ||
+          new Date(e.end_at).getTime() > Date.now(),
       ),
     ).slice(0, 5);
     return (

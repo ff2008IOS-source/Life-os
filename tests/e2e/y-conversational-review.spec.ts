@@ -57,7 +57,7 @@ test("weekly conversation resumes, keeps approved reflection separate and drafts
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Focus", exact: true }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.goto("/reviews");
   await page.getByRole("button", { name: "Start weekly conversation" }).click();

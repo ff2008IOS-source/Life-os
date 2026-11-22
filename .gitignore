@@ -12,3 +12,6 @@ ops/recovery/node_modules/
 *.enc
 *.enc.sha256
 supabase/.temp/
+
+request-results/
+artifacts/

@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
-import { BasketballPage, LearningPage } from "@/components/domain-workspaces";
-import { readSavedPlans } from "@/lib/services/saved-plans";
+import { LearningPage } from "@/components/domain-workspaces";
 import { loadBriefing } from "@/lib/briefing-server";
-import { readAcademics } from "@/lib/services/academics";
 import { authorized } from "@/lib/auth";
 import { dbError } from "@/lib/http";
 import type { Session } from "@/components/focus-session-provider";
@@ -59,6 +57,7 @@ export default async function Page({
     (page === "home" && path.length)
   )
     notFound();
+  if (page === "basketball") redirect("/planner");
   if ((page === "assistant" && !path[1]) || page === "briefing")
     redirect("/#daily-briefing");
   if (page === "notifications") redirect("/#needs-attention");
@@ -73,54 +72,26 @@ export default async function Page({
     throw e;
   }
   const { db, user } = await authorized();
-  const [initialBriefing, initialAcademic, initialFocus, initialPlans] =
-    await Promise.all([
-      page === "home" ? loadBriefing(undefined, data).catch(() => null) : null,
-      page === "home" &&
-      data.dashboard?.enabled &&
-      data.dashboard.settings.mode === "custom" &&
-      data.dashboard.settings.widgets.some(
-        (w) => w.visible && ["academics", "learning"].includes(w.id),
-      )
-        ? readAcademics(db, user.id).catch(() => null)
-        : null,
-      (async () => {
-        try {
-          const result = await db
-            .from("focus_sessions")
-            .select("*")
-            .eq("user_id", user.id)
-            .in("status", ["running", "paused"])
-            .maybeSingle();
-          dbError(result.error);
-          return {
-            session: result.data as Session | null,
-            server_time: new Date().toISOString(),
-          };
-        } catch {
-          return undefined;
-        }
-      })(),
-      page === "home" &&
-      data.dashboard?.enabled &&
-      data.dashboard.settings.mode === "custom" &&
-      data.dashboard.settings.widgets.some(
-        (w) => w.visible && ["career", "learning"].includes(w.id),
-      )
-        ? (async () => {
-            const sources = await db
-              .from("sheet_rest_datasets")
-              .select("*")
-              .eq("user_id", user.id)
-              .order("created_at")
-              .limit(21);
-            dbError(sources.error);
-            if ((sources.data?.length ?? 0) > 20)
-              throw new Error("Too many saved sources");
-            return readSavedPlans(db, user.id, sources.data ?? [], true);
-          })().catch(() => null)
-        : null,
-    ]);
+  const [initialBriefing, initialFocus] = await Promise.all([
+    page === "home" ? loadBriefing(undefined, data).catch(() => null) : null,
+    (async () => {
+      try {
+        const result = await db
+          .from("focus_sessions")
+          .select("*")
+          .eq("user_id", user.id)
+          .in("status", ["running", "paused"])
+          .maybeSingle();
+        dbError(result.error);
+        return {
+          session: result.data as Session | null,
+          server_time: new Date().toISOString(),
+        };
+      } catch {
+        return undefined;
+      }
+    })(),
+  ]);
   const sidebarCollapsed =
     (await cookies()).get("lifeos_sidebar_collapsed")?.value === "true";
   return (
@@ -128,13 +99,7 @@ export default async function Page({
       <FocusSessionProvider initial={initialFocus}>
         <WorkspaceShell initialCollapsed={sidebarCollapsed}>
           {page === "home" ? (
-            <HomePage
-              initialBriefing={initialBriefing}
-              initialAcademic={initialAcademic}
-              initialPlans={initialPlans}
-            />
-          ) : page === "basketball" ? (
-            <BasketballPage />
+            <HomePage initialBriefing={initialBriefing} />
           ) : page === "learning" ? (
             <LearningPage />
           ) : page === "planner" ? (

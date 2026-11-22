@@ -4296,3 +4296,9 @@ input[type="checkbox"] {
   margin-right: 9px;
   color: var(--blue);
 }
+
+.workspace-section > summary {
+  min-height: 36px;
+  padding-block: 8px;
+  cursor: pointer;
+}

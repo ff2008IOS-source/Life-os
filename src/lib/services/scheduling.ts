@@ -1,4 +1,5 @@
 import "server-only";
+import { CALENDAR_FRESH_MS } from "../calendar-availability";
 import { schedulingEligible } from "../scheduling-eligibility";
 import { createHash } from "node:crypto";
 import { addDays, format } from "date-fns";
@@ -8,7 +9,7 @@ import { dbError } from "@/lib/http";
 import { schedulingIdentity } from "./scheduling-identity";
 import { loadWorkspace, loadWorkspaceForUser } from "./workspace";
 import { calendarBusy, type AvailabilityEvent } from "../calendar-availability";
-import { localDate, TIMEZONE } from "../dates";
+import { localDate, TIMEZONE, preparationDeadline } from "../dates";
 import { schedule, type Policy, type ExistingBlock } from "../scheduler";
 import { syncCalendarForUser } from "../integrations/calendar-sync-service";
 import { serverAdmin } from "../supabase/admin";
@@ -17,6 +18,7 @@ export async function liveSchedule(
   forceRefresh = false,
   workerUserId?: string,
   writerLease?: string,
+  taskIds?: string[],
 ) {
   const { db, user } = await schedulingIdentity(workerUserId);
   const selected = await db
@@ -47,7 +49,7 @@ export async function liveSchedule(
     if (
       forceRefresh ||
       !c.last_synced_at ||
-      Date.now() - Date.parse(c.last_synced_at) > 300000 ||
+      Date.now() - Date.parse(c.last_synced_at) > CALENDAR_FRESH_MS ||
       c.sync_error ||
       !c.coverage_start ||
       !c.coverage_end ||
@@ -131,6 +133,14 @@ export async function liveSchedule(
     .limit(1000);
   dbError(held.error);
   const heldTasks = new Set((held.data ?? []).map((x) => x.task_id));
+  const official = taskIds?.length
+    ? await db
+        .from("assessments")
+        .select("task_id,due_at,due_date,submission_state,dropped")
+        .eq("user_id", user.id)
+        .in("task_id", taskIds)
+    : { data: [], error: null };
+  dbError(official.error);
   const result = schedule({
     now: new Date().toISOString(),
     policy,
@@ -142,15 +152,26 @@ export async function liveSchedule(
         (t) =>
           !t.deleted_at && (!workerUserId || !t.title.startsWith("[TEST]")),
       )
-      .map((t) => ({
-        ...t,
-        area: workspace.areas.find((a) => a.id === t.area_id)?.slug ?? null,
-        eligible: schedulingEligible(
-          t,
-          workspace.projects.find((p) => p.id === t.project_id),
-          heldTasks.has(t.id),
-        ),
-      })),
+      .map((t) => {
+        const assessment = official.data?.find((a) => a.task_id === t.id);
+        return {
+          ...t,
+          ...(assessment ? preparationDeadline(t, assessment) : {}),
+          area: workspace.areas.find((a) => a.id === t.area_id)?.slug ?? null,
+          eligible:
+            (!assessment ||
+              (!assessment.dropped &&
+                !["submitted", "returned", "excused"].includes(
+                  assessment.submission_state,
+                ))) &&
+            (!taskIds || taskIds.includes(t.id)) &&
+            schedulingEligible(
+              t,
+              workspace.projects.find((p) => p.id === t.project_id),
+              heldTasks.has(t.id),
+            ),
+        };
+      }),
   });
   const revision = createHash("sha256")
     .update(
@@ -163,6 +184,8 @@ export async function liveSchedule(
         blocks: existing,
         holds: [...heldTasks].sort(),
         policy,
+        task_ids: taskIds ?? null,
+        assessments: official.data,
       }),
     )
     .digest("hex");
@@ -179,12 +202,16 @@ export async function liveSchedule(
 export async function saveSchedulePreview(
   policy: Policy,
   workerUserId?: string,
+  taskIds?: string[],
 ) {
   const { user, result, revision } = await liveSchedule(
     policy,
     false,
     workerUserId,
+    undefined,
+    taskIds,
   );
+  if (taskIds) result.task_ids = taskIds;
   const run = await serverAdmin()
     .from("scheduling_runs")
     .insert({

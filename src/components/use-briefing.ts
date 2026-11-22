@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { affects } from "@/lib/workspace-change";
 import { calendarRequest } from "./use-calendar";
 import type { LiveBriefing } from "@/lib/briefing-server";
 export function useBriefing(week?: string, initial?: LiveBriefing | null) {
   const [data, setData] = useState<LiveBriefing | null>(initial ?? null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(!initial);
+  const lastLoaded = useRef(initial ? Date.parse(initial.refreshed_at) : 0);
   const pending = useRef(false),
     alive = useRef(true),
     queued = useRef(false);
@@ -23,6 +25,7 @@ export function useBriefing(week?: string, initial?: LiveBriefing | null) {
         );
         if (alive.current) {
           setData(value);
+          lastLoaded.current = Date.now();
           setError("");
         }
       } catch (e) {
@@ -43,21 +46,41 @@ export function useBriefing(week?: string, initial?: LiveBriefing | null) {
   );
   useEffect(() => {
     alive.current = true;
-    const initial = setTimeout(() => void reload(), 0);
-    const change = () => {
+    const first =
+      initial && Date.now() - Date.parse(initial.refreshed_at) < 60000
+        ? undefined
+        : setTimeout(() => void reload(), 0);
+    const change = (event?: Event) => {
+      if (
+        event?.type === "lifeos:changed" &&
+        !affects(event, [
+          "tasks",
+          "projects",
+          "milestones",
+          "reviews",
+          "calendar",
+          "assessments",
+        ])
+      )
+        return;
+      if (
+        event?.type !== "lifeos:changed" &&
+        Date.now() - lastLoaded.current < 60000
+      )
+        return;
       if (document.visibilityState === "visible") void reload();
     };
     window.addEventListener("focus", change);
     window.addEventListener("lifeos:changed", change);
-    const timer = setInterval(change, 300000);
+    const timer = setInterval(() => change(), 300000);
     return () => {
       alive.current = false;
-      clearTimeout(initial);
+      clearTimeout(first);
       clearInterval(timer);
       window.removeEventListener("focus", change);
       window.removeEventListener("lifeos:changed", change);
     };
-  }, [reload]);
+  }, [reload, initial]);
   return { data, error, loading, reload };
 }
 export type BriefingController = ReturnType<typeof useBriefing>;

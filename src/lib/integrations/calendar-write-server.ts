@@ -202,6 +202,8 @@ export async function applyReservations(runId: string, workerUserId?: string) {
       .single();
     dbError(read.error);
     const run = read.data;
+    if (run?.status === "completed")
+      return { applied: run.applied_count, replayed: true };
     if (
       !run ||
       !["preview", "failed"].includes(run.status) ||
@@ -213,7 +215,13 @@ export async function applyReservations(runId: string, workerUserId?: string) {
       );
     const proposal = run.proposal as ScheduleResult;
     const policy = policySchema.parse(proposal.policy);
-    const current = await liveSchedule(policy, true, workerUserId, writerLease);
+    const current = await liveSchedule(
+      policy,
+      true,
+      workerUserId,
+      writerLease,
+      proposal.task_ids,
+    );
     if (current.revision !== run.input_revision)
       throw new ApiError(
         409,
@@ -366,7 +374,10 @@ export async function applyReservations(runId: string, workerUserId?: string) {
     }
   });
 }
-export async function undoReservations(runId: string) {
+export async function undoReservations(
+  runId: string,
+  onlyProviderEventId?: string,
+) {
   const { user } = await authorized();
   return withCalendarWriteLock(user.id, async () => {
     const db = integrationAdmin();
@@ -392,6 +403,8 @@ export async function undoReservations(runId: string) {
           calendar_id: z.uuid(),
         })
         .parse(job.payload);
+      if (onlyProviderEventId && p.provider_event_id !== onlyProviderEventId)
+        continue;
       if (p.calendar_id !== calendar.id)
         throw new ApiError(
           409,

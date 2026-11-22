@@ -38,3 +38,30 @@ it("pins visible widgets while preserving relative order and excludes hidden wid
   expect(shown[0].id).toBe(d.widgets[3].id);
   expect(shown.some((w) => w.id === d.widgets[0].id)).toBe(false);
 });
+
+it("removes retired entries without resetting surviving layout or presets", () => {
+  const current = defaultLayout("study");
+  current.density = "compact";
+  current.widgets[0].size = "wide";
+  const retired = {
+    id: "basketball",
+    visible: true,
+    pinned: true,
+    size: "standard",
+  };
+  const old = {
+    ...current,
+    widgets: [retired, ...current.widgets],
+    presets: [
+      {
+        name: "Saved",
+        density: "compact",
+        widgets: [...current.widgets, retired],
+      },
+    ],
+  };
+  const migrated = migrateLayout(old);
+  expect(migrated.widgets).toEqual(current.widgets);
+  expect(migrated.density).toBe("compact");
+  expect(migrated.presets[0].widgets).toEqual(current.widgets);
+});

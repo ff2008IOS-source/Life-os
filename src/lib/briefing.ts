@@ -1,3 +1,4 @@
+import { calendarCoverage } from "./calendar-availability";
 import { aggregateSyncHealth, type SyncSource } from "./sync-health";
 import { realWorkspace } from "./real-workspace";
 import { z } from "zod";
@@ -97,6 +98,7 @@ export type BriefingInput = {
   } | null;
   actions: BriefingAction[];
   blocks: {
+    actual_minutes?: number | null;
     id: string;
     task_id: string;
     start_at: string;
@@ -187,24 +189,16 @@ export function buildBriefing(input: BriefingInput) {
   const selected = input.calendars.filter((c) => c.sync_enabled);
   const dayStart = fromZonedTime(today + "T00:00:00", zone).getTime(),
     dayEnd = fromZonedTime(dayPlus(today, 1) + "T00:00:00", zone).getTime();
-  const calendarReliable =
-    !["calendar", "work", "scheduling"].some((x) =>
+  const calendarReliable = calendarCoverage({
+    calendars: input.calendars,
+    connections: input.connections,
+    start: dayStart,
+    end: dayEnd,
+    now: nowMs,
+    failed: ["calendar", "work", "scheduling"].some((x) =>
       input.source_errors.includes(x),
-    ) &&
-    selected.length > 0 &&
-    selected.every(
-      (c) =>
-        !c.sync_error &&
-        !!c.last_synced_at &&
-        nowMs - Date.parse(c.last_synced_at) <= 26 * 3600000 &&
-        !!c.coverage_start &&
-        !!c.coverage_end &&
-        Date.parse(c.coverage_start) <= dayStart &&
-        Date.parse(c.coverage_end) >= dayEnd &&
-        input.connections.some(
-          (x) => x.id === c.connection_id && x.status === "connected",
-        ),
-    );
+    ),
+  }).verified;
   const selectedEvents = input.events.filter((e) =>
     selected.some((c) => c.id === e.calendar_id),
   );
@@ -758,6 +752,24 @@ export function buildBriefing(input: BriefingInput) {
           .map((c) => c.last_synced_at)
           .filter((x): x is string => !!x)
           .sort()[0] ?? null,
+    },
+    planning: {
+      blocks: input.blocks,
+      events: selectedEvents.map((e) => ({
+        id: e.id,
+        calendar_id: e.calendar_id,
+        title: e.title,
+        start_at: e.start_at,
+        end_at: e.end_at,
+        all_day_start: e.all_day_start,
+        all_day_end: e.all_day_end,
+        timezone: e.timezone,
+        busy_status: e.busy_status,
+        work_session: e.work_session,
+      })),
+      policy,
+      calendars: selected,
+      connections: input.connections,
     },
     recommendations,
     attention: [...new Map(attention.map((a) => [a.id, a])).values()]

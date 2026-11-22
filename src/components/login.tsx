@@ -4,7 +4,7 @@ import { AppLogo } from "./profile-identity";
 import { MfaPanel } from "./mfa-panel";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Check, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "./ui/button";
 export function Login({
   configured,
@@ -47,65 +47,18 @@ export function Login({
   }
   return (
     <main className="login-page">
-      <section className="login-story">
-        <Link className="brand" href="/">
-          <span className="logo">
-            <AppLogo />
-          </span>
-          Life OS
-        </Link>
-        <div className="login-story-content">
-          <span className="eyebrow">A LITTLE CLARITY. EVERY DAY.</span>
-          <h1>
-            Make room for
-            <br />
-            what matters.
-          </h1>
-          <p>
-            Your commitments, your ambitions, your next step.
-            <br />
-            One calm place to bring it all together.
-          </p>
-          <div className="login-example">
-            <div className="flex-between">
-              <span className="eyebrow">YOUR DAY, WITH INTENTION</span>
-              <span className="status-dot" />
-            </div>
-            <div className="example-line">
-              <span className="example-check">
-                <Check size={15} />
-              </span>
-              Know what needs your attention
-            </div>
-            <div className="example-line">
-              <span className="example-check">
-                <Check size={15} />
-              </span>
-              Connect daily actions to bigger goals
-            </div>
-            <div className="example-line">
-              <span className="example-check">
-                <Check size={15} />
-              </span>
-              Plan with a realistic view of your time
-            </div>
-          </div>
-        </div>
-        <span className="login-foot">Your life, organized in one place.</span>
-      </section>
       <section className="login-form">
         <div className="login-form-inner">
-          <span className="section-icon">
-            <LockKeyhole size={25} />
-          </span>
+          <Link className="brand" href="/">
+            <span className="logo">
+              <AppLogo />
+            </span>
+            Life OS
+          </Link>
           <h2>
             {configured ? "Welcome to your space" : "Your space starts here"}
           </h2>
-          <p className="muted">
-            {configured
-              ? "Sign in to your private Life OS workspace."
-              : "The application is ready for private Supabase setup."}
-          </p>
+
           {mfa ? (
             <MfaPanel
               challenge
@@ -194,9 +147,6 @@ export function Login({
               Private by design. Only your approved account has access.
             </span>
           </div>
-          <p className="small muted">
-            Private account · Connected services are controlled in Settings
-          </p>
         </div>
       </section>
     </main>

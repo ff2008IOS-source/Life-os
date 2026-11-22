@@ -1,4 +1,5 @@
 "use client";
+import { affects } from "@/lib/workspace-change";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -72,7 +73,18 @@ export function DashboardWidgets({
   useEffect(() => {
     if (!needsAcademics) return;
     let live = true;
-    const load = () => {
+    const load = (event?: Event) => {
+      if (
+        event &&
+        !affects(event, [
+          "courses",
+          "assessments",
+          "study_topics",
+          "academic_terms",
+          "work",
+        ])
+      )
+        return;
       void calendarRequest<AcademicData>("/api/v1/academics")
         .then((r) => {
           if (live) {
@@ -87,20 +99,21 @@ export function DashboardWidgets({
             );
         });
     };
-    load();
+    if (!initialAcademic) load();
     window.addEventListener("lifeos:changed", load);
     return () => {
       live = false;
       window.removeEventListener("lifeos:changed", load);
     };
-  }, [needsAcademics]);
+  }, [needsAcademics, initialAcademic]);
   const needsCareer = shown.some((w) => ["career", "learning"].includes(w.id));
   const [plans, setPlans] = useState<SavedPlans | null>(initialPlans ?? null),
     [planError, setPlanError] = useState("");
   useEffect(() => {
     if (!needsCareer) return;
     let live = true;
-    const load = () => {
+    const load = (event?: Event) => {
+      if (event && !affects(event, ["sheets"])) return;
       void calendarRequest<NonNullable<typeof plans>>(
         "/api/v1/sheets/tables?overview=true&skills=true",
       )
@@ -117,13 +130,13 @@ export function DashboardWidgets({
             );
         });
     };
-    load();
+    if (!initialPlans) load();
     window.addEventListener("lifeos:changed", load);
     return () => {
       live = false;
       window.removeEventListener("lifeos:changed", load);
     };
-  }, [needsCareer]);
+  }, [needsCareer, initialPlans]);
   const skillSourceError = plans?.datasets.some(
     (d) =>
       d.config.columns.some((c) => /^skill$/i.test(c.header)) &&
@@ -160,14 +173,8 @@ export function DashboardWidgets({
       p.status === "active" &&
       data.areas.some((a) => a.id === p.area_id && visibleArea(a)),
   );
-  const basketball = projects.filter((p) =>
-    /\b(basketball|hoops|shooting|MBB)\b/i.test(`${p.name} ${p.description}`),
-  );
   const careerArea = data.areas.find((a) => a.slug === "career");
-  const career = projects.filter(
-    (p) =>
-      p.area_id === careerArea?.id && !basketball.some((b) => b.id === p.id),
-  );
+  const career = projects.filter((p) => p.area_id === careerArea?.id);
   const projectArea = data.areas.find((a) => a.slug === "projects");
   const personalProjects = projects.filter(
     (p) => p.area_id === projectArea?.id,
@@ -280,15 +287,6 @@ export function DashboardWidgets({
     academics: (
       <Card title="Academics" href="/areas/academics">
         {academicContent}
-      </Card>
-    ),
-    basketball: (
-      <Card title="Basketball operations" href="/areas/career">
-        {projectLinks(basketball)}
-        <p className="small muted">
-          Active projects mentioning basketball, hoops or shooting. No
-          performance statistics are inferred.
-        </p>
       </Card>
     ),
     career: (

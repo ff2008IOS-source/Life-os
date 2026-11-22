@@ -123,9 +123,7 @@ export function CareerPanel({ compact = false }: { compact?: boolean }) {
             a.slug ===
             (["Academics", "Beedie"].includes(record.details.Area ?? "")
               ? "academics"
-              : record.details.Area === "Basketball"
-                ? "unassigned"
-                : "career"),
+              : "career"),
         )?.id ?? null,
       progress_type: "qualitative" as const,
       target_date: target,

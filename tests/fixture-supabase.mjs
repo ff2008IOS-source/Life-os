@@ -235,6 +235,84 @@ const server = createServer((req, res) => {
         );
         return send(200, { ok: true });
       }
+      // Synthetic calendars exist only in this loopback test adapter.
+      if (
+        url.pathname === "/__fixtures/calendar-ready" &&
+        req.method === "POST"
+      ) {
+        const connection = "bbbbbbbb-1111-4111-8111-111111111111",
+          calendar = "bbbbbbbb-2222-4222-8222-222222222222";
+        if (body.enabled) {
+          await db.query(
+            "insert into calendar_connections(id,user_id,provider,provider_account_id,status)values($1,$2,'google','[TEST] Capacity','connected') on conflict do nothing",
+            [connection, uid],
+          );
+          await db.query(
+            "insert into calendars(id,user_id,connection_id,provider_calendar_id,name,timezone,access_role,sync_enabled,last_synced_at,coverage_start,coverage_end)values($1,$2,$3,'[TEST] Capacity','[TEST] Capacity','America/Vancouver','reader',true,$4,'2025-01-01','2030-01-01') on conflict(id)do update set last_synced_at=excluded.last_synced_at",
+            [calendar, uid, connection, new Date().toISOString()],
+          );
+        } else {
+          await db.query("delete from calendars where id=$1", [calendar]);
+          await db.query("delete from calendar_connections where id=$1", [
+            connection,
+          ]);
+        }
+        return send(200, { ok: true });
+      }
+      if (
+        url.pathname === "/__fixtures/dashboard-layout" &&
+        req.method === "POST"
+      ) {
+        if (body.settings)
+          await db.query(
+            "insert into dashboard_preferences(user_id,settings)values($1,$2)on conflict(user_id)do update set settings=excluded.settings",
+            [uid, JSON.stringify(body.settings)],
+          );
+        else
+          await db.query("delete from dashboard_preferences where user_id=$1", [
+            uid,
+          ]);
+        return send(200, { ok: true });
+      }
+      if (url.pathname === "/__fixtures/today-plan" && req.method === "POST") {
+        const block = "cccccccc-1111-4111-8111-111111111111";
+        await db.query("delete from work_blocks where id=$1", [block]);
+        await db.query(
+          "delete from calendar_events where provider_event_id='synthetic-today-class'",
+        );
+        if (body.enabled) {
+          await db.query(
+            "insert into work_blocks(id,user_id,task_id,start_at,end_at,status,policy_version,provider_event_id)values($1,$2,$3,$4,$5,'planned',1,'synthetic-today-block')",
+            [block, uid, body.task_id, body.start, body.end],
+          );
+          await db.query(
+            "insert into calendar_events(user_id,calendar_id,provider_event_id,title,start_at,end_at,timezone,busy_status,event_status)values($1,'bbbbbbbb-2222-4222-8222-222222222222','synthetic-today-class','[TEST] Next class',$2,$3,'America/Vancouver','busy','confirmed')",
+            [uid, body.class_start, body.class_end],
+          );
+        }
+        return send(200, { ok: true });
+      }
+      if (
+        url.pathname === "/__fixtures/today-change" &&
+        req.method === "POST"
+      ) {
+        if (body.start)
+          await db.query(
+            "update calendar_events set start_at=$1,end_at=$2,event_status=$3 where provider_event_id='synthetic-today-class'",
+            [body.start, body.end, body.cancelled ? "cancelled" : "confirmed"],
+          );
+        if (typeof body.fixed === "boolean")
+          await db.query(
+            "update work_blocks set flexibility=$1 where id='cccccccc-1111-4111-8111-111111111111'",
+            [body.fixed ? "fixed" : "flexible"],
+          );
+        if (body.block_start)
+          await db.query(
+            "update work_blocks set start_at=$1,end_at=$2 where id='cccccccc-1111-4111-8111-111111111111'",
+            [body.block_start, body.block_end],
+          );
+        return send(200, { ok: true });
+      }
       if (url.pathname === "/health") return send(200, { ok: true });
       if (url.pathname === "/auth/v1/token") {
         if (body.email !== user.email || body.password !== "test-password-only")
@@ -264,6 +342,8 @@ const server = createServer((req, res) => {
       const isAdmin = auth === "synthetic-test-server-key";
       if (!sessions.has(auth) && !isAdmin)
         return send(401, { message: "Unauthorized", code: "42501" });
+      if (isAdmin && url.pathname === `/auth/v1/admin/users/${uid}`)
+        return send(200, { user });
       await db.exec(
         `begin; set local role ${isAdmin ? "service_role" : "authenticated"}; select set_config('request.jwt.claim.sub','${uid}',true);`,
       );
@@ -379,6 +459,7 @@ const server = createServer((req, res) => {
           "canvas_documents",
           "canvas_document_chunks",
           "canvas_sync_jobs",
+          "canvas_connections",
           "canvas_mappings",
           "canvas_grade_history",
         ];
@@ -397,6 +478,15 @@ const server = createServer((req, res) => {
           // Deliberately bounded PostgREST subset used by the deadline API.
           // Identifiers are validated and all comparison values parameterized.
           if (key === "or") {
+            const interval = val.match(
+              /^\(and\(start_at\.lt\.([^,]+),end_at\.gt\.([^)]+)\),and\(all_day_start\.lt\.(\d{4}-\d{2}-\d{2}),all_day_end\.gt\.(\d{4}-\d{2}-\d{2})\)\)$/,
+            );
+            if (interval) {
+              where.push(
+                `((start_at < ${param(interval[1])} and end_at > ${param(interval[2])}) or (all_day_start < ${param(interval[3])} and all_day_end > ${param(interval[4])}))`,
+              );
+              continue;
+            }
             const courseFilter = val.match(
               /^\(course_canvas_id\.eq\.(\d+),and\(resource_type\.eq\.course,canvas_id\.eq\.(\d+)\)\)$/,
             );
@@ -433,11 +523,19 @@ const server = createServer((req, res) => {
             );
             continue;
           }
+          if (val.startsWith("cs.")) {
+            const value = JSON.parse(val.slice(3));
+            where.push(
+              `${quote(key)} @> ${param(JSON.stringify(value))}::jsonb`,
+            );
+            continue;
+          }
           const [op, ...parts] = val.split(".");
           const value = parts.join(".");
           const operator = {
             ilike: "ilike",
             eq: "=",
+            neq: "<>",
             gte: ">=",
             gt: ">",
             lt: "<",
@@ -473,6 +571,12 @@ const server = createServer((req, res) => {
             String(req.headers.prefer).includes("resolution=ignore-duplicates")
           )
             conflict = " on conflict(user_id,id)do nothing";
+          if (
+            table === "integration_jobs" &&
+            url.searchParams.get("on_conflict") === "user_id,idempotency_key" &&
+            String(req.headers.prefer).includes("resolution=ignore-duplicates")
+          )
+            conflict = " on conflict(user_id,idempotency_key)do nothing";
           sql = `insert into public.${quote(table)}(${keys.map(quote)}) values(${keys.map((k) => param(body[k]))})${conflict} returning *`;
         } else if (req.method === "PATCH") {
           const keys = Object.keys(body);
@@ -495,6 +599,12 @@ const server = createServer((req, res) => {
         return send(200, singular ? (result.rows[0] ?? null) : result.rows);
       } catch (error) {
         await db.exec("rollback");
+        if (process.env.LIFE_OS_FIXTURE_DEBUG)
+          console.error(
+            "Synthetic database request",
+            url.pathname,
+            error.message,
+          );
         return send(400, {
           message: error.message,
           code: error.code || "TEST_ADAPTER_ERROR",

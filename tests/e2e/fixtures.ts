@@ -1,8 +1,9 @@
 import { test as base, type Page } from "@playwright/test";
 export * from "@playwright/test";
 /** Freeze the calendar date, while leaving DOM timers and native Performance APIs intact. */
-export const test = base.extend({
-  page: async ({ page }, runFixture) => {
+export const test = base.extend<{ calendarReady: boolean }>({
+  calendarReady: [false, { option: true }],
+  page: async ({ page, calendarReady }, runFixture) => {
     await page.addInitScript(
       ({ epoch, anchor }) => {
         const NativeDate = Date;
@@ -31,7 +32,20 @@ export const test = base.extend({
       },
       { epoch: Date.now(), anchor: performance.timeOrigin + performance.now() },
     );
-    await runFixture(page);
+    if (calendarReady)
+      await page.request.post(
+        "http://127.0.0.1:54329/__fixtures/calendar-ready",
+        { data: { enabled: true } },
+      );
+    try {
+      await runFixture(page);
+    } finally {
+      if (calendarReady)
+        await page.request.post(
+          "http://127.0.0.1:54329/__fixtures/calendar-ready",
+          { data: { enabled: false } },
+        );
+    }
   },
 });
 export async function setBrowserTestTime(page: Page, date: Date) {

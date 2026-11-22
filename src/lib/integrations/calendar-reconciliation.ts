@@ -19,6 +19,7 @@ export function managedEventReason(
   input: unknown,
   policy: Policy,
   now = Date.now(),
+  resolveMissed = false,
 ) {
   const e = googleEventSchema.parse(input);
   if (e.id !== block.provider_event_id)
@@ -43,8 +44,9 @@ export function managedEventReason(
   if (s === Date.parse(block.start_at) && end === Date.parse(block.end_at))
     return null;
   if (
-    Math.min(s, Date.parse(block.start_at)) <
-    now + policy.freeze_minutes * 60000
+    s < now + policy.freeze_minutes * 60000 ||
+    (Date.parse(block.start_at) < now + policy.freeze_minutes * 60000 &&
+      !(resolveMissed && Date.parse(block.end_at) <= now))
   )
     return "The external move affects a frozen or past session. Review it before accepting.";
   if (

@@ -72,7 +72,9 @@ test("synthetic reservation → actual completion → academic history and revie
   await page
     .getByRole("button", { name: "[TEST] Recorded academic work", exact: true })
     .click();
-  await page.getByRole("button", { name: "Prepare work", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Plan preparation", exact: true })
+    .click();
   await page.getByLabel("Estimated preparation minutes").fill("60");
   await page
     .getByLabel("Allow scheduling under my current automation preferences")
@@ -215,9 +217,24 @@ test("synthetic reservation → actual completion → academic history and revie
   const sent = page.waitForRequest(
     (r) => r.url().endsWith("/complete") && r.method() === "POST",
   );
+  await page.route("**/api/v1/workspace", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({
+          status: 503,
+          json: { error: { message: "Synthetic refresh failure" } },
+        })
+      : route.continue(),
+  );
   await page.getByRole("button", { name: "Save completed work" }).click();
   const original = await sent;
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByText("Work recorded · details refresh pending", { exact: true }),
+  ).toBeVisible();
+  await page.unroute("**/api/v1/workspace");
+  await page
+    .getByRole("button", { name: "Refresh saved work", exact: true })
+    .click();
   const replay = await page.request.post(original.url(), {
     data: original.postDataJSON(),
     headers: { Origin: "http://127.0.0.1:3000" },
@@ -265,4 +282,38 @@ test("synthetic reservation → actual completion → academic history and revie
         .getByText(new RegExp(`${previousMinutes + 45} minutes logged`)),
     ).toBeVisible();
   }
+  await page.goto("/areas/academics");
+  await page
+    .getByLabel("Selected course")
+    .filter({ visible: true })
+    .selectOption(course.id);
+  await page
+    .getByRole("button", { name: "Assessments", exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
+  await page
+    .getByRole("button", { name: "[TEST] Recorded academic work", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Plan preparation", exact: true })
+    .click();
+  await expect(page.getByLabel("Estimated preparation minutes")).toHaveValue(
+    "15",
+  );
+  await page.getByLabel("Estimated preparation minutes").fill("20");
+  await page
+    .getByRole("button", { name: "Save preparation estimate", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog").getByLabel("Title", { exact: true }),
+  ).toBeVisible();
+  const revised = (
+    await (await page.request.get(`/api/v1/tasks/${task.id}`)).json()
+  ).data;
+  expect(revised).toMatchObject({
+    estimated_minutes: 65,
+    actual_minutes: 45,
+    status: "completed",
+  });
 });

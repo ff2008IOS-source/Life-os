@@ -26,6 +26,7 @@ type FocusContext = {
   start: (id: string) => Promise<void>;
   toggle: () => Promise<void>;
   finish: () => void;
+  discard: () => Promise<void>;
 };
 const Context = createContext<FocusContext | null>(null);
 export const useFocusSession = () => useContext(Context);
@@ -36,7 +37,7 @@ export function FocusSessionProvider({
   children: ReactNode;
   initial?: { session: Session | null; server_time: string };
 }) {
-  const { data, refresh } = useWorkspace();
+  const { data, refresh, notify } = useWorkspace();
   const [session, setSession] = useState<Session | null>(
       initial?.session ?? null,
     ),
@@ -85,7 +86,8 @@ export function FocusSessionProvider({
             );
         });
     };
-    read();
+    if (!initial || Date.now() - Date.parse(initial.server_time) > 30000)
+      read();
     const timer = setInterval(read, 30000);
     window.addEventListener("focus", read);
     document.addEventListener("visibilitychange", read);
@@ -95,7 +97,7 @@ export function FocusSessionProvider({
       window.removeEventListener("focus", read);
       document.removeEventListener("visibilitychange", read);
     };
-  }, []);
+  }, [initial]);
   async function action(
     action: string,
     target: Session | null,
@@ -123,7 +125,14 @@ export function FocusSessionProvider({
       );
       if (action === "finish") {
         setFinishing(null);
-        await refresh();
+        try {
+          await refresh();
+        } catch {
+          notify("Focus session saved · details refresh pending", undefined, {
+            label: "Refresh saved work",
+            action: refresh,
+          });
+        }
       }
       return r;
     } catch (e) {
@@ -154,7 +163,10 @@ export function FocusSessionProvider({
   useEffect(() => {
     if (session?.id && focusAfterStart.current) {
       focusAfterStart.current = false;
-      dock.current?.focus();
+      (
+        document.querySelector<HTMLElement>("[data-current-focus]") ??
+        dock.current
+      )?.focus();
     }
   }, [session?.id]);
   const title =
@@ -186,6 +198,13 @@ export function FocusSessionProvider({
             );
         },
         finish: beginFinish,
+        discard: async () => {
+          if (
+            session &&
+            window.confirm("Discard this timer without recording work?")
+          )
+            await action("discard", session);
+        },
       }}
     >
       {children}

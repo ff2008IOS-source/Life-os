@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+test.use({ calendarReady: true });
 import AxeBuilder from "@axe-core/playwright";
 test("deterministic briefing saves check-ins, performs approved task actions and keeps AI out of the daily flow", async ({
   page,
@@ -54,9 +55,8 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   ).toHaveCount(0);
   const primary = page.locator(".briefing-primary").filter({ visible: true });
   await expect(primary).toContainText(task.title);
-  await expect(primary).toContainText(
-    "Update your calendar to check available time",
-  );
+  await expect(primary).toContainText("30 min estimated");
+  await primary.locator(".focus-secondary > summary").click();
   await primary.getByRole("button", { name: "Schedule", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "Enable scheduling eligibility",
@@ -108,6 +108,13 @@ test("deterministic briefing saves check-ins, performs approved task actions and
       .getByText("[TEST] Confirm a realistic study block.", { exact: true })
       .filter({ visible: true }),
   ).toBeVisible();
+  if (
+    !(await primary.locator(".focus-secondary").getAttribute("open")) &&
+    !(await primary
+      .getByRole("button", { name: "Mark Complete", exact: true })
+      .isVisible())
+  )
+    await primary.locator(".focus-secondary > summary").click();
   await primary
     .getByRole("button", { name: "Mark Complete", exact: true })
     .click();
