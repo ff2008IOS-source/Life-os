@@ -1,6 +1,7 @@
 "use client";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -27,6 +28,7 @@ type FocusContext = {
   toggle: () => Promise<void>;
   finish: () => void;
   discard: () => Promise<void>;
+  setInlineAvailable: (visible: boolean) => void;
 };
 const Context = createContext<FocusContext | null>(null);
 export const useFocusSession = () => useContext(Context);
@@ -38,6 +40,12 @@ export function FocusSessionProvider({
   initial?: { session: Session | null; server_time: string };
 }) {
   const { data, refresh, notify } = useWorkspace();
+  const [inlineAvailable, setInline] = useState(false);
+  const setInlineAvailable = useCallback(
+    (visible: boolean) => setInline(visible),
+    [],
+  );
+  const activatedBefore = useRef(false);
   const [session, setSession] = useState<Session | null>(
       initial?.session ?? null,
     ),
@@ -86,8 +94,13 @@ export function FocusSessionProvider({
             );
         });
     };
-    if (!initial || Date.now() - Date.parse(initial.server_time) > 30000)
+    if (
+      activatedBefore.current ||
+      !initial ||
+      Date.now() - Date.parse(initial.server_time) > 30000
+    )
       read();
+    activatedBefore.current = true;
     const timer = setInterval(read, 30000);
     window.addEventListener("focus", read);
     document.addEventListener("visibilitychange", read);
@@ -164,8 +177,9 @@ export function FocusSessionProvider({
     if (session?.id && focusAfterStart.current) {
       focusAfterStart.current = false;
       (
-        document.querySelector<HTMLElement>("[data-current-focus]") ??
-        dock.current
+        [
+          ...document.querySelectorAll<HTMLElement>("[data-current-focus]"),
+        ].find((node) => node.getClientRects().length > 0) ?? dock.current
       )?.focus();
     }
   }, [session?.id]);
@@ -198,6 +212,7 @@ export function FocusSessionProvider({
             );
         },
         finish: beginFinish,
+        setInlineAvailable,
         discard: async () => {
           if (
             session &&
@@ -228,7 +243,7 @@ export function FocusSessionProvider({
           </Button>
         </div>
       )}
-      {session && (
+      {session && !inlineAvailable && (
         <section
           className="focus-dock"
           aria-label="Current focus session"

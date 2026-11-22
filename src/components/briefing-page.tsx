@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useCurrentTime } from "./use-current-time";
 import { useFocusSession } from "./focus-session-provider";
 import { consumerReason } from "@/lib/consumer-copy";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CalendarDays, ArrowRight, AlertCircle, Clock3 } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { type BriefingController } from "./use-briefing";
@@ -33,6 +33,13 @@ export function BriefingPanel({
   const focus = useFocusSession();
   const now = useCurrentTime();
   const d = c.data;
+  const inlineActive = compact && !!d && !!focus?.session;
+  const setInlineAvailable = focus?.setInlineAvailable;
+  useEffect(() => {
+    if (!compact) return;
+    setInlineAvailable?.(inlineActive);
+    return () => setInlineAvailable?.(false);
+  }, [compact, inlineActive, setInlineAvailable]);
   const primary = d?.recommendations[0];
   const activeTask = focus?.session
     ? w.tasks.find((t) => t.id === focus.session?.task_id)

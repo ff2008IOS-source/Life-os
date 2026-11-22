@@ -1837,10 +1837,6 @@ b {
   }
 }
 
-/* Today already has the active session controls; keep the dock for other views. */
-body:has([data-current-focus]) .focus-dock {
-  display: none;
-}
 [data-current-focus]:focus {
   outline: 2px solid var(--accent);
   outline-offset: 6px;

@@ -40,3 +40,17 @@ export function keepConfirmedRows<T extends Record<string, unknown>>(
   }
   return merged;
 }
+
+/** A read can acknowledge only the exact save/version it was issued to verify. */
+export function clearVerifiedRead<T extends { version: number }>(
+  pending: Map<string, T>,
+  key: string,
+  expected: T,
+  record: { version?: number },
+) {
+  if (
+    pending.get(key) === expected &&
+    (record.version ?? 0) >= expected.version
+  )
+    pending.delete(key);
+}

@@ -13,6 +13,7 @@ import {
   mergeConfirmed,
   announceChange,
   keepConfirmedRows,
+  clearVerifiedRead,
 } from "@/lib/workspace-change";
 import type { Workspace } from "@/lib/schemas";
 import { Button } from "./ui/button";
@@ -80,7 +81,9 @@ export function WorkspaceProvider({
   }, [initial]);
   const versions = useRef(new Map<string, number>());
   const [refreshPending, setRefreshPending] = useState(false);
-  const confirmedReads = useRef(new Map<string, string>());
+  const confirmedReads = useRef(
+    new Map<string, { url: string; version: number }>(),
+  );
   const knownWrite = useRef(false);
   function accept(entity: string, record: { id: string; version?: number }) {
     const key = entity + ":" + record.id,
@@ -103,21 +106,20 @@ export function WorkspaceProvider({
     announceChange([entity]);
   }
   async function recover() {
-    let failed = false;
     await Promise.all(
-      [...confirmedReads.current].map(async ([key, url]) => {
+      [...confirmedReads.current].map(async ([key, expected]) => {
         try {
-          const body = (await request(url)) as {
+          const body = (await request(expected.url)) as {
             data: { id: string; version?: number };
           };
           accept(key.split(":")[0], body.data);
-          confirmedReads.current.delete(key);
+          clearVerifiedRead(confirmedReads.current, key, expected, body.data);
         } catch {
-          failed = true;
+          // Keep the exact pending version for a read-only retry.
         }
       }),
     );
-    setRefreshPending(failed);
+    setRefreshPending(confirmedReads.current.size > 0);
   }
   const notify = useCallback(
     (message: string, undo?: () => Promise<void>, recovery?: Recovery) => {
@@ -158,10 +160,10 @@ export function WorkspaceProvider({
       ) {
         accept(entity, body.data);
         knownWrite.current = true;
-        confirmedReads.current.set(
-          `${entity}:${body.data.id}`,
-          `/api/v1/${entity}/${body.data.id}`,
-        );
+        confirmedReads.current.set(`${entity}:${body.data.id}`, {
+          url: `/api/v1/${entity}/${body.data.id}`,
+          version: body.data.version ?? 0,
+        });
       }
     }
     return body;
@@ -266,10 +268,10 @@ export function WorkspaceProvider({
       try {
         sessionStorage.removeItem(storageKey);
       } catch {}
-      confirmedReads.current.set(
-        `${entity}:${body.data.id}`,
-        `/api/v1/${entity}/${body.data.id}`,
-      );
+      confirmedReads.current.set(`${entity}:${body.data.id}`, {
+        url: `/api/v1/${entity}/${body.data.id}`,
+        version: body.data.version ?? 0,
+      });
       void recover();
       return body;
     } finally {

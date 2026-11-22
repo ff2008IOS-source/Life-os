@@ -140,16 +140,30 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   await page
     .getByRole("button", { name: "Start selected task", exact: true })
     .click();
-  await expect(page.locator("[data-current-focus]")).toBeFocused();
+  await expect(
+    page.locator("[data-current-focus]").filter({ visible: true }),
+  ).toBeFocused();
   await expect(
     page.getByRole("region", { name: "Current focus session" }),
   ).toHaveCount(0);
-  await page.goto("/planner");
+  await page
+    .getByRole("complementary", { name: "Main navigation", exact: true })
+    .getByRole("link", { name: "Planner", exact: true })
+    .click();
   const dock = page.getByRole("region", { name: "Current focus session" });
   await expect(dock).toContainText(task.title);
   await dock.getByRole("button", { name: "Pause focus", exact: true }).click();
   await expect(dock).toContainText("Paused");
   const measuredNavigation = await page.reload();
+  await expect(dock).toContainText("Paused");
+  await page.goBack();
+  await expect(
+    page.getByRole("region", { name: "Focus", exact: true }),
+  ).toContainText("Paused");
+  await page
+    .getByRole("complementary", { name: "Main navigation", exact: true })
+    .getByRole("link", { name: "Planner", exact: true })
+    .click();
   await expect(dock).toContainText("Paused");
   await dock.getByRole("button", { name: "Resume focus", exact: true }).click();
   await dock.getByRole("button", { name: "Finish focus", exact: true }).click();
