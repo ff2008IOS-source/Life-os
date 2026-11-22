@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+test.use({ calendarReady: true });
 import AxeBuilder from "@axe-core/playwright";
 test("Home recommends feasible work and follows durable task-goal links", async ({
   page,
@@ -8,7 +9,7 @@ test("Home recommends feasible work and follows durable task-goal links", async 
   await page.getByLabel("Password", { exact: true }).fill("test-password-only");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Focus", exact: true }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   const create = async (entity: string, data: unknown) => {
     const r = await page.request.post(`/api/v1/${entity}`, {
@@ -54,7 +55,7 @@ test("Home recommends feasible work and follows durable task-goal links", async 
   await expect(action).toContainText(next.title);
   await expect(action).not.toContainText(blocked.title);
   await expect(action).toContainText("30 min estimated");
-  await action.getByRole("button", { name: "Open task" }).click();
+  await action.locator(".focus-title").click();
   await expect(
     page.getByRole("dialog").getByLabel("Title", { exact: true }),
   ).toHaveValue(next.title);

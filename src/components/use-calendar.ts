@@ -1,10 +1,30 @@
 "use client";
+import { CALENDAR_FRESH_MS } from "@/lib/calendar-availability";
+import { announceChange } from "@/lib/workspace-change";
 import { useEffect, useState, useCallback } from "react";
 import type {
   CalendarEvent,
   ConnectionState,
 } from "@/lib/integrations/calendar-view";
+const sharedReads = new Map<string, Promise<unknown>>();
 export async function calendarRequest<T>(
+  url: string,
+  options?: RequestInit,
+): Promise<T> {
+  if ((!options?.method || options.method === "GET") && !options?.signal) {
+    const existing = sharedReads.get(url);
+    if (existing) return existing as Promise<T>;
+    const pending = performRequest<T>(url, options);
+    sharedReads.set(url, pending);
+    try {
+      return await pending;
+    } finally {
+      if (sharedReads.get(url) === pending) sharedReads.delete(url);
+    }
+  }
+  return performRequest<T>(url, options);
+}
+async function performRequest<T>(
   url: string,
   options?: RequestInit,
 ): Promise<T> {
@@ -53,6 +73,45 @@ export function useCalendar(start?: string, end?: string) {
           setData(state);
           setEvents(result.events);
           setError("");
+          const stale = state.calendars
+            .filter(
+              (c) =>
+                c.sync_enabled &&
+                (!c.last_synced_at ||
+                  Date.now() - Date.parse(c.last_synced_at) >
+                    CALENDAR_FRESH_MS) &&
+                state.connections.some(
+                  (a) =>
+                    a.id === c.connection_id &&
+                    a.status === "connected" &&
+                    a.daily_sync_enabled,
+                ),
+            )
+            .slice(0, 3);
+          if (stale.length)
+            void Promise.all(
+              stale.map((c) =>
+                calendarRequest<{ refreshed?: boolean }>(
+                  "/api/v1/calendar/sync",
+                  {
+                    method: "POST",
+                    body: JSON.stringify({ calendar_id: c.id, if_stale: true }),
+                  },
+                ),
+              ),
+            )
+              .then((results) => {
+                if (live && results.some((r) => r.refreshed)) {
+                  void reload();
+                  announceChange(["calendar"]);
+                }
+              })
+              .catch(() => {
+                if (live)
+                  setError(
+                    "Latest refresh failed. Showing the last saved schedule; retry in Connections.",
+                  );
+              });
         }
       })
       .catch((e) => {
@@ -62,7 +121,7 @@ export function useCalendar(start?: string, end?: string) {
     return () => {
       live = false;
     };
-  }, [read]);
+  }, [read, reload]);
   async function act(label: string, fn: () => Promise<void>) {
     setBusy(label);
     setError("");

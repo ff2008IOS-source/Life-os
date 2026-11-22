@@ -33,7 +33,8 @@ export function TaskEditor({
   defaultDescription?: string;
   onCreated?: (task: Task) => void;
 }) {
-  const { data, mutate, notify, request, refresh, pending } = useWorkspace();
+  const { data, mutate, notify, request, refresh, isPending } = useWorkspace();
+  const pending = isPending("tasks", task?.id ?? null);
   const [context, setContext] = useState<{
     courses: { id: string; code: string; title: string }[];
     topics: { id: string; course_id: string; title: string }[];

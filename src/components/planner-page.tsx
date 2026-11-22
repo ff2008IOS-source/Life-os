@@ -1,4 +1,6 @@
 "use client";
+import { useSearchParams } from "next/navigation";
+import { PlanningDecisions } from "./planning-decisions";
 import { visibleArea } from "@/lib/visible-areas";
 import { realWorkspace } from "@/lib/real-workspace";
 import { WorkSessionsPanel } from "./work-sessions-panel";
@@ -28,6 +30,7 @@ export function PlannerPage({
 }: { initialSection?: string } = {}) {
   const { data: raw } = useWorkspace();
   const data = realWorkspace(raw);
+  const selectedTask = useSearchParams().get("task");
   const [tab, setTab] = useState(
     ["calendar", "tasks", "inbox", "recurring", "schedule"].includes(
       initialSection ?? "",
@@ -66,7 +69,10 @@ export function PlannerPage({
   const [area, setArea] = useState("");
   const [status, setStatus] = useState("active");
   const [search, setSearch] = useState("");
-  const [editor, setEditor] = useState<{ task: Task | null } | null>(null);
+  const [editor, setEditor] = useState<{ task: Task | null } | null>(() => {
+    const task = data.tasks.find((t) => t.id === selectedTask);
+    return task ? { task } : null;
+  });
   const all = data.tasks.filter(
     (t) =>
       (status === "deleted" ? !!t.deleted_at : !t.deleted_at) &&
@@ -108,6 +114,7 @@ export function PlannerPage({
           New task
         </Button>
       </div>
+      <PlanningDecisions />
       <div className="tabs" role="tablist" aria-label="Planner section">
         {[
           { id: "calendar", label: "Calendar" },

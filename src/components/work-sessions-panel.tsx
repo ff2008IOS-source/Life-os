@@ -17,7 +17,7 @@ export function WorkSessionsPanel({
   start?: string;
   end?: string;
 }) {
-  const { data: workspace, refresh } = useWorkspace();
+  const { data: workspace, refresh, notify } = useWorkspace();
   const [state, setState] = useState<WorkState | null>(null),
     [error, setError] = useState(""),
     [page, setPage] = useState(0),
@@ -29,6 +29,23 @@ export function WorkSessionsPanel({
     ...(start ? { start } : {}),
     ...(end ? { end } : {}),
   }).toString();
+  async function reloadSavedWork() {
+    const [, fresh] = await Promise.all([
+      refresh(),
+      calendarRequest<WorkState>("/api/v1/work/sessions?" + query),
+    ]);
+    setState(fresh);
+  }
+  async function savedWork(message: string) {
+    try {
+      await reloadSavedWork();
+    } catch {
+      notify(message + " · details refresh pending", undefined, {
+        label: "Refresh saved work",
+        action: reloadSavedWork,
+      });
+    }
+  }
   useEffect(() => {
     let live = true;
     void calendarRequest<WorkState>("/api/v1/work/sessions?" + query)
@@ -178,13 +195,8 @@ export function WorkSessionsPanel({
           block={moving}
           onClose={() => setMoving(null)}
           onSaved={async () => {
-            await refresh();
-            setState(
-              await calendarRequest<WorkState>(
-                "/api/v1/work/sessions?" + query,
-              ),
-            );
             setMoving(null);
+            await savedWork("Work block moved");
           }}
         />
       )}
@@ -193,13 +205,8 @@ export function WorkSessionsPanel({
           block={selected}
           onClose={() => setSelected(null)}
           onSaved={async () => {
-            await refresh();
-            setState(
-              await calendarRequest<WorkState>(
-                "/api/v1/work/sessions?" + query,
-              ),
-            );
             setSelected(null);
+            await savedWork("Work recorded");
           }}
         />
       )}

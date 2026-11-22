@@ -6,7 +6,6 @@ export const widgetIds = [
   "goals",
   "review",
   "academics",
-  "basketball",
   "career",
   "learning",
   "projects",
@@ -21,7 +20,6 @@ export const widgetNames: Record<WidgetId, string> = {
   goals: "Goals",
   review: "Weekly review",
   academics: "Academics",
-  basketball: "Basketball operations",
   career: "Career",
   learning: "Learning",
   projects: "Projects",
@@ -95,7 +93,6 @@ export function defaultLayout(
             "schedule",
             "upcoming",
             "academics",
-            "basketball",
             "career",
             "review",
             "projects",
@@ -126,7 +123,28 @@ export function defaultLayout(
 }
 /** Unknown or corrupt layouts never replace the safe baseline. Newly added widgets receive defaults. */
 export function migrateLayout(value: unknown): DashboardLayout {
-  const parsed = layoutSchema.safeParse(value);
+  const cleaned =
+    value && typeof value === "object"
+      ? ({ ...value } as Record<string, unknown>)
+      : value;
+  if (cleaned && typeof cleaned === "object") {
+    const c = cleaned as Record<string, unknown>;
+    const surviving = (rows: unknown) =>
+      Array.isArray(rows)
+        ? rows.filter(
+            (row) =>
+              !(row && typeof row === "object" && row.id === "basketball"),
+          )
+        : rows;
+    c.widgets = surviving(c.widgets);
+    if (Array.isArray(c.presets))
+      c.presets = c.presets.map((p) =>
+        p && typeof p === "object"
+          ? { ...p, widgets: surviving(p.widgets) }
+          : p,
+      );
+  }
+  const parsed = layoutSchema.safeParse(cleaned);
   return parsed.success ? parsed.data : { ...defaultLayout(), mode: "classic" };
 }
 export function displayedWidgets(layout: DashboardLayout) {

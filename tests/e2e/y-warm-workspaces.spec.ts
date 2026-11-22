@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { defaultLayout } from "../../src/lib/dashboard-layout";
 import AxeBuilder from "@axe-core/playwright";
 
 test("warm workspaces fit desktop, tablet and phone with accessible navigation and real task capture", async ({
@@ -29,11 +30,18 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
   await expect(
     page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
-  const originalDate = await page.getByLabel("Dashboard date").inputValue();
+  const originalDate = await page
+    .getByLabel("Dashboard date")
+    .filter({ visible: true })
+    .inputValue();
   await page.getByRole("button", { name: "Next day", exact: true }).click();
-  await expect(page.getByLabel("Dashboard date")).not.toHaveValue(originalDate);
+  await expect(
+    page.getByLabel("Dashboard date").filter({ visible: true }),
+  ).not.toHaveValue(originalDate);
   await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(page.getByLabel("Dashboard date")).toHaveValue(originalDate);
+  await expect(
+    page.getByLabel("Dashboard date").filter({ visible: true }),
+  ).toHaveValue(originalDate);
   const daily = page.getByRole("region", { name: "Daily tasks" });
   await daily.locator("summary").filter({ hasText: "Details" }).click();
   const title = "[TEST] Warm inline capture";
@@ -43,8 +51,16 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
     .getByRole("combobox", { name: "Priority", exact: true })
     .selectOption("3");
   await daily.getByRole("button", { name: "Add task", exact: true }).click();
+  await page
+    .locator(".today-inbox > summary")
+    .filter({ visible: true })
+    .click();
   await expect(daily.getByText(title, { exact: true })).toBeVisible();
   await page.reload();
+  await page
+    .locator(".today-inbox > summary")
+    .filter({ visible: true })
+    .click();
   await expect(daily.getByText(title, { exact: true })).toBeVisible();
   const records = (await (await page.request.get("/api/v1/tasks")).json()).data;
   const captured = records.find((t: { title: string }) => t.title === title);
@@ -78,7 +94,6 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
       "/",
       "/planner",
       "/areas/academics",
-      "/basketball",
       "/areas/career",
       "/learning",
       "/areas/projects",
@@ -113,7 +128,7 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
       if (
         path === "/" ||
         (viewport.width === 1280 &&
-          ["/areas/academics", "/basketball", "/learning"].includes(path))
+          ["/areas/academics", "/learning"].includes(path))
       ) {
         await page.screenshot({
           path: testInfo.outputPath(
@@ -126,7 +141,7 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
   }
 });
 
-test("shooting report validates source rows, filters players and exports only complete checked results", async ({
+test("retired sports destination redirects without hiding ordinary projects", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -136,78 +151,58 @@ test("shooting report validates source rows, filters players and exports only co
   await expect(
     page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
-  let invalid = false;
-  // Isolated browser fixture, never written to a user database or spreadsheet.
-  await page.route("**/api/v1/sheets/tables?overview=true", (route) =>
-    route.fulfill({
-      json: {
-        datasets: [
-          {
-            id: "test-report",
-            title: "[TEST] Weekly shooting",
-            config: {
-              columns: [
-                { key: "player", header: "Player", key_part: true },
-                { key: "made", header: "Made" },
-                { key: "attempts", header: "Attempts" },
-              ],
-            },
-          },
-        ],
-        overview: [
-          {
-            dataset_id: "test-report",
-            more: false,
-            rows: [
-              {
-                id: "a",
-                state: "synced",
-                local_values: {
-                  player: "[TEST] Player A",
-                  made: invalid ? 11 : 7,
-                  attempts: 10,
-                },
-              },
-              {
-                id: "b",
-                state: "synced",
-                local_values: {
-                  player: "[TEST] Player B",
-                  made: 1,
-                  attempts: 2,
-                },
-              },
-            ],
-          },
-        ],
-      },
-    }),
+  const headers = { Origin: "http://127.0.0.1:3000" };
+  const created = await page.request.post("/api/v1/projects", {
+    headers,
+    data: {
+      name: "[TEST] My basketball research project",
+      description: "Keep my original contents.",
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const project = (await created.json()).data;
+  const layout = defaultLayout();
+  layout.density = "compact";
+  layout.widgets[0].pinned = true;
+  const oldLayout = {
+    ...layout,
+    widgets: [
+      { id: "basketball", visible: true, size: "wide", pinned: false },
+      ...layout.widgets,
+    ],
+  };
+  await page.request.post(
+    "http://127.0.0.1:54329/__fixtures/dashboard-layout",
+    { data: { settings: oldLayout } },
   );
+  await page.goto("/");
+  await expect(
+    page.locator(".today-primary").filter({ visible: true }),
+  ).toHaveCount(1);
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("dialog");
+  await search
+    .getByRole("textbox", { name: "Search", exact: true })
+    .fill("basketball research");
+  await expect(
+    search.getByRole("link", { name: `${project.name} Project`, exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.goto("/basketball");
+  await expect(page).toHaveURL(/\/planner$/);
   await expect(
-    page.getByText("8 made / 12 attempts", { exact: false }),
-  ).toBeVisible();
-  await page.getByLabel("Find a player").fill("Player A");
-  await expect(
-    page.getByRole("cell", { name: "[TEST] Player A", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("cell", { name: "[TEST] Player B", exact: true }),
+    page.getByRole("link", { name: "Basketball Ops", exact: true }),
   ).toHaveCount(0);
-  const downloaded = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export CSV", exact: true }).click();
-  expect((await downloaded).suggestedFilename()).toBe("shooting-report.csv");
-  invalid = true;
-  await page.reload();
-  await expect(page.getByText("Check counts", { exact: true })).toBeVisible();
+  await page.goto("/learning");
   await expect(
-    page.getByRole("button", { name: "Export CSV", exact: true }),
-  ).toBeDisabled();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+    page.getByRole("heading", { name: "Learning", exact: true }),
+  ).toBeVisible();
+  await page.request.post(
+    "http://127.0.0.1:54329/__fixtures/dashboard-layout",
+    { data: { settings: null } },
+  );
+  await page.request.delete(`/api/v1/projects/${project.id}`, {
+    headers,
+    data: { version: project.version },
+  });
 });

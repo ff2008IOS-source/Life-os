@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "node tests/run-browser-tests.mjs",
+    "test:requests": "node tests/run-browser-tests.mjs --config tests/measurements.config.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:bundle": "node tests/verify-parser-bundle.mjs"

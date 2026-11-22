@@ -1,0 +1,88 @@
+{
+  "synthetic": true,
+  "scope": "Single loopback PostgreSQL fixture sample. Browser API requests; 600ms quiescence separates phases. Not a production latency benchmark.",
+  "opening": {
+    "renderedMs": 389,
+    "settledMs": 1102,
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/v1/focus",
+        "status": 200,
+        "bytes": 57
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/calendar/connections",
+        "status": 200,
+        "bytes": 98
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/calendar/events",
+        "status": 200,
+        "bytes": 13
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/briefing",
+        "status": 200,
+        "bytes": 17
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/briefing",
+        "status": 200,
+        "bytes": 2100
+      }
+    ]
+  },
+  "capture": {
+    "confirmedMs": 217,
+    "settledMs": 924,
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/v1/tasks",
+        "status": 201,
+        "bytes": 654
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/workspace",
+        "status": 200,
+        "bytes": 3526
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/briefing",
+        "status": 200,
+        "bytes": 2427
+      }
+    ]
+  },
+  "completion": {
+    "confirmedMs": 172,
+    "settledMs": 779,
+    "requests": [
+      {
+        "method": "PATCH",
+        "path": "/api/v1/tasks/:id",
+        "status": 200,
+        "bytes": 680
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/workspace",
+        "status": 200,
+        "bytes": 3552
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/briefing",
+        "status": 200,
+        "bytes": 2100
+      }
+    ]
+  }
+}

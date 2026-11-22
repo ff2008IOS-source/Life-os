@@ -1,7 +1,8 @@
 import { test, expect } from "./fixtures";
+test.use({ calendarReady: true });
 import AxeBuilder from "@axe-core/playwright";
 import { writeFile } from "node:fs/promises";
-test.use({ hasTouch: true });
+test.use({ hasTouch: true, calendarReady: true });
 test("personal dashboard persists layout and focus sessions, protects stale saves and records actual work once", async ({
   page,
 }) => {
@@ -139,9 +140,13 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   await page
     .getByRole("button", { name: "Start selected task", exact: true })
     .click();
+  await expect(page.locator("[data-current-focus]")).toBeFocused();
+  await expect(
+    page.getByRole("region", { name: "Current focus session" }),
+  ).toHaveCount(0);
+  await page.goto("/planner");
   const dock = page.getByRole("region", { name: "Current focus session" });
   await expect(dock).toContainText(task.title);
-  await expect(dock).toBeFocused();
   await dock.getByRole("button", { name: "Pause focus", exact: true }).click();
   await expect(dock).toContainText("Paused");
   const measuredNavigation = await page.reload();
@@ -152,10 +157,28 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   await dialog
     .getByLabel("These are the minutes I actually worked", { exact: true })
     .check();
+  await page.route("**/api/v1/workspace", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({
+          status: 503,
+          json: { error: { message: "Synthetic refresh failure" } },
+        })
+      : route.continue(),
+  );
   await dialog
     .getByRole("button", { name: "Save focus session", exact: true })
     .click();
   await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByText("Focus session saved · details refresh pending", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.unroute("**/api/v1/workspace");
+  await page
+    .getByRole("button", { name: "Refresh saved work", exact: true })
+    .click();
+
   await expect(dock).toHaveCount(0);
   const updated = (
     await (await page.request.get(`/api/v1/tasks/${task.id}`)).json()
@@ -194,6 +217,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   const measurement = {
     environment:
       "Synthetic localhost Chromium; native PerformanceObserver and protocol network timings, not field Web Vitals",
+    route: "/planner",
     ...performanceSnapshot,
     ttfb: timing.responseStart - timing.requestStart,
     saveDashboardRoundTripMs: saveDashboardMs,
@@ -205,6 +229,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
     test.info().outputPath("dashboard-performance.json"),
     JSON.stringify(measurement, null, 2),
   );
+  await page.goto("/");
   for (const width of [1280, 834, 390]) {
     await page.setViewportSize({ width, height: 900 });
     expect(

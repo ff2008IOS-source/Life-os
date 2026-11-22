@@ -21,6 +21,7 @@ import {
 } from "./calendar-move";
 export async function moveManagedSession(input: {
   request_id: string;
+  resolve_missed?: boolean;
   block_id?: string;
   version?: number;
   start_at?: string;
@@ -167,7 +168,13 @@ export async function moveManagedSession(input: {
           private: { lifeos_run: block.run_id, lifeos_task: block.task_id },
         },
       };
-      let reason = managedEventReason(block, proposed, policy);
+      let reason = managedEventReason(
+        block,
+        proposed,
+        policy,
+        Date.now(),
+        input.resolve_missed === true,
+      );
       const blocks = await db
         .from("work_blocks")
         .select("*")

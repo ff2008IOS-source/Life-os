@@ -25,9 +25,9 @@ export function isOverdue(
   return (
     !task.deleted_at &&
     !["completed", "cancelled"].includes(task.status) &&
-    (task.due_date
-      ? task.due_date < localDate(now)
-      : !!task.due_at && new Date(task.due_at) < now)
+    (task.due_at
+      ? new Date(task.due_at) < now
+      : !!task.due_date && task.due_date < localDate(now))
   );
 }
 export function deadlineInstant(task: {
@@ -39,4 +39,16 @@ export function deadlineInstant(task: {
     : task.due_date
       ? fromZonedTime(task.due_date + "T23:59:59", TIMEZONE)
       : null;
+}
+
+/** Keep an earlier personal preparation target; official dates remain separate records. */
+export function preparationDeadline(
+  task: { due_at: string | null; due_date: string | null },
+  assessment: { due_at: string | null; due_date: string | null },
+) {
+  const official = deadlineInstant(assessment),
+    personal = deadlineInstant(task);
+  const selected =
+    official && (!personal || official < personal) ? assessment : task;
+  return { due_at: selected.due_at, due_date: selected.due_date };
 }

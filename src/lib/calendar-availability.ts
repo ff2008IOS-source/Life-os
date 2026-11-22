@@ -1,5 +1,6 @@
 import { fromZonedTime } from "date-fns-tz";
 import type { Busy } from "./scheduler";
+export const CALENDAR_FRESH_MS = 5 * 60 * 1000;
 export type AvailabilityEvent = {
   start_at: string | null;
   end_at: string | null;
@@ -38,4 +39,47 @@ export function calendarBusy(events: AvailabilityEvent[]): Busy[] {
         );
       return { start_at: start, end_at: end };
     });
+}
+
+/** Coverage and freshness are required together; an empty source list is not free time. */
+export function calendarCoverage(input: {
+  calendars: {
+    id: string;
+    connection_id: string;
+    sync_enabled: boolean;
+    last_synced_at: string | null;
+    sync_error: string | null;
+    coverage_start: string | null;
+    coverage_end: string | null;
+  }[];
+  connections: { id: string; status: string }[];
+  start: number;
+  end: number;
+  now: number;
+  failed?: boolean;
+}) {
+  const selected = input.calendars.filter((c) => c.sync_enabled);
+  const verified =
+    !input.failed &&
+    selected.length > 0 &&
+    selected.every(
+      (c) =>
+        !c.sync_error &&
+        !!c.last_synced_at &&
+        input.now - Date.parse(c.last_synced_at) <= CALENDAR_FRESH_MS &&
+        !!c.coverage_start &&
+        !!c.coverage_end &&
+        Date.parse(c.coverage_start) <= input.start &&
+        Date.parse(c.coverage_end) >= input.end &&
+        input.connections.some(
+          (a) => a.id === c.connection_id && a.status === "connected",
+        ),
+    );
+  return {
+    verified,
+    lastSuccess:
+      selected.length && selected.every((c) => !!c.last_synced_at)
+        ? selected.map((c) => c.last_synced_at!).sort()[0]
+        : null,
+  };
 }

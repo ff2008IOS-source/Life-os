@@ -73,7 +73,22 @@ export async function syncCalendarForUser(
         .eq("id", calendarId);
       throw e;
     }
-    return { count, coverage_start: start, coverage_end: end, managed };
+    // Proposals never move provider events. A failure here must not turn a confirmed sync into a failed sync.
+    let planning_pending = false;
+    try {
+      const { generatePlanningDecisions } =
+        await import("../services/planning-decisions");
+      await generatePlanningDecisions(userId);
+    } catch {
+      planning_pending = true;
+    }
+    return {
+      count,
+      coverage_start: start,
+      coverage_end: end,
+      managed,
+      planning_pending,
+    };
   } catch (error) {
     if (lease)
       try {

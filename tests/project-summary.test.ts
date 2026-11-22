@@ -13,9 +13,7 @@ describe("project card copy", () => {
         "x".repeat(1000),
       true,
     );
-    expect(s).toBe(
-      "Launch an NBA front-office analysis channel with a first transaction breakdown.",
-    );
+    expect(s).toBe("NBA GM/CBA content channel and first transaction analysis");
     expect(s).not.toContain("http");
   });
   it("bounds ordinary descriptions and strips long links", () => {

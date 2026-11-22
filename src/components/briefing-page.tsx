@@ -255,10 +255,16 @@ export function BriefingPanel({
             </Link>
           </div>
           {focus?.session ? (
-            <div>
+            <div data-current-focus tabIndex={-1}>
               <h3>
-                {w.tasks.find((t) => t.id === focus.session?.task_id)?.title ??
-                  "Your current focus"}
+                <button
+                  type="button"
+                  className="focus-title"
+                  onClick={() => focus.session && open(focus.session.task_id)}
+                >
+                  {w.tasks.find((t) => t.id === focus.session?.task_id)
+                    ?.title ?? "Your current focus"}
+                </button>
               </h3>
               <p className="focus-description">
                 Focus ·{" "}
@@ -277,16 +283,6 @@ export function BriefingPanel({
               )}
               <div className="focus-dock-actions">
                 <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={busy || focus.busy}
-                  onClick={() => {
-                    if (focus.session) open(focus.session.task_id);
-                  }}
-                >
-                  Edit current task
-                </Button>
-                <Button
                   disabled={focus.busy}
                   onClick={() => void focus.toggle()}
                 >
@@ -301,11 +297,29 @@ export function BriefingPanel({
                 >
                   Finish current focus
                 </Button>
+                <details className="focus-secondary">
+                  <summary>More actions</summary>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={focus.busy}
+                    onClick={() => void focus.discard()}
+                  >
+                    Discard timer
+                  </Button>
+                </details>
               </div>
             </div>
           ) : d.recommendations[0] ? (
             <>
-              <h3>{d.recommendations[0].title}</h3>
+              <h3>
+                <button
+                  className="focus-title"
+                  onClick={() => open(d.recommendations[0].task_id)}
+                >
+                  {d.recommendations[0].title}
+                </button>
+              </h3>
               <div className="focus-meta">
                 {d.recommendations[0].remaining_minutes !== null && (
                   <span>
@@ -358,41 +372,52 @@ export function BriefingPanel({
                       </Button>
                     </div>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => open(d.recommendations[0].task_id)}
-                  >
-                    Open task <ArrowRight size={12} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy || !!c.error}
-                    onClick={() =>
-                      void freshTask(d.recommendations[0].task_id, "schedule")
-                    }
-                  >
-                    Schedule
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy || !!c.error}
-                    onClick={deferPrimary}
-                  >
-                    Not Now
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy || !!c.error}
-                    onClick={() =>
-                      void freshTask(d.recommendations[0].task_id, "complete")
-                    }
-                  >
-                    Mark Complete
-                  </Button>
+                  <details className="focus-secondary">
+                    <summary>More actions</summary>
+                    <div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => open(d.recommendations[0].task_id)}
+                      >
+                        Open task <ArrowRight size={12} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || !!c.error}
+                        onClick={() =>
+                          void freshTask(
+                            d.recommendations[0].task_id,
+                            "schedule",
+                          )
+                        }
+                      >
+                        Schedule
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy || !!c.error}
+                        onClick={deferPrimary}
+                      >
+                        Not Now
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || !!c.error}
+                        onClick={() =>
+                          void freshTask(
+                            d.recommendations[0].task_id,
+                            "complete",
+                          )
+                        }
+                      >
+                        Mark Complete
+                      </Button>
+                    </div>
+                  </details>
                 </div>
               </div>
             </>

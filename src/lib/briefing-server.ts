@@ -50,6 +50,14 @@ export async function loadBriefing(
   initialWorkspace?: Awaited<ReturnType<typeof loadWorkspace>>,
 ) {
   const { db, user } = await authorized();
+  const decisionsPromise = db
+    .from("integration_jobs")
+    .select("id,job_type,payload,status,created_at")
+    .eq("user_id", user.id)
+    .in("job_type", ["work_replan_proposal", "missed_block_decision"])
+    .in("status", ["pending", "running"])
+    .order("created_at")
+    .limit(21);
   const workspace = initialWorkspace ?? (await loadWorkspace());
   const errors: string[] = [];
   async function optional<T>(
@@ -150,7 +158,13 @@ export async function loadBriefing(
           start_at: string;
           end_at: string;
           status: string;
-        }>(db, user.id, "work_blocks", "id,task_id,start_at,end_at,status"),
+          actual_minutes: number | null;
+        }>(
+          db,
+          user.id,
+          "work_blocks",
+          "id,task_id,start_at,end_at,status,actual_minutes",
+        ),
       [],
     ),
     optional(
@@ -285,8 +299,12 @@ export async function loadBriefing(
     .update(JSON.stringify(stable))
     .update(String(Math.floor(Date.now() / 300000)))
     .digest("hex");
+  const decisionRows = await decisionsPromise;
   return {
     ...facts,
+    planning_decisions: decisionRows.error
+      ? undefined
+      : decisionRows.data?.slice(0, 20),
     fingerprint,
     settings_version: settings[0]?.version ?? null,
     planning_timezone: "America/Vancouver",

@@ -9,6 +9,37 @@ export async function loadWorkspace(): Promise<Workspace> {
 export async function loadWorkspaceForUser(userId: string): Promise<Workspace> {
   return readWorkspace(userId);
 }
+/** Calendar-change decisions need tasks and dependencies, not the whole dashboard. */
+export async function loadPlanningWorkspaceForUser(
+  userId: string,
+): Promise<Pick<Workspace, "tasks" | "areas" | "dependencies">> {
+  const { db, user } = await schedulingIdentity(userId);
+  const tables = ["tasks", "life_areas", "task_dependencies"] as const;
+  const records = await Promise.all(
+    tables.map(async (table) => {
+      const rows: Record<string, unknown>[] = [];
+      for (let page = 0; page < 20; page++) {
+        let query = db
+          .from(table)
+          .select("*")
+          .eq("user_id", user.id)
+          .order(table === "task_dependencies" ? "predecessor_task_id" : "id");
+        if (table === "task_dependencies")
+          query = query.order("successor_task_id");
+        const result = await query.range(page * 500, page * 500 + 499);
+        dbError(result.error);
+        rows.push(...(result.data ?? []));
+        if (!result.data || result.data.length < 500) return rows;
+      }
+      throw new Error("Planning records exceed the safe loading limit.");
+    }),
+  );
+  return {
+    tasks: records[0] as unknown as Workspace["tasks"],
+    areas: records[1] as unknown as Workspace["areas"],
+    dependencies: records[2] as unknown as Workspace["dependencies"],
+  };
+}
 async function readWorkspace(workerUserId?: string): Promise<Workspace> {
   const { db, user } = await schedulingIdentity(workerUserId);
   const tables = [

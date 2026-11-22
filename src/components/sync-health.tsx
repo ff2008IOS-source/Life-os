@@ -36,7 +36,7 @@ export function SyncHealth({
           disabled={c.loading}
           onClick={() => void c.reload()}
         >
-          Refresh status
+          Reread saved status
         </Button>
       </div>
       {h && (

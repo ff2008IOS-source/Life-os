@@ -258,6 +258,14 @@ export async function syncCanvas(
         .eq("user_id", user)
         .lte("next_run_at", new Date().toISOString()),
     ).count ?? 0;
+  if (processed > 0)
+    try {
+      const { generatePlanningDecisions } =
+        await import("../services/planning-decisions");
+      await generatePlanningDecisions(user);
+    } catch {
+      /* Import remains confirmed; proposal checks can retry independently. */
+    }
   return { processed, pending, errors };
 }
 export async function canvasWorker() {
