@@ -130,9 +130,9 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
       },
     }),
   );
-  await expect(page.locator(".today-capacity")).not.toContainText(
-    /null min|undefined min|NaN min/,
-  );
+  await expect(
+    page.locator(".today-capacity").filter({ visible: true }),
+  ).not.toContainText(/null min|undefined min|NaN min/);
   for (const theme of ["light", "dark"] as const) {
     const saved = await page.request.patch("/api/v1/profile", {
       headers: origin,
@@ -147,9 +147,9 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
     if (theme === "dark")
       await expect(page.locator("html")).toHaveClass(/dark/);
     else await expect(page.locator("html")).not.toHaveClass(/dark/);
-    await expect(page.locator(".today-upcoming")).toContainText(
-      assessment.title,
-    );
+    await expect(
+      page.locator(".today-upcoming").filter({ visible: true }),
+    ).toContainText(assessment.title);
     await expect(
       page.locator("main").filter({ visible: true }),
     ).not.toContainText(/cached|outbox|deterministic|source-owned|ranked by/i);
@@ -161,8 +161,14 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
         ),
       ).toBe(true);
       if (width === 390) {
-        const focus = await page.locator(".today-primary").boundingBox();
-        const schedule = await page.locator(".home-calendar").boundingBox();
+        const focus = await page
+          .locator(".today-primary")
+          .filter({ visible: true })
+          .boundingBox();
+        const schedule = await page
+          .locator(".home-calendar")
+          .filter({ visible: true })
+          .boundingBox();
         expect(Math.abs(focus!.width - schedule!.width)).toBeLessThan(1);
         expect(Math.abs(focus!.x - schedule!.x)).toBeLessThan(1);
       }
@@ -181,6 +187,7 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
   }
   await page
     .locator(".today-upcoming")
+    .filter({ visible: true })
     .getByRole("link")
     .filter({ hasText: assessment.title })
     .click();

@@ -3,6 +3,7 @@ import {
   mergeConfirmed,
   affects,
   keepConfirmedRows,
+  clearVerifiedRead,
 } from "@/lib/workspace-change";
 it("never lets an older confirmation overwrite a newer row", () => {
   const rows = [{ id: "t", version: 4, title: "latest" }];
@@ -29,4 +30,16 @@ it("keeps a confirmed row when a later read returns an older replica snapshot", 
   expect(
     keepConfirmedRows({ tasks: [] }, current, new Map([["tasks:t", 3]])),
   ).toEqual(current);
+});
+
+it("an older or stale verification cannot acknowledge a newer pending save", () => {
+  const old = { version: 1 },
+    latest = { version: 2 },
+    pending = new Map([["tasks:t", latest]]);
+  clearVerifiedRead(pending, "tasks:t", old, { version: 2 });
+  expect(pending.get("tasks:t")).toBe(latest);
+  clearVerifiedRead(pending, "tasks:t", latest, { version: 1 });
+  expect(pending.size).toBe(1);
+  clearVerifiedRead(pending, "tasks:t", latest, { version: 2 });
+  expect(pending.size).toBe(0);
 });
