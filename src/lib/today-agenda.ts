@@ -214,7 +214,17 @@ export function buildAgenda(input: AgendaInput) {
       end: Date.parse(e.end_at!),
       meta: calendarName(e.calendar_id),
     }))
-    .sort((a, b) => a.start - b.start || a.end - b.end);
+    .sort((a, b) => a.start - b.start || a.end - b.end)
+    // The same event copied onto several calendars shows once.
+    .filter(
+      (e, i, all) =>
+        !all
+          .slice(0, i)
+          .some(
+            (o) =>
+              o.title === e.title && o.start === e.start && o.end === e.end,
+          ),
+    );
   const allDay = input.events
     .filter((e) => e.all_day_start === today)
     .map((e) => e.title);
