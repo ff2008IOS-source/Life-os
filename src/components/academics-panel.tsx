@@ -124,11 +124,28 @@ export function AcademicsPanel({
           a.score_unit === "percent" ? "percent" : "points",
         );
   /** Plain average of graded work; used when grading rules are not confirmed. */
+  /**
+   * The course's current grade: weighted by its syllabus rules once they are
+   * confirmed, otherwise a plain average of graded work.
+   */
   const averageFor = (courseKey: string) => {
-    const p = data.assessments
-      .filter((a) => a.course_id === courseKey)
-      .map(pctOf)
-      .filter((x): x is number => x !== null);
+    const course = data.courses.find((c) => c.id === courseKey);
+    const rows = data.assessments.filter((a) => a.course_id === courseKey);
+    if (
+      course?.grading_rules_confirmed === true &&
+      course.grading_method !== "unknown"
+    ) {
+      const weighted = academicGrade(
+        String(course.grading_method),
+        rows as unknown as GradeAssessment[],
+        data.grading_categories.filter(
+          (g) => g.course_id === courseKey,
+        ) as unknown as GradeCategory[],
+        { inventoryComplete: false, rulesVerified: true },
+      ).graded_average;
+      if (weighted !== null) return weighted;
+    }
+    const p = rows.map(pctOf).filter((x): x is number => x !== null);
     return p.length ? p.reduce((a, b) => a + b, 0) / p.length : null;
   };
   const nowMs = now.getTime();
