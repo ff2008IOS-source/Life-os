@@ -16,21 +16,26 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await expect(
     page.getByRole("button", { name: /Set up my space/ }),
   ).toHaveCount(0);
+  // Capture lives in the Inbox; Today keeps only a link to it.
+  await expect(page.getByRole("link", { name: /^Inbox/ }).last()).toBeVisible();
+  await page.goto("/planner?section=inbox");
   await page
     .getByLabel("Quick capture task title")
+    .filter({ visible: true })
     .fill("[TEST] Persistent browser task");
-  await page.getByRole("button", { name: "Add task", exact: true }).click();
-  await page.locator(".today-inbox > summary").click();
+  await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page
-      .getByRole("region", { name: "Daily tasks" })
+      .getByRole("main")
       .getByText("[TEST] Persistent browser task", { exact: true }),
   ).toBeVisible();
   await page.reload();
-  await page.locator(".today-inbox > summary").click();
   await expect(
     page
-      .getByRole("region", { name: "Daily tasks" })
+      .getByRole("main")
       .getByText("[TEST] Persistent browser task", { exact: true }),
   ).toBeVisible();
   await page

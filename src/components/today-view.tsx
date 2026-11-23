@@ -23,6 +23,8 @@ import { useCurrentTime } from "./use-current-time";
 import { calendarRequest } from "./use-calendar";
 import type { BriefingController } from "./use-briefing";
 import { taskValues } from "./task-editor";
+import { dayBadge, dayLabel } from "@/lib/display";
+import { ReconnectGoogle, needsReconnect } from "./reconnect-google";
 
 const STALE_MS = 26 * 3600000;
 
@@ -119,6 +121,9 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
     now.getTime() - Date.parse(lastSync) > STALE_MS ||
     calendarFailed;
   const hasCalendars = !!b?.planning.calendars.length;
+  const reconnect =
+    needsReconnect(b?.planning.calendars.map((c) => c.sync_error) ?? []) ||
+    /sign in again/.test(syncError);
 
   async function refreshCalendars() {
     if (!b) return;
@@ -369,7 +374,11 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             </time>
           </div>
           {hasCalendars &&
-            (stale ? (
+            (reconnect ? (
+              <span className="td-pill td-pill-warn">
+                Google needs you to sign in again
+              </span>
+            ) : stale ? (
               <button
                 className="td-pill td-pill-warn"
                 onClick={() => void refreshCalendars()}
@@ -397,7 +406,17 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
         <p className="td-summary">
           {summary || "Nothing scheduled yet today."}
         </p>
-        {syncError && (
+        {reconnect && (
+          <div className="td-reconnect" role="alert">
+            <p>
+              Your calendar and spreadsheets stopped updating
+              {lastSync ? ` on ${dayLabel(Date.parse(lastSync), now)}` : ""}.
+              Changes you made in Google since then aren’t shown here yet.
+            </p>
+            <ReconnectGoogle />
+          </div>
+        )}
+        {syncError && !reconnect && (
           <p className="td-alert" role="alert">
             {syncError}{" "}
             <Link href="/settings?section=integrations">Fix connection</Link>
@@ -688,7 +707,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                       <span
                         className={`td-badge ${d.urgent ? "td-badge-hot" : ""}`}
                       >
-                        <b>{fmt(d.due, "EEE").toUpperCase()}</b>
+                        <b>{dayBadge(d.due, now)}</b>
                         <small>
                           {fmt(d.due, "h:mma").replace(":00", "").toLowerCase()}
                         </small>

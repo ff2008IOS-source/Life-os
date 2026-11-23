@@ -1,4 +1,5 @@
 "use client";
+import { ReconnectGoogle, needsReconnect } from "./reconnect-google";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarDays, RefreshCw, Link2, ChevronRight } from "lucide-react";
@@ -296,7 +297,9 @@ export function GoogleCalendarPanel({
                   <span className="calendar-choice-name">{c.name}</span>
                   <span className="calendar-choice-status">
                     {c.sync_error
-                      ? "Needs attention"
+                      ? needsReconnect([c.sync_error])
+                        ? "Sign in again"
+                        : "Needs attention"
                       : c.last_synced_at
                         ? "Synced"
                         : "Not synced"}
@@ -463,9 +466,10 @@ export function GoogleCalendarPanel({
         </p>
       )}
       {error && (
-        <p className="error-message" role="alert">
-          {error}
-        </p>
+        <div className="error-message" role="alert">
+          <span>{error}</span>
+          {needsReconnect([error]) && <ReconnectGoogle />}
+        </div>
       )}
     </section>
   );

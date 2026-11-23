@@ -1,4 +1,5 @@
 "use client";
+import { stamp, dueLabel } from "@/lib/display";
 import { useState, useEffect } from "react";
 import { FolderClosed } from "lucide-react";
 import Link from "next/link";
@@ -216,20 +217,12 @@ export function CanvasMaterials({
                   <div>
                     <p className="small muted">Original name: {r.title}</p>
                     <p className="form-hint">
-                      Retrieved {new Date(r.synced_at).toLocaleString()} ·{" "}
+                      Retrieved {stamp(r.synced_at)} ·{" "}
                       {r.content_status === "Retrieved Canvas record"
                         ? "Synced from Canvas"
                         : r.content_status}
                     </p>
-                    {r.due_at && (
-                      <p>
-                        Canvas deadline:{" "}
-                        {new Date(r.due_at).toLocaleString("en-CA", {
-                          timeZone: "America/Vancouver",
-                        })}{" "}
-                        Vancouver
-                      </p>
-                    )}
+                    {r.due_at && <p>Canvas deadline: {dueLabel(r.due_at)}</p>}
                     {r.score !== null && (
                       <p>
                         Canvas score: {r.score}

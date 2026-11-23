@@ -6,6 +6,8 @@ import {
 } from "@/lib/assessment-identity";
 import { useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
+import { dueLabel } from "@/lib/display";
+import { Mark } from "./mark";
 import type { AcademicRow } from "./academic-editor";
 import {
   assessmentResult,
@@ -52,19 +54,27 @@ export function AssessmentTable({
               a.submission_state === "returned"
             : filter === "upcoming"
               ? String(a.due_date ?? a.due_at ?? "") >=
-                new Date().toISOString().slice(0, 10)
+                formatInTimeZone(new Date(), "America/Vancouver", "yyyy-MM-dd")
               : a.submission_state === "unknown")),
   );
   function date(a: AcademicRow) {
-    return a.due_at
-      ? formatInTimeZone(String(a.due_at), "America/Vancouver", "MMM d, h:mm a")
-      : a.due_date
-        ? formatInTimeZone(
-            new Date(String(a.due_date) + "T12:00:00Z"),
-            "UTC",
-            "MMM d, yyyy",
-          )
-        : "Not scheduled";
+    return a.due_at || a.due_date
+      ? dueLabel({
+          due_at: a.due_at as string | null,
+          due_date: a.due_date as string | null,
+        })
+      : "Not scheduled";
+  }
+  function result(a: AcademicRow) {
+    return typeof a.earned_score === "number" ? (
+      <Mark
+        earned={a.earned_score}
+        maximum={a.maximum_score as number | null}
+        unit={a.score_unit === "percent" ? "percent" : "points"}
+      />
+    ) : (
+      assessmentResult(a)
+    );
   }
   return (
     <>
@@ -168,7 +178,7 @@ export function AssessmentTable({
                   </span>
                 </td>
                 <td data-label="Result" className="assessment-result">
-                  {assessmentResult(a)}
+                  {result(a)}
                   {(a.components?.length ?? 0) > 1 && (
                     <span className="small muted">
                       {" "}
@@ -217,7 +227,7 @@ export function AssessmentTable({
               </div>
               <div>
                 <dt>Result</dt>
-                <dd>{assessmentResult(detail)}</dd>
+                <dd>{result(detail)}</dd>
               </div>
               <div>
                 <dt>Course weight</dt>

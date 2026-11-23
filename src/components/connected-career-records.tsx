@@ -1,4 +1,5 @@
 "use client";
+import { stamp } from "@/lib/display";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkspace } from "./workspace-provider";
@@ -108,9 +109,7 @@ export function ConnectedCareerRecords() {
         <>
           <p className="small">
             {d.mode.replaceAll("_", " ")} · Updated:{" "}
-            {d.last_read_at
-              ? new Date(d.last_read_at).toLocaleString()
-              : "Not yet confirmed"}
+            {d.last_read_at ? stamp(d.last_read_at) : "Not yet confirmed"}
           </p>
           {d.last_error && <p role="alert">{d.last_error}</p>}
           <div className="inline">

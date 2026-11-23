@@ -188,9 +188,10 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
     .getByRole("link")
     .filter({ hasText: assessment.title })
     .click();
-  await expect(
-    page.getByLabel("Selected course").filter({ visible: true }),
-  ).toHaveValue(course.id);
+  await expect(page.locator(`[data-course-id="${course.id}"]`)).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
   await expect(
     page.locator(`#assessment-${assessment.id}`).filter({ visible: true }),
   ).toContainText(assessment.title);

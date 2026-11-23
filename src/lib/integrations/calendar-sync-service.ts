@@ -90,6 +90,18 @@ export async function syncCalendarForUser(
       planning_pending,
     };
   } catch (error) {
+    // A sign-in failure happens before the sync lease, so record it here; otherwise
+    // the calendar keeps reading "Synced" while every refresh fails.
+    if (!lease && error instanceof ApiError && error.code.startsWith("GOOGLE_"))
+      try {
+        await integrationAdmin()
+          .from("calendars")
+          .update({ sync_error: error.message.slice(0, 300) })
+          .eq("user_id", userId)
+          .eq("id", calendarId);
+      } catch {
+        /* Best effort; the request still fails visibly. */
+      }
     if (lease)
       try {
         await integrationRpc("google_fail_sync", {

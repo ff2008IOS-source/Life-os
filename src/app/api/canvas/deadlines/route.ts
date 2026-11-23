@@ -6,6 +6,22 @@ export async function GET(request: Request) {
   try {
     const { db, user } = await authorized();
     const now = Date.now();
+    // The course picker lists the courses that actually have Canvas deadlines.
+    if (new URL(request.url).searchParams.get("courses") === "1") {
+      const { data, error } = await db
+        .from("canvas_deadlines")
+        .select("course_code")
+        .eq("user_id", user.id)
+        .not("course_code", "is", null)
+        .limit(5000);
+      dbError(error);
+      const courses = [
+        ...new Set((data ?? []).map((r) => String(r.course_code).trim())),
+      ]
+        .filter(Boolean)
+        .sort();
+      return NextResponse.json({ courses });
+    }
     const search = z
       .string()
       .trim()

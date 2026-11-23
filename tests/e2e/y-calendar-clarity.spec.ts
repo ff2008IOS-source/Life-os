@@ -87,16 +87,16 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
   const work = calendar
     .locator(".time-event")
     .filter({ hasText: "[TEST] Linked work" });
-  await expect(
-    calendar.getByRole("button", { name: /2 overlapping events/ }),
-  ).toBeVisible();
-  await calendar.getByRole("button", { name: /2 overlapping events/ }).click();
-  await expect(
-    page.getByRole("dialog").getByText("[TEST] Fixed lecture", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("dialog").getByText("[TEST] Linked work", { exact: true }),
-  ).toBeVisible();
+  // Overlapping events sit side by side, each marked as a clash.
+  const lecture = calendar
+    .locator(".time-event")
+    .filter({ hasText: "[TEST] Fixed lecture" });
+  await expect(lecture).toHaveAttribute("aria-label", /Overlaps another event/);
+  await expect(work).toHaveAttribute("aria-label", /Overlaps another event/);
+  const [a, b] = [await lecture.boundingBox(), await work.boundingBox()];
+  expect(Math.abs(a!.x - b!.x)).toBeGreaterThan(10);
+  await lecture.click();
+  await expect(page.getByRole("dialog")).toContainText("[TEST] Fixed lecture");
   await page.getByRole("button", { name: "Close dialog" }).click();
   await calendar
     .getByRole("button", { name: "[TEST] SFU", exact: true })
