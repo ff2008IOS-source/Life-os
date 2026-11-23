@@ -95,7 +95,7 @@ export async function loadBriefing(
           db,
           user.id,
           "assessments",
-          "id,title,course_id,task_id,due_at,due_date,submission_state,verification_status,earned_score,maximum_score,weight,dropped,source_key,source_status,score_unit",
+          "id,title,course_id,task_id,due_at,due_date,submission_state,verification_status,earned_score,maximum_score,weight,dropped,source_key,source_status,score_unit,version",
         ),
       [],
     ),

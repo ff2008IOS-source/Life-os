@@ -49,17 +49,17 @@ test("Home recommends feasible work and follows durable task-goal links", async 
   }
   await page.reload();
   const action = page.getByRole("region", {
-    name: "Focus",
+    name: "Do this next",
     exact: true,
   });
   await expect(action).toContainText(next.title);
   await expect(action).not.toContainText(blocked.title);
-  await expect(action).toContainText("30 min estimated");
-  await action.locator(".focus-title").click();
   await expect(
-    page.getByRole("dialog").getByLabel("Title", { exact: true }),
-  ).toHaveValue(next.title);
-  await page.keyboard.press("Escape");
+    action.getByRole("button", { name: "Start 30 min", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Today’s plan" }),
+  ).not.toContainText(blocked.title);
   await action.getByRole("link", { name: goal.title }).click();
   const card = page.locator(`#goal-${goal.id}`).filter({ visible: true });
   await card.locator("summary").click();

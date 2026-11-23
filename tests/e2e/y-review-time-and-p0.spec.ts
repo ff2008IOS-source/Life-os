@@ -68,6 +68,10 @@ test("Sunday-only review, past-exam wording, unified status and responsive P0 sh
     "What preparation",
   );
   await page.goto("/");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Day review, alerts & connections" })
+    .click();
   await expect(
     page.getByRole("region", { name: "Connected data status" }),
   ).toHaveCount(1);

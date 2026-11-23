@@ -59,61 +59,30 @@ test("personal dashboard persists layout and focus sessions, protects stale save
     data: {
       title: "Personal dashboard focus task",
       priority: 4,
+      // Overdue, so Today leads with it ahead of the fixture's upcoming exam.
+      due_date: "2000-01-01",
       estimated_minutes: 30,
     },
   });
   expect(created.status(), await created.text()).toBe(201);
   const task = (await created.json()).data;
-  await page.reload();
-  await page
-    .getByRole("button", { name: "Customize dashboard", exact: true })
-    .click();
-  const dialog = page.getByRole("dialog");
-  await dialog
-    .getByRole("combobox", { name: "Layout preset", exact: true })
-    .selectOption("study");
-  await dialog
-    .getByRole("combobox", { name: "Card spacing", exact: true })
-    .selectOption("compact");
-  await dialog
-    .getByRole("combobox", { name: "Accent", exact: true })
-    .selectOption("violet");
-  await dialog.getByLabel("Pin Learning", { exact: true }).check();
-  await dialog
-    .getByRole("button", { name: "Move Learning up", exact: true })
-    .focus();
-  await page.keyboard.press("Enter");
-  await dialog
-    .getByLabel("Learning size", { exact: true })
-    .selectOption("wide");
-  await dialog.getByLabel("Save layout as", { exact: true }).fill("Exam week");
-  await dialog
-    .getByRole("button", { name: "Save preset", exact: true })
-    .click();
+  // Dashboard preferences stay versioned even though Today no longer exposes the old customizer.
   const saveStarted = performance.now();
-  await dialog
-    .getByRole("button", { name: "Save dashboard", exact: true })
-    .click();
-  await expect(dialog).toHaveCount(0);
-  await expect(
-    page.locator('.personal-dashboard-grid > [data-widget="learning"]').first(),
-  ).toHaveClass(/widget-wide/);
+  const initial = await (
+    await page.request.get("/api/v1/dashboard/preferences")
+  ).json();
   expect(
-    await page
-      .locator(".personal-dashboard-grid > div")
-      .first()
-      .getAttribute("data-widget"),
-  ).toBe("learning");
-  await expect(page.locator(".landscape-banner")).toHaveCount(0);
+    (
+      await page.request.put("/api/v1/dashboard/preferences", {
+        headers,
+        data: initial,
+      })
+    ).status(),
+  ).toBe(200);
   const saveDashboardMs = performance.now() - saveStarted;
   const current = await (
     await page.request.get("/api/v1/dashboard/preferences")
   ).json();
-  expect(
-    current.settings.widgets.findIndex(
-      (w: { id: string }) => w.id === "learning",
-    ),
-  ).toBe(0); // Optional sections reorder independently of the fixed Today workspace.
   const update = await page.request.put("/api/v1/dashboard/preferences", {
     headers,
     data: current,
@@ -126,20 +95,10 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   expect(stale.status()).toBe(409);
   await page.request.post("/api/v1/auth/logout", { headers });
   await login();
-  await expect(page.locator(".personal-dashboard-grid")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Customize dashboard", exact: true })
-    .tap();
-  await expect(
-    dialog.getByRole("combobox", { name: "Saved layouts", exact: true }),
-  ).toContainText("Exam week");
-  await page.keyboard.press("Escape");
-  await page
-    .getByRole("combobox", { name: "Choose a task to focus on", exact: true })
-    .selectOption(task.id);
-  await page
-    .getByRole("button", { name: "Start selected task", exact: true })
-    .click();
+  const dialog = page.getByRole("dialog");
+  const next = page.getByRole("region", { name: "Do this next", exact: true });
+  await expect(next).toContainText(task.title);
+  await next.getByRole("button", { name: "Start 30 min", exact: true }).click();
   await expect(
     page.locator("[data-current-focus]").filter({ visible: true }),
   ).toBeFocused();
@@ -148,7 +107,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   ).toHaveCount(0);
   await page
     .getByRole("complementary", { name: "Main navigation", exact: true })
-    .getByRole("link", { name: "Planner", exact: true })
+    .getByRole("link", { name: "Week", exact: true })
     .click();
   const dock = page.getByRole("region", { name: "Current focus session" });
   await expect(dock).toContainText(task.title);
@@ -158,11 +117,11 @@ test("personal dashboard persists layout and focus sessions, protects stale save
   await expect(dock).toContainText("Paused");
   await page.goBack();
   await expect(
-    page.getByRole("region", { name: "Focus", exact: true }),
+    page.getByRole("region", { name: "Do this next", exact: true }),
   ).toContainText("Paused");
   await page
     .getByRole("complementary", { name: "Main navigation", exact: true })
-    .getByRole("link", { name: "Planner", exact: true })
+    .getByRole("link", { name: "Week", exact: true })
     .click();
   await expect(dock).toContainText("Paused");
   await dock.getByRole("button", { name: "Resume focus", exact: true }).click();
@@ -309,17 +268,6 @@ test("personal dashboard persists layout and focus sessions, protects stale save
         .analyze()
     ).violations,
   ).toEqual([]);
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Customize dashboard", exact: true })
-    .click();
-  await dialog
-    .getByRole("button", { name: "Reset layout", exact: true })
-    .click();
-  await dialog
-    .getByRole("button", { name: "Save dashboard", exact: true })
-    .click();
-  await expect(page.locator(".personal-dashboard-grid")).toHaveCount(0);
   await page.goto("/settings");
   await page
     .getByRole("combobox", { name: "Appearance", exact: true })

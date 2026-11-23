@@ -131,8 +131,8 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
     }),
   );
   await expect(
-    page.locator(".today-capacity").filter({ visible: true }),
-  ).not.toContainText(/null min|undefined min|NaN min/);
+    page.locator(".td-header").filter({ visible: true }),
+  ).not.toContainText(/null|undefined|NaN/);
   for (const theme of ["light", "dark"] as const) {
     const saved = await page.request.patch("/api/v1/profile", {
       headers: origin,
@@ -148,7 +148,7 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
       await expect(page.locator("html")).toHaveClass(/dark/);
     else await expect(page.locator("html")).not.toHaveClass(/dark/);
     await expect(
-      page.locator(".today-upcoming").filter({ visible: true }),
+      page.getByRole("region", { name: "Due this week" }),
     ).toContainText(assessment.title);
     await expect(
       page.locator("main").filter({ visible: true }),
@@ -162,12 +162,10 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
       ).toBe(true);
       if (width === 390) {
         const focus = await page
-          .locator(".today-primary")
-          .filter({ visible: true })
+          .getByRole("region", { name: "Do this next" })
           .boundingBox();
         const schedule = await page
-          .locator(".home-calendar")
-          .filter({ visible: true })
+          .getByRole("region", { name: "Today’s plan" })
           .boundingBox();
         expect(Math.abs(focus!.width - schedule!.width)).toBeLessThan(1);
         expect(Math.abs(focus!.x - schedule!.x)).toBeLessThan(1);
@@ -186,8 +184,7 @@ test("consumer Home stays useful without tasks, adapts to screens and opens the 
     ).toEqual([]);
   }
   await page
-    .locator(".today-upcoming")
-    .filter({ visible: true })
+    .getByRole("region", { name: "Due this week" })
     .getByRole("link")
     .filter({ hasText: assessment.title })
     .click();

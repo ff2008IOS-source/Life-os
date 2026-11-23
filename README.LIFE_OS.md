@@ -4,7 +4,7 @@ Your life, organized in one place. Private single-user application; Next.js App 
 
 ## Current state
 
-Local application and synthetic tests; **not deployed, not connected to personal services, not approved for real data or daily use**. See [progress](docs/PROGRESS.md), [feasibility](docs/FEASIBILITY.md), and [recovery](docs/RECOVERY.md). Finance/Wellbeing start empty. No grades, deadlines or commitments are inferred from the specification.
+Private beta deployed at https://lifeos-beta-ivory.vercel.app, connected to Google Calendar, Google Sheets and SFU Canvas for one approved account. See [current status](docs/README-work-completion.md), [progress](docs/PROGRESS.md), [feasibility](docs/FEASIBILITY.md), and [recovery](docs/RECOVERY.md). Finance/Wellbeing start empty. No grades, deadlines or commitments are inferred from the specification.
 
 ## Run locally
 
@@ -32,6 +32,12 @@ MFA enrollment UI and recovery are not implemented yet. Do not treat beta authen
 
 Database tests use a mocked auth schema and real PostgreSQL execution through PGlite because Docker daemon access is unavailable in the development environment. The test adapter is not shipped as an application route. Production requests always require a valid Supabase identity and database approval.
 
+## Today screen
+
+`/` answers three questions: what to do next, whether the week is on track, and what is slipping. `src/lib/today-agenda.ts` (pure, unit-tested) finds free windows between calendar commitments (10-minute buffer after each, 25-minute minimum), flags overlapping events, places open work due within a week into those windows (soonest deadline first, at most two parts, never past its deadline, within the daily cap), treats reserved Life OS work sessions as committed time, and builds the weekly progress and goal nudges. Suggestions are previews: nothing is written to a calendar. Starting a suggestion for a Canvas assessment creates its preparation task and starts a focus session.
+
+Navigation has four destinations: Today, Week (planner), School (academics) and Growth (`/growth`: goals, career, learning, projects, reviews and insights).
+
 ## Architecture
 
 - `src/app`: protected pages and versioned route handlers
@@ -52,6 +58,6 @@ Per-task/project opt-in, Academics/Career/Projects only. 9 AM–9 PM Vancouver, 
 
 ## Deployment and approval gates
 
-Use Vercel Hobby and Supabase Free only, with free Vercel subdomain. Set environment variables in Vercel; redeploy after public variable changes. No Vercel/Supabase credentials are available in this workspace, so no hosted resources or deployments have been created.
+Use Vercel Hobby and Supabase Free only, with free Vercel subdomain. Set environment variables in Vercel; redeploy after public variable changes.
 
 Stage A: test records only. Stage B: separately approved read integrations/imports after security, restore and mapping verification. Stage C: separately approved Life OS calendar creation and writes. Stage D: separately approved daily activation. Never create or alter the six existing calendars. No automatic background execution or push-delivery guarantee. See official-source limits in feasibility report.

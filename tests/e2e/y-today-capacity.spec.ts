@@ -51,13 +51,18 @@ test("populated Today keeps commitments and active focus accessible across width
   ).toBe(true);
   try {
     await page.reload();
-    await expect(
-      page.locator(".today-capacity").filter({ visible: true }),
-    ).toContainText("[TEST] Next class");
-    await expect(
-      page.locator(".today-primary").filter({ visible: true }),
-    ).toContainText("30 min planned");
-    const focus = page.getByRole("region", { name: "Focus", exact: true });
+    const plan = page.getByRole("region", { name: "Today’s plan" });
+    await expect(plan).toContainText("[TEST] Next class");
+    // The reserved block is committed work, not a new suggestion.
+    await expect(plan.locator(".td-work-planned")).toContainText(title);
+    await expect(plan.locator(".td-work-planned")).toContainText("30 min");
+    await expect(page.locator(".td-summary")).toContainText(
+      "1 work session planned",
+    );
+    const focus = page.getByRole("region", {
+      name: "Do this next",
+      exact: true,
+    });
     // Explicit override: earlier tests can leave a real recorded-work break in progress.
     const started = await page.request.post("/api/v1/focus", {
       headers,
@@ -71,9 +76,7 @@ test("populated Today keeps commitments and active focus accessible across width
     ).toBeVisible();
     for (const width of [390, 834, 1280]) {
       await page.setViewportSize({ width, height: width === 834 ? 1112 : 900 });
-      await expect(
-        page.locator(".today-capacity").filter({ visible: true }),
-      ).toBeInViewport();
+      await expect(focus).toBeInViewport();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,

@@ -19,7 +19,6 @@ import {
   Search,
   Settings,
   ChevronDown,
-  MoreHorizontal,
   BookOpen,
   ArrowUpRight,
   LogOut,
@@ -27,19 +26,49 @@ import {
   GraduationCap,
   NotebookPen,
   Inbox,
+  TrendingUp,
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
 import { Modal } from "./dialog";
 import { TaskEditor } from "./task-editor";
 import type { Task } from "@/lib/schemas";
+/** Four places to go; everything else lives inside one of them. */
 const navigation = [
+  { label: "Today", href: "/", icon: Home, also: [] as string[] },
+  { label: "Week", href: "/planner", icon: CalendarDays, also: [] },
+  {
+    label: "School",
+    href: "/areas/academics",
+    icon: GraduationCap,
+    also: [],
+  },
+  {
+    label: "Growth",
+    href: "/growth",
+    icon: TrendingUp,
+    also: ["/areas/career", "/learning", "/areas/projects", "/goals", "/areas"],
+  },
+];
+const allPages = [
   { label: "Today", href: "/", icon: Home },
-  { label: "Planner", href: "/planner", icon: CalendarDays },
-  { label: "Academics", href: "/areas/academics", icon: GraduationCap },
+  { label: "Week planner", href: "/planner", icon: CalendarDays },
+  {
+    label: "School",
+    href: "/areas/academics",
+    icon: GraduationCap,
+    keywords: "academics courses grades",
+  },
+  {
+    label: "Growth",
+    href: "/growth",
+    icon: TrendingUp,
+    keywords: "goals career learning projects",
+  },
   { label: "Career", href: "/areas/career", icon: Briefcase },
   { label: "Learning", href: "/learning", icon: NotebookPen },
   { label: "Projects", href: "/areas/projects", icon: Layers3 },
+  { label: "Goals", href: "/goals", icon: Target },
   { label: "Reviews", href: "/reviews", icon: BookOpen },
 ];
 export function WorkspaceShell({
@@ -112,7 +141,9 @@ export function WorkspaceShell({
     return () => document.removeEventListener("keydown", shortcut);
   }, []);
   const active = navigation.find((n) =>
-    n.href === "/" ? path === "/" : path.startsWith(n.href),
+    n.href === "/"
+      ? path === "/"
+      : path.startsWith(n.href) || n.also.some((a) => path.startsWith(a)),
   );
   const inbox = data.tasks.filter(
     (t) => !t.deleted_at && t.status === "inbox",
@@ -144,9 +175,6 @@ export function WorkspaceShell({
             >
               <n.icon />
               <span>{n.label}</span>
-              {n.href === "/planner" && inbox > 0 && (
-                <span className="nav-count">{inbox}</span>
-              )}
             </Link>
           ))}
         </nav>
@@ -169,12 +197,12 @@ export function WorkspaceShell({
             {inbox > 0 && <span className="nav-count">{inbox}</span>}
           </Link>
           <Link
-            className={`nav-link ${path === "/goals" ? "active" : ""}`}
-            href="/goals"
-            title="Goals"
+            className={`nav-link ${path === "/reviews" ? "active" : ""}`}
+            href="/reviews"
+            title="Weekly review"
           >
-            <Target />
-            <span>Goals</span>
+            <BookOpen />
+            <span>Reviews</span>
           </Link>
           <Link
             className={`nav-link ${path === "/insights" ? "active" : ""}`}
@@ -226,7 +254,16 @@ export function WorkspaceShell({
             <span>My workspace</span>
             <span className="breadcrumb-slash">/</span>
             <strong>
-              {active?.label ??
+              {(path.startsWith("/areas/career")
+                ? "Career"
+                : path.startsWith("/learning")
+                  ? "Learning"
+                  : path.startsWith("/areas/projects")
+                    ? "Projects"
+                    : path === "/goals"
+                      ? "Goals"
+                      : null) ??
+                active?.label ??
                 (path === "/reviews"
                   ? "Weekly review"
                   : path === "/settings"
@@ -272,46 +309,34 @@ export function WorkspaceShell({
         </main>
       </div>
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        <Link href="/" className={path === "/" ? "active" : ""}>
-          <Home />
-          Today
-        </Link>
-        <Link href="/planner" className={path === "/planner" ? "active" : ""}>
-          <CalendarDays />
-          Planner
-        </Link>
+        {navigation.slice(0, 2).map((n) => (
+          <Link
+            key={n.href}
+            href={n.href}
+            className={active?.href === n.href ? "active" : ""}
+            aria-current={active?.href === n.href ? "page" : undefined}
+          >
+            <n.icon />
+            {n.label}
+          </Link>
+        ))}
         <button onClick={() => setEditor({ task: null })}>
           <span className="mobile-add">
             <Plus />
           </span>
           Add
         </button>
-        <Link
-          href="/areas"
-          className={path.startsWith("/areas") ? "active" : ""}
-        >
-          <Layers3 />
-          Life Areas
-        </Link>
-        <Link
-          href="/more"
-          className={
-            [
-              "/goals",
-              "/assistant/history",
-              "/briefing",
-              "/insights",
-              "/more",
-              "/settings",
-              "/reviews",
-            ].includes(path)
-              ? "active"
-              : ""
-          }
-        >
-          <MoreHorizontal />
-          More
-        </Link>
+        {navigation.slice(2).map((n) => (
+          <Link
+            key={n.href}
+            href={n.href}
+            className={active?.href === n.href ? "active" : ""}
+            aria-current={active?.href === n.href ? "page" : undefined}
+          >
+            <n.icon />
+            {n.label}
+          </Link>
+        ))}
       </nav>
       {editor && (
         <TaskEditor task={editor.task} onClose={() => setEditor(null)} />
@@ -363,11 +388,18 @@ export function WorkspaceShell({
             e.preventDefault();
           }}
         >
-          {navigation
+          {(query.trim() ? allPages : navigation)
             .filter(
               (n) =>
                 !query.trim() ||
-                n.label.toLowerCase().includes(query.toLowerCase()),
+                `${n.label} ${"keywords" in n ? n.keywords : ""}`
+                  .toLowerCase()
+                  .includes(query.toLowerCase()),
+            )
+            .sort(
+              (a, b) =>
+                Number(!a.label.toLowerCase().includes(query.toLowerCase())) -
+                Number(!b.label.toLowerCase().includes(query.toLowerCase())),
             )
             .map((n) => (
               <Link
@@ -455,7 +487,9 @@ export function WorkspaceShell({
               ))}
           {query.trim() &&
             ![
-              ...navigation.map((n) => n.label),
+              ...allPages.map(
+                (n) => `${n.label} ${"keywords" in n ? n.keywords : ""}`,
+              ),
               ...(searchAcademic?.courses.map((c) => `${c.code} ${c.title}`) ??
                 []),
               ...data.tasks.filter((t) => !t.deleted_at).map((t) => t.title),
@@ -487,18 +521,13 @@ export function MorePage() {
         </div>
       </div>
       <div className="more-list">
-        {navigation.map((n) => (
+        {allPages.map((n) => (
           <Link key={n.href} href={n.href}>
             <n.icon />
             {n.label}
             <ArrowUpRight size={14} />
           </Link>
         ))}
-        <Link href="/goals">
-          <Target />
-          Goals
-          <ArrowUpRight size={14} />
-        </Link>
         <Link href="/insights">
           <ChartNoAxesCombined />
           Insights
