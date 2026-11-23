@@ -1,32 +1,38 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
-export function AppLogo() {
+const RING =
+  "M490.9 415.9A191 191 0 0 1 616.0 360.3L617.6 391.2A160 160 0 0 0 512.9 437.9Z M435.5 564.3A191 191 0 0 1 477.6 430.8L501.7 450.3A160 160 0 0 0 466.4 562.2Z M498.2 692.9A191 191 0 0 1 437.9 584.2L468.4 578.8A160 160 0 0 0 518.9 669.9Z M636.0 360.3A191 191 0 0 1 761.1 415.9L739.1 437.9A160 160 0 0 0 634.4 391.2Z M774.4 430.8A191 191 0 0 1 816.5 564.3L785.6 562.2A160 160 0 0 0 750.3 450.3Z M814.1 584.2A191 191 0 0 1 753.8 692.9L733.1 669.9A160 160 0 0 0 783.6 578.8Z";
+const POINTER = "M626 405L641 437H611Z";
+const NEEDLE =
+  "M480 562Q590 566 626 580Q662 566 772 562Q690 578 660 600Q645 613 641 640L626 712L611 640Q607 613 592 600Q562 578 480 562Z";
+/** The Life OS mark: a bronze dial with its needle. */
+export function AppLogo({ size = 28 }: { size?: number }) {
+  const id = useId().replace(/:/g, "");
   return (
     <svg
-      viewBox="0 0 32 32"
-      width="24"
-      height="24"
-      fill="none"
+      viewBox="416 327 420 420"
+      width={size}
+      height={size}
       aria-hidden="true"
+      className="app-logo"
     >
-      <path
-        d="M8 5v20h17"
-        stroke="currentColor"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="21" cy="11" r="6" stroke="currentColor" strokeWidth="2.5" />
-      <path
-        d="m18 11 2 2 4-4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <defs>
+        <linearGradient id={`${id}r`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#E9C7A0" />
+          <stop offset=".5" stopColor="#A57B56" />
+          <stop offset="1" stopColor="#6B4A33" />
+        </linearGradient>
+        <linearGradient id={`${id}n`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#F1D6B8" />
+          <stop offset="1" stopColor="#B3875F" />
+        </linearGradient>
+      </defs>
+      <path fill={`url(#${id}r)`} d={RING} />
+      <path fill={`url(#${id}n)`} d={POINTER} />
+      <path fill={`url(#${id}n)`} d={NEEDLE} />
     </svg>
   );
 }
