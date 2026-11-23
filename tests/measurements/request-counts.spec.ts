@@ -71,12 +71,23 @@ test("synthetic Today opening and quick capture request measurements", async ({
     settledMs: Math.round(performance.now() - started),
     requests: [...events],
   };
+  // Capture lives in the Inbox; measure it there once the page has settled.
+  await page.goto("/planner?section=inbox");
+  await page
+    .getByLabel("Quick capture task title")
+    .filter({ visible: true })
+    .waitFor();
+  await settle();
   events.length = 0;
   started = performance.now();
   await page
     .getByLabel("Quick capture task title")
+    .filter({ visible: true })
     .fill("[TEST] Synthetic request count");
-  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(page.getByText("Task added", { exact: true })).toBeVisible();
   const capturedMs = Math.round(performance.now() - started);
   await settle();
@@ -86,14 +97,13 @@ test("synthetic Today opening and quick capture request measurements", async ({
     requests: [...events],
   };
   events.length = 0;
-  const inbox = page.locator(".today-inbox");
-  if (await inbox.count()) await inbox.locator("summary").click();
   started = performance.now();
   await page
     .getByRole("button", {
       name: "Complete [TEST] Synthetic request count",
       exact: true,
     })
+    .filter({ visible: true })
     .click();
   await expect(page.getByText("Task completed", { exact: true })).toBeVisible();
   const completedMs = Math.round(performance.now() - started);
