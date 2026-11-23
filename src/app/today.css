@@ -962,3 +962,188 @@
   font-size: 13px;
   color: var(--secondary);
 }
+
+/* Career */
+.career-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.career-tab {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.career-tab:hover {
+  background: var(--surface-hover);
+}
+.career-tab.active {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--border);
+}
+.career-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.career-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+.career-block {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.career-block h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 650;
+}
+.career-block ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.career-block li + li {
+  border-top: 1px solid var(--border);
+}
+.career-row > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: 14px;
+  list-style: none;
+}
+.career-row > summary::-webkit-details-marker {
+  display: none;
+}
+.career-row > summary::after {
+  content: "›";
+  color: var(--muted);
+  transition: transform var(--transition-fast);
+}
+.career-row[open] > summary::after {
+  transform: rotate(90deg);
+}
+.career-row dl {
+  margin: 0 0 10px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.career-row dl div {
+  display: grid;
+  grid-template-columns: minmax(90px, 35%) 1fr;
+  gap: 8px;
+}
+.career-row dt {
+  color: var(--secondary);
+}
+.career-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.career-projects ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.career-projects li a {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.career-projects li:first-child a {
+  border-top: 0;
+}
+.career-projects li a:hover span:first-child {
+  text-decoration: underline;
+}
+
+/* Week grid: 48px hours, readable event text, side-by-side clashes */
+.time-grid-body {
+  height: 1152px;
+}
+.time-event {
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.time-event strong {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.time-event small {
+  font-size: 11px;
+  opacity: 0.85;
+}
+.time-event-clash {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.time-event .calendar-overlap-icon {
+  float: right;
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+/* Canvas deadlines: one compact row per assignment */
+.deadline-record {
+  padding: 10px 0;
+}
+.deadline-record strong {
+  font-size: 14px;
+}
+.deadline-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 4px 0 2px;
+}
+.deadline-facts > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.deadline-facts p {
+  margin: 0;
+  font-size: 13.5px;
+}
+.deadline-record p.small:empty {
+  display: none;
+}
+.deadline-record .text-link.small {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .deadline-facts {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .deadline-facts > div {
+    justify-content: space-between;
+  }
+}

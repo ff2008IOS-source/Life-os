@@ -1,4 +1,5 @@
 "use client";
+import { dayLabel } from "@/lib/display";
 import { visibleArea } from "@/lib/visible-areas";
 import { realWorkspace } from "@/lib/real-workspace";
 import Link from "next/link";
@@ -360,7 +361,35 @@ export function AreasPage({
               )}
             </div>
           )}
-          {slug !== "projects" && projects.length > 0 && (
+          {slug === "career" && projects.length > 0 && (
+            <section className="td-card career-projects" aria-label="Projects">
+              <div className="td-card-head">
+                <h2 className="td-card-title">Projects</h2>
+                <Link className="td-link" href="/areas/projects">
+                  Open Projects
+                </Link>
+              </div>
+              <ul>
+                {projects
+                  .filter(
+                    (p) => p.status !== "completed" && p.status !== "cancelled",
+                  )
+                  .map((p) => (
+                    <li key={p.id}>
+                      <Link href={`/areas/projects#project-${p.id}`}>
+                        <span>{p.name}</span>
+                        <span className="td-muted">
+                          {p.target_date
+                            ? `Due ${dayLabel(p.target_date)}`
+                            : "No due date"}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            </section>
+          )}
+          {slug !== "projects" && slug !== "career" && projects.length > 0 && (
             <div style={{ marginTop: 22 }}>
               <ProjectCards
                 projects={projects.filter(

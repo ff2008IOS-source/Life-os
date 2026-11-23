@@ -16,9 +16,23 @@ import { Modal } from "./dialog";
 import { eventOnDate, eventTimeLabel } from "@/lib/integrations/calendar-view";
 import {
   groupCalendarEvents,
+  layoutDay,
   readableDay,
   type EventGroup,
 } from "@/lib/integrations/calendar-layout";
+
+/** Pixels per hour and per minute in the week and day grids. */
+const HOUR = 48;
+const MINUTE = HOUR / 60;
+/** Timed events this long ("Off Day", camps) read better in the all-day row. */
+function isLong(g: EventGroup) {
+  const { start_at, end_at } = g.event;
+  return (
+    !!start_at &&
+    !!end_at &&
+    Date.parse(end_at) - Date.parse(start_at) >= 10 * 3600000
+  );
+}
 import {
   calendarKind,
   calendarKindLabel,
@@ -55,19 +69,6 @@ export function PlannerCalendar({
     [dayDetail, setDayDetail] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const restored = useRef("");
-  useEffect(() => {
-    if (!data || !scroller.current || restored.current === view) return;
-    restored.current = view;
-    let saved = 7 * 36;
-    try {
-      const raw = localStorage.getItem(`lifeos:v1:calendar-scroll:${view}`);
-      if (raw !== null && Number.isFinite(Number(raw)))
-        saved = Math.max(0, Math.min(864, Number(raw)));
-    } catch {
-      /* Private browsing may disable storage. */
-    }
-    scroller.current.scrollTop = saved;
-  }, [view, data]);
   const calendars = data?.calendars.filter((c) => c.sync_enabled) ?? [];
   const allGroups = groupCalendarEvents(events, group);
   const groups = groupCalendarEvents(
@@ -78,6 +79,20 @@ export function PlannerCalendar({
     ),
     group,
   );
+  // Open on the first commitment of the visible days, half an hour early.
+  const firstStart = days
+    .flatMap((d) =>
+      layoutDay(
+        groups.filter((g) => !isLong(g)),
+        format(d, "yyyy-MM-dd"),
+      ).map((i) => i.start),
+    )
+    .reduce((a, b) => Math.min(a, b), 8 * 60);
+  useEffect(() => {
+    if (!data || !scroller.current || restored.current === view) return;
+    restored.current = view;
+    scroller.current.scrollTop = Math.max(0, (firstStart - 30) * MINUTE);
+  }, [view, data, firstStart]);
   const name = (id: string) =>
     data?.calendars.find((c) => c.id === id)?.name ?? "Calendar";
   const color = (g: EventGroup) =>
@@ -441,7 +456,9 @@ export function PlannerCalendar({
               </span>
               {days.map((d) => {
                 const key = format(d, "yyyy-MM-dd");
-                const all = on(key).filter((g) => g.event.all_day_start);
+                const all = on(key).filter(
+                  (g) => g.event.all_day_start || isLong(g),
+                );
                 const deadlines = due(key);
                 return (
                   <div
@@ -489,7 +506,7 @@ export function PlannerCalendar({
               <div className="time-grid-body">
                 <div className="time-axis">
                   {Array.from({ length: 24 }, (_, h) => (
-                    <span key={h} style={{ top: h * 36 }}>
+                    <span key={h} style={{ top: h * HOUR }}>
                       {h === 0
                         ? "12 AM"
                         : h < 12
@@ -508,26 +525,66 @@ export function PlannerCalendar({
                       key={day}
                       className={`time-day-column ${day === selectedDay ? "selected-mobile" : ""} ${day === localDate() ? "is-today" : ""}`}
                     >
-                      {readableDay(groups, day).map((cluster) => {
+                      {readableDay(
+                        groups.filter((g) => !isLong(g)),
+                        day,
+                      ).flatMap((cluster) => {
+                        const columns = Math.max(
+                          ...cluster.items.map((i) => i.columns),
+                        );
+                        // Up to three overlapping events sit side by side; only
+                        // a denser slot collapses into one "+N" entry.
+                        if (columns <= 3)
+                          return cluster.items.map((item) => {
+                            const g = item;
+                            const clash =
+                              item.columns > 1 || overlaps.has(g.id);
+                            const width = `calc((100% - 4px) / ${item.columns})`;
+                            return (
+                              <button
+                                key={item.id}
+                                className={`time-event ${clash ? "time-event-clash" : ""} ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
+                                aria-label={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((src) => name(src.calendar_id)).join(", ")}${item.columns > 1 ? " · Overlaps another event" : overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
+                                onClick={() => {
+                                  setDayDetail(null);
+                                  setDetails(g);
+                                }}
+                                title={`${g.event.title} · ${eventTimeLabel(g.event)}`}
+                                style={{
+                                  top: item.start * MINUTE,
+                                  height: Math.max(
+                                    26,
+                                    (item.end - item.start) * MINUTE - 2,
+                                  ),
+                                  left: `calc(2px + ${width} * ${item.column})`,
+                                  width: `calc(${width} - 2px)`,
+                                  borderLeftColor: color(g),
+                                  background: `color-mix(in srgb, ${color(g)} 18%, var(--surface))`,
+                                }}
+                              >
+                                {clash && (
+                                  <AlertTriangle
+                                    size={11}
+                                    className="calendar-overlap-icon"
+                                    aria-hidden
+                                  />
+                                )}
+                                <strong>
+                                  {g.event.title || "Untitled event"}
+                                </strong>
+                                <small>{eventTimeLabel(g.event)}</small>
+                              </button>
+                            );
+                          });
                         const g = cluster.items[0];
-                        const crowded = cluster.items.length > 1;
-                        return (
+                        return [
                           <button
                             key={cluster.id}
-                            className={`time-event ${crowded ? "calendar-overlap-group" : ""} ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
-                            aria-label={
-                              crowded
-                                ? `${cluster.items.length} overlapping events on ${day}. Open full schedule`
-                                : `${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((s) => name(s.calendar_id)).join(", ")}${overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`
-                            }
+                            className="time-event calendar-overlap-group"
+                            aria-label={`${cluster.items.length} events at once on ${day}. Open full schedule`}
                             onClick={() => {
-                              if (crowded) {
-                                setDetails(null);
-                                setDayDetail(day);
-                              } else {
-                                setDayDetail(null);
-                                setDetails(g);
-                              }
+                              setDetails(null);
+                              setDayDetail(day);
                             }}
                             title={cluster.items
                               .map(
@@ -536,40 +593,23 @@ export function PlannerCalendar({
                               )
                               .join("\n")}
                             style={{
-                              top: cluster.start * 0.6,
+                              top: cluster.start * MINUTE,
                               height: Math.max(
-                                24,
-                                (cluster.end - cluster.start) * 0.6 - 2,
+                                26,
+                                (cluster.end - cluster.start) * MINUTE - 2,
                               ),
                               left: 2,
                               width: "calc(100% - 4px)",
                               borderLeftColor: color(g),
-                              background: `color-mix(in srgb, ${color(g)} 17%, var(--surface))`,
+                              background: `color-mix(in srgb, ${color(g)} 18%, var(--surface))`,
                             }}
                           >
-                            {(crowded || overlaps.has(g.id)) && (
-                              <AlertTriangle
-                                size={12}
-                                className="calendar-overlap-icon"
-                                aria-label="Overlaps a busy entry"
-                              />
-                            )}
-                            <strong>
-                              {crowded
-                                ? `${cluster.items.length} overlapping events`
-                                : g.event.title || "Untitled event"}
-                            </strong>
+                            <strong>{g.event.title}</strong>
                             <small>
-                              {crowded
-                                ? cluster.items
-                                    .slice(0, 2)
-                                    .map((item) => item.event.title)
-                                    .join(" · ")
-                                : eventTimeLabel(g.event)}
+                              +{cluster.items.length - 1} more at the same time
                             </small>
-                            {crowded && <small>View full schedule →</small>}
-                          </button>
-                        );
+                          </button>,
+                        ];
                       })}
                     </div>
                   );
