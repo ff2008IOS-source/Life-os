@@ -60,10 +60,7 @@ test("synthetic reservation → actual completion → academic history and revie
     ).status(),
   ).toBe(403);
   await page.goto("/areas/academics");
-  await page
-    .getByLabel("Selected course")
-    .filter({ visible: true })
-    .selectOption(course.id);
+  await page.locator(`[data-course-id="${course.id}"]`).click();
   await page
     .getByRole("button", { name: "Assessments", exact: true })
     .filter({ visible: true })
@@ -288,10 +285,7 @@ test("synthetic reservation → actual completion → academic history and revie
     ).toBeVisible();
   }
   await page.goto("/areas/academics");
-  await page
-    .getByLabel("Selected course")
-    .filter({ visible: true })
-    .selectOption(course.id);
+  await page.locator(`[data-course-id="${course.id}"]`).click();
   await page
     .getByRole("button", { name: "Assessments", exact: true })
     .filter({ visible: true })

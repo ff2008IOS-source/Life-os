@@ -1,4 +1,5 @@
 "use client";
+import { stamp } from "@/lib/display";
 import {
   syncAllTables,
   type BatchResult,
@@ -645,13 +646,11 @@ export function SheetRestPanel() {
               paused: "Paused",
             }[d.mode] ?? d.mode}
             {" · Last updated: "}
-            {d.last_read_at
-              ? new Date(d.last_read_at).toLocaleString()
-              : "Not synced yet"}
+            {d.last_read_at ? stamp(d.last_read_at) : "Not synced yet"}
           </p>
           <p className="small muted">
             {d.last_write_at
-              ? `Last change sent to Sheets: ${new Date(d.last_write_at).toLocaleString()}`
+              ? `Last change sent to Sheets: ${stamp(d.last_write_at)}`
               : "No changes to Sheets have been confirmed yet."}
           </p>
           {d.last_error && (
@@ -981,8 +980,7 @@ export function SheetRestPanel() {
             <summary>Recent synchronization history</summary>
             {state?.runs?.map((r) => (
               <p className="small" key={r.id}>
-                {new Date(r.started_at).toLocaleString()} · {r.status} ·{" "}
-                {JSON.stringify(r.summary)}
+                {stamp(r.started_at)} · {r.status} · {JSON.stringify(r.summary)}
               </p>
             ))}
           </details>

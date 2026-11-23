@@ -1,4 +1,5 @@
 "use client";
+import { ReconnectGoogle, needsReconnect } from "./reconnect-google";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { addDays, format } from "date-fns";
@@ -268,9 +269,21 @@ export function PlannerCalendar({
         </div>
       )}
       {error && (
-        <p className="calendar-inline-alert error-message" role="alert">
-          {error}
-        </p>
+        <div className="calendar-inline-alert error-message" role="alert">
+          <span>{error}</span>
+          {needsReconnect([error, ...calendars.map((c) => c.sync_error)]) && (
+            <ReconnectGoogle />
+          )}
+        </div>
+      )}
+      {!error && needsReconnect(calendars.map((c) => c.sync_error)) && (
+        <div className="calendar-inline-alert error-message" role="alert">
+          <span>
+            Google needs you to sign in again. Events changed in Google since
+            the last sync aren’t shown yet.
+          </span>
+          <ReconnectGoogle />
+        </div>
       )}
       {message && (
         <p className="calendar-inline-alert" role="status">

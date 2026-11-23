@@ -29,17 +29,21 @@ test("confirmed create remains visible when the verification read fails; recover
         })
       : route.continue(),
   );
+  await page.goto("/planner?section=inbox");
   await page
     .getByLabel("Quick capture task title")
+    .filter({ visible: true })
     .fill("[TEST] Confirmed save despite failed refresh");
-  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByText("Saved · refresh pending.", { exact: false }),
   ).toBeVisible();
-  await page.locator(".today-inbox > summary").click();
   await expect(
     page
-      .locator(".today-inbox")
+      .getByRole("main")
       .getByText("[TEST] Confirmed save despite failed refresh", {
         exact: true,
       }),
@@ -71,10 +75,15 @@ test("lost create response reconciles a stable identifier and direct retries ret
       await route.abort("connectionfailed");
     } else await route.continue();
   });
+  await page.goto("/planner?section=inbox");
   await page
     .getByLabel("Quick capture task title")
+    .filter({ visible: true })
     .fill("[TEST] Reconciled response");
-  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(page.getByText("Task added", { exact: true })).toBeVisible();
   const key = "77777777-7777-4777-8777-777777777777",
     headers = { Origin: "http://127.0.0.1:3000", "Idempotency-Key": key };

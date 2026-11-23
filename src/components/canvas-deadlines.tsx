@@ -6,7 +6,8 @@ import {
   canvasAssignmentLink,
 } from "@/lib/canvas/deadline-status";
 import Link from "next/link";
-import { formatInTimeZone } from "date-fns-tz";
+import { dueLabel } from "@/lib/display";
+import { Mark } from "./mark";
 type Deadline = {
   earned_score: number | null;
   maximum_score: number | null;
@@ -25,6 +26,13 @@ type Deadline = {
 export function CanvasDeadlines() {
   const [search, setSearch] = useState("");
   const [course, setCourse] = useState("");
+  const [courses, setCourses] = useState<string[]>([]);
+  useEffect(() => {
+    void fetch("/api/canvas/deadlines?courses=1", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { courses: [] }))
+      .then((d: { courses?: string[] }) => setCourses(d.courses ?? []))
+      .catch(() => setCourses([]));
+  }, []);
   const [view, setView] = useState("upcoming"),
     [page, setPage] = useState(0),
     [loading, setLoading] = useState(true);
@@ -80,16 +88,22 @@ export function CanvasDeadlines() {
           />
         </label>
         <label>
-          Course code
-          <input
+          Course
+          <select
             value={course}
-            placeholder="All courses"
             onChange={(e) => {
               setLoading(true);
               setCourse(e.target.value);
               setPage(0);
             }}
-          />
+          >
+            <option value="">All courses</option>
+            {courses.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <div className="career-import-actions" aria-label="Canvas deadline views">
@@ -140,14 +154,7 @@ export function CanvasDeadlines() {
               <div className="deadline-facts">
                 <div>
                   <span className="small muted">Due</span>
-                  <p>
-                    {formatInTimeZone(
-                      r.due_at,
-                      "America/Vancouver",
-                      "MMM d, h:mm a",
-                    )}{" "}
-                    Vancouver
-                  </p>
+                  <p>{dueLabel(r.due_at, new Date(now))}</p>
                 </div>
                 <div>
                   <span className="small muted">Submission</span>
@@ -163,13 +170,15 @@ export function CanvasDeadlines() {
                   <span className="small muted">Result</span>
                   <p>
                     {typeof r.earned_score === "number" &&
-                    typeof r.maximum_score === "number"
-                      ? `${r.earned_score} / ${r.maximum_score}`
-                      : r.submission_state === "submitted"
-                        ? "Awaiting grade"
-                        : r.submission_state === "graded"
-                          ? "View in Canvas"
-                          : "Not recorded"}
+                    typeof r.maximum_score === "number" ? (
+                      <Mark earned={r.earned_score} maximum={r.maximum_score} />
+                    ) : r.submission_state === "submitted" ? (
+                      "Awaiting grade"
+                    ) : r.submission_state === "graded" ? (
+                      "View in Canvas"
+                    ) : (
+                      "Not recorded"
+                    )}
                   </p>
                 </div>
               </div>

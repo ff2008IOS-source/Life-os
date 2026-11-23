@@ -785,3 +785,180 @@
 .td-capture-actions {
   padding: 4px 0 10px;
 }
+
+/* Colour-coded marks: 83%+ green, 70–83% orange, under 70% red. */
+.mark {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.mark b {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 650;
+}
+.mark-good b {
+  color: #1f6b33;
+  background: #e3f4e7;
+}
+.mark-ok b {
+  color: #8a4a00;
+  background: #fff0dc;
+}
+.mark-low b {
+  color: #a4161a;
+  background: #fde7e7;
+}
+.dark .mark-good b {
+  color: #8ee0a2;
+  background: #15301d;
+}
+.dark .mark-ok b {
+  color: #ffc27a;
+  background: #3a2710;
+}
+.dark .mark-low b {
+  color: #ff9d9d;
+  background: #3b1416;
+}
+.mark-fraction {
+  color: var(--secondary);
+}
+.td-footer {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 4px 2px 12px;
+}
+.td-footer .td-link {
+  min-height: 44px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.td-reconnect {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--td-hot-soft);
+  border: 1px solid var(--td-hot-line);
+}
+.td-reconnect p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  flex: 1 1 260px;
+}
+.calendar-inline-alert:has(.td-btn),
+.error-message:has(.td-btn) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* School: one tap per course, with its average */
+.course-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.course-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.course-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.course-chip:hover {
+  background: var(--surface-hover);
+}
+.course-chip.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.course-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.course-switcher-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.course-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 8px 0 20px;
+}
+@media (max-width: 720px) {
+  .course-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.course-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  min-width: 0;
+}
+.course-stats span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--secondary);
+}
+.course-stats strong {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.course-stats strong small {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--secondary);
+}
+.course-stats .course-next {
+  font-size: 16px;
+  line-height: 1.35;
+}
+.course-stats .mark b {
+  font-size: 22px;
+  padding: 2px 12px;
+}
+.course-stats > div > small {
+  font-size: 13px;
+  color: var(--secondary);
+}

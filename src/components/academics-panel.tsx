@@ -1,14 +1,13 @@
 "use client";
 import { SyllabusReference } from "./syllabus-reference";
 import { AssessmentTable } from "./assessment-table";
-import {
-  standingLabel,
-  assessmentResult,
-  possibleAssessmentDuplicates,
-} from "@/lib/academic-display";
+import { possibleAssessmentDuplicates } from "@/lib/academic-display";
+import { useCurrentTime } from "./use-current-time";
 import { CanvasMaterials } from "./canvas-materials";
 import { AssessmentPreparation } from "./assessment-preparation";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { dueLabel, markPercent } from "@/lib/display";
+import { Mark } from "./mark";
 import { GradePlanner } from "./grade-planner";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, BookOpen } from "lucide-react";
@@ -43,6 +42,7 @@ export function AcademicsPanel({
   initialView?: string;
 } = {}) {
   const [limit, setLimit] = useState(8);
+  const now = useCurrentTime();
   const [view, setView] = useState(
     initialAssessment
       ? "assessments"
@@ -115,6 +115,45 @@ export function AcademicsPanel({
       rulesVerified: current?.grading_rules_confirmed === true,
     },
   );
+  const pctOf = (a: AcademicRow) =>
+    a.dropped
+      ? null
+      : markPercent(
+          a.earned_score as number | null,
+          a.maximum_score as number | null,
+          a.score_unit === "percent" ? "percent" : "points",
+        );
+  /** Plain average of graded work; used when grading rules are not confirmed. */
+  const averageFor = (courseKey: string) => {
+    const p = data.assessments
+      .filter((a) => a.course_id === courseKey)
+      .map(pctOf)
+      .filter((x): x is number => x !== null);
+    return p.length ? p.reduce((a, b) => a + b, 0) / p.length : null;
+  };
+  const nowMs = now.getTime();
+  const dueMs = (a: AcademicRow) =>
+    a.due_at
+      ? Date.parse(String(a.due_at))
+      : a.due_date
+        ? fromZonedTime(
+            String(a.due_date) + "T23:59:00",
+            "America/Vancouver",
+          ).getTime()
+        : null;
+  const open = (a: AcademicRow) =>
+    !a.dropped &&
+    !["submitted", "returned", "excused", "graded"].includes(
+      String(a.submission_state),
+    ) &&
+    typeof a.earned_score !== "number";
+  const upcoming = assessments
+    .filter((a) => open(a) && (dueMs(a) ?? -1) >= nowMs - 3600000)
+    .sort((a, b) => dueMs(a)! - dueMs(b)!);
+  const undated = assessments.filter((a) => open(a) && dueMs(a) === null);
+  const graded = assessments
+    .filter((a) => pctOf(a) !== null)
+    .sort((a, b) => (dueMs(b) ?? 0) - (dueMs(a) ?? 0));
   const standingSupported =
     current?.grading_rules_confirmed === true &&
     possibleAssessmentDuplicates(assessments).length === 0 &&
@@ -143,30 +182,6 @@ export function AcademicsPanel({
           : assessments;
   return (
     <section className="academic-workspace">
-      <div className="academic-toolbar">
-        <div className="inline">
-          <BookOpen size={17} />
-          <h2>Courses</h2>
-        </div>
-        <div className="inline">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEdit({ kind: "academic_terms" })}
-          >
-            <Plus size={12} />
-            Term
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setEdit({ kind: "courses" })}
-            disabled={!data.academic_terms.length}
-          >
-            <Plus size={12} />
-            Course
-          </Button>
-        </div>
-      </div>
       {loading && (
         <p className="muted small" role="status">
           Loading your courses…
@@ -194,57 +209,74 @@ export function AcademicsPanel({
           </Button>
         </div>
       )}
-      <div className="academic-toolbar">
-        <select
-          aria-label="Academic term"
-          value={term}
-          onChange={(e) => setTerm(e.currentTarget.value)}
-        >
-          <option value="">All terms</option>
-          {data.academic_terms.map((t) => (
-            <option key={t.id} value={t.id}>
-              {String(t.name)}
-            </option>
-          ))}
-        </select>
-        {data.academic_terms.find((t) => t.id === term) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setEdit({
-                kind: "academic_terms",
-                record: data.academic_terms.find((t) => t.id === term),
-              })
-            }
-          >
-            Edit term
-          </Button>
-        )}
-        <select
+      <div className="course-switcher">
+        <div
+          className="course-chips"
+          role="radiogroup"
           aria-label="Selected course"
-          value={selected ?? ""}
-          onChange={(e) => setCourseId(e.currentTarget.value)}
         >
-          {!courses.length && <option value="">No courses yet</option>}
-          {courses.map((c) => (
-            <option key={c.id} value={c.id}>
-              {String(c.code)} ·{" "}
-              {String(
-                data.academic_terms.find((t) => t.id === c.term_id)?.name ?? "",
-              )}
-            </option>
-          ))}
-        </select>
-        {current && (
+          {courses.map((c) => {
+            const avg = averageFor(c.id);
+            return (
+              <button
+                key={c.id}
+                role="radio"
+                data-course-id={c.id}
+                aria-label={`${String(c.code)} · ${String(c.title ?? "")}${avg !== null ? ` · average ${Math.round(avg)}%` : ""}`}
+                aria-checked={c.id === selected}
+                className={`course-chip ${c.id === selected ? "active" : ""}`}
+                onClick={() => setCourseId(c.id)}
+              >
+                <strong>{String(c.code)}</strong>
+                {avg !== null && (
+                  <Mark earned={avg} unit="percent" showFraction={false} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div className="course-switcher-actions">
+          {data.academic_terms.length > 1 && (
+            <select
+              aria-label="Academic term"
+              value={term}
+              onChange={(e) => setTerm(e.currentTarget.value)}
+            >
+              <option value="">All terms</option>
+              {data.academic_terms.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {String(t.name)}
+                </option>
+              ))}
+            </select>
+          )}
+          {current && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEdit({ kind: "courses", record: current })}
+            >
+              Edit course
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setEdit({ kind: "courses", record: current })}
+            onClick={() => setEdit({ kind: "academic_terms" })}
           >
-            Edit course
+            <Plus size={12} />
+            Term
           </Button>
-        )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEdit({ kind: "courses" })}
+            disabled={!data.academic_terms.length}
+          >
+            <Plus size={12} />
+            Course
+          </Button>
+        </div>
       </div>
       {!current && !loading && !error ? (
         <div className="empty-state compact">
@@ -317,65 +349,105 @@ export function AcademicsPanel({
               />
             ) : (
               <>
-                <div className="academic-score-grid">
+                <div className="course-stats">
                   <div>
                     <span>
-                      {standingLabel(summary, standingSupported).title}
+                      {standingSupported && summary.graded_average !== null
+                        ? "Current standing"
+                        : "Average so far"}
                     </span>
-                    <strong>
-                      {standingLabel(summary, standingSupported).value}
-                    </strong>
+                    {(standingSupported && summary.graded_average !== null
+                      ? summary.graded_average
+                      : averageFor(selected!)) !== null ? (
+                      <strong>
+                        <Mark
+                          earned={
+                            standingSupported && summary.graded_average !== null
+                              ? summary.graded_average
+                              : averageFor(selected!)
+                          }
+                          unit="percent"
+                          showFraction={false}
+                        />
+                      </strong>
+                    ) : (
+                      <strong>—</strong>
+                    )}
                     <small>
-                      {summary.overall_grade !== null
-                        ? "All confirmed assessments"
-                        : summary.graded_average !== null && standingSupported
-                          ? "Based on graded work so far"
-                          : "Recorded assessment results"}
+                      {standingSupported
+                        ? "Weighted by your syllabus"
+                        : graded.length
+                          ? `Unweighted, ${graded.length} graded`
+                          : "No grades yet"}
                     </small>
                   </div>
                   <div>
-                    <span>Graded course weight</span>
+                    <span>Graded</span>
                     <strong>
-                      {summary.graded_weight !== null && weightSupported
-                        ? `${Number(summary.graded_weight.toFixed(1))}%`
-                        : "To confirm"}
+                      {graded.length}
+                      <small>
+                        {" "}
+                        of {assessments.filter((a) => !a.dropped).length}
+                      </small>
                     </strong>
                     <small>
                       {summary.graded_weight !== null && weightSupported
-                        ? "Weight represented by current results"
-                        : "Check syllabus grading rules"}
+                        ? `${Number(summary.graded_weight.toFixed(1))}% of the course weight`
+                        : "Course weights not confirmed"}
                     </small>
                   </div>
                   <div>
-                    <span>Results pending</span>
-                    <strong>{summary.missing_scores}</strong>
+                    <span>Next due</span>
+                    <strong className="course-next">
+                      {upcoming[0] ? String(upcoming[0].title) : "Nothing due"}
+                    </strong>
                     <small>
-                      Of {summary.known_scores + summary.missing_scores}{" "}
-                      included assessments
+                      {upcoming[0]
+                        ? dueLabel({
+                            due_at: upcoming[0].due_at as string | null,
+                            due_date: upcoming[0].due_date as string | null,
+                          })
+                        : undated.length
+                          ? `${undated.length} without a date`
+                          : "You’re all caught up"}
                     </small>
                   </div>
                 </div>
-                {view === "overview" && summary.known_scores > 0 && (
+                {view === "overview" && graded.length > 0 && (
                   <section className="course-results">
-                    <h3>Recorded results</h3>
-                    {assessments
-                      .filter((a) => typeof a.earned_score === "number")
-                      .slice(0, 3)
-                      .map((a) => (
-                        <button
-                          className="academic-record-row"
-                          key={a.id}
-                          onClick={() => {
-                            setView("assessments");
-                            setTab("assessments");
-                          }}
-                        >
-                          <strong>{String(a.title)}</strong>
-                          <span className="assessment-result">
-                            {assessmentResult(a)}
-                          </span>
-                        </button>
-                      ))}
+                    <h3>Recent results</h3>
+                    {graded.slice(0, 6).map((a) => (
+                      <button
+                        className="academic-record-row"
+                        key={a.id}
+                        onClick={() => {
+                          setView("assessments");
+                          setTab("assessments");
+                        }}
+                      >
+                        <strong>{String(a.title)}</strong>
+                        <span className="assessment-result">
+                          <Mark
+                            earned={a.earned_score as number}
+                            maximum={a.maximum_score as number | null}
+                            unit={
+                              a.score_unit === "percent" ? "percent" : "points"
+                            }
+                          />
+                        </span>
+                      </button>
+                    ))}
+                    {graded.length > 6 && (
+                      <button
+                        className="td-link"
+                        onClick={() => {
+                          setView("assessments");
+                          setTab("assessments");
+                        }}
+                      >
+                        All {graded.length} results
+                      </button>
+                    )}
                   </section>
                 )}
                 <details
@@ -421,40 +493,46 @@ export function AcademicsPanel({
                 </details>
                 {view === "overview" ? (
                   <div className="course-overview">
-                    <h3>Assessments to review</h3>
-                    {assessments
-                      .filter(
-                        (a) =>
-                          !a.dropped &&
-                          !["submitted", "returned", "excused"].includes(
-                            String(a.submission_state),
-                          ),
-                      )
-                      .slice(0, 3)
-                      .map((a) => (
-                        <button
-                          className="academic-record-row"
-                          key={a.id}
-                          onClick={() => {
-                            setView("assessments");
-                            setTab("assessments");
-                            setEdit({ kind: "assessments", record: a });
-                          }}
-                        >
-                          <strong>{String(a.title)}</strong>
-                          <span className="small muted">
-                            {a.due_date
-                              ? String(a.due_date)
-                              : a.due_at
-                                ? formatInTimeZone(
-                                    String(a.due_at),
-                                    "America/Vancouver",
-                                    "MMM d, h:mm a",
-                                  )
-                                : "Deadline not set"}
-                          </span>
-                        </button>
-                      ))}
+                    <h3>Coming up</h3>
+                    {upcoming.slice(0, 5).map((a) => (
+                      <button
+                        className="academic-record-row"
+                        key={a.id}
+                        onClick={() => {
+                          setView("assessments");
+                          setTab("assessments");
+                          setEdit({ kind: "assessments", record: a });
+                        }}
+                      >
+                        <strong>{String(a.title)}</strong>
+                        <span className="small muted">
+                          {dueLabel({
+                            due_at: a.due_at as string | null,
+                            due_date: a.due_date as string | null,
+                          })}
+                        </span>
+                      </button>
+                    ))}
+                    {!upcoming.length && assessments.length > 0 && (
+                      <p className="small muted">Nothing due soon.</p>
+                    )}
+                    {undated.length > 0 && (
+                      <details className="briefing-detail">
+                        <summary>{undated.length} without a due date</summary>
+                        {undated.map((a) => (
+                          <button
+                            className="academic-record-row"
+                            key={a.id}
+                            onClick={() =>
+                              setEdit({ kind: "assessments", record: a })
+                            }
+                          >
+                            <strong>{String(a.title)}</strong>
+                            <span className="small muted">Add a date</span>
+                          </button>
+                        ))}
+                      </details>
+                    )}
                     {!assessments.length && (
                       <p>
                         Your assessments will appear here after a sync or when
@@ -554,7 +632,7 @@ export function AcademicsPanel({
                                 </strong>
                                 <small>
                                   {tab === "assessments"
-                                    ? `${row.submission_state ?? "unknown"} · ${row.due_date ?? (row.due_at ? String(row.due_at).slice(0, 10) : "No confirmed deadline")}`
+                                    ? `${String(row.submission_state ?? "unknown").replaceAll("_", " ")} · ${row.due_date || row.due_at ? dueLabel({ due_at: row.due_at as string | null, due_date: row.due_date as string | null }, now) : "No due date"}`
                                     : tab === "topics"
                                       ? String(row.mastery ?? "unstudied")
                                       : tab === "categories"
@@ -563,19 +641,37 @@ export function AcademicsPanel({
                                 </small>
                               </div>
                               <span>
-                                {tab === "assessments"
-                                  ? row.earned_score === null
-                                    ? "Score unknown"
-                                    : `${row.earned_score} / ${row.maximum_score}${row.score_unit === "percent" ? "%" : ""}`
-                                  : tab === "categories"
-                                    ? row.weight === null
-                                      ? "Weight unknown"
-                                      : `${row.weight}%`
-                                    : tab === "sessions"
-                                      ? row.actual_minutes
-                                        ? `${row.actual_minutes} min`
-                                        : "Duration not recorded"
-                                      : ""}
+                                {tab === "assessments" ? (
+                                  row.earned_score === null ? (
+                                    "Score unknown"
+                                  ) : (
+                                    <Mark
+                                      earned={row.earned_score as number}
+                                      maximum={
+                                        row.maximum_score as number | null
+                                      }
+                                      unit={
+                                        row.score_unit === "percent"
+                                          ? "percent"
+                                          : "points"
+                                      }
+                                    />
+                                  )
+                                ) : tab === "categories" ? (
+                                  row.weight === null ? (
+                                    "Weight unknown"
+                                  ) : (
+                                    `${row.weight}%`
+                                  )
+                                ) : tab === "sessions" ? (
+                                  row.actual_minutes ? (
+                                    `${row.actual_minutes} min`
+                                  ) : (
+                                    "Duration not recorded"
+                                  )
+                                ) : (
+                                  ""
+                                )}
                               </span>
                               {tab === "assessments" && (
                                 <span className="badge">

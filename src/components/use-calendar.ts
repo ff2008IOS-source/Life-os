@@ -77,6 +77,10 @@ export function useCalendar(start?: string, end?: string) {
             .filter(
               (c) =>
                 c.sync_enabled &&
+                // A refresh can't succeed until Google is reconnected.
+                !/reconnect|authori[sz]ation expired/i.test(
+                  c.sync_error ?? "",
+                ) &&
                 (!c.last_synced_at ||
                   Date.now() - Date.parse(c.last_synced_at) >
                     CALENDAR_FRESH_MS) &&
@@ -137,7 +141,8 @@ export function useCalendar(start?: string, end?: string) {
   }
   async function sync() {
     await act("sync", async () => {
-      let failed = 0;
+      let failed = 0,
+        signIn = false;
       for (const calendar of data?.calendars.filter((c) => c.sync_enabled) ??
         []) {
         try {
@@ -145,10 +150,21 @@ export function useCalendar(start?: string, end?: string) {
             method: "POST",
             body: JSON.stringify({ calendar_id: calendar.id }),
           });
-        } catch {
+        } catch (e) {
           failed++;
+          if (
+            e instanceof Error &&
+            /reconnect|authori[sz]ation/i.test(e.message)
+          )
+            signIn = true;
+          // One expired sign-in fails every calendar; stop after the first.
+          if (signIn) break;
         }
       }
+      if (signIn)
+        throw Error(
+          "Google needs you to sign in again before your calendars can update. Reconnect Google to sync. Your saved events are still shown.",
+        );
       if (failed)
         throw Error(
           `${failed} calendar sync${failed === 1 ? "" : "s"} failed. Previous events were kept. Check Settings for details.`,

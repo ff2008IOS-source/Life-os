@@ -1,4 +1,5 @@
 "use client";
+import { stamp } from "@/lib/display";
 import { useCallback, useEffect, useState } from "react";
 import { calendarRequest } from "./use-calendar";
 import { useWorkspace } from "./workspace-provider";
@@ -192,9 +193,9 @@ export function ReviewCommitments({
         <details className="briefing-detail">
           <summary>At the start of this review</summary>
           <p className="small">
-            Captured {new Date(state.snapshot.captured_at).toLocaleString()}.
-            Data as of {new Date(state.snapshot.facts.as_of).toLocaleString()}.
-            Later source edits do not rewrite this saved snapshot.
+            Captured {stamp(state.snapshot.captured_at)}. Data as of{" "}
+            {stamp(state.snapshot.facts.as_of)}. Later source edits do not
+            rewrite this saved snapshot.
           </p>
           <p className="small">
             {state.snapshot.facts.weekly?.completed_tasks ?? "Unknown"} tasks

@@ -58,11 +58,13 @@ export async function refreshStaleCalendar(user: string, calendar: string) {
     dbError(done.error);
     return { refreshed: true, ...result };
   } catch (error) {
+    // Free the bucket so the next visit retries instead of being skipped.
     await db
       .from("integration_jobs")
       .update({
         status: "failed",
         lease_until: null,
+        idempotency_key: `freshness:${calendar}:failed:${randomUUID()}`,
         last_error: "Calendar refresh failed. Cached events retained.",
       })
       .eq("user_id", user)

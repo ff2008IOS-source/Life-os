@@ -6,7 +6,8 @@ import { AppLogo, ProfileAvatar } from "./profile-identity";
 import { usePathname, useRouter } from "next/navigation";
 import type { AcademicData } from "./academic-editor";
 import { calendarRequest } from "./use-calendar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { buildSearchIndex, searchEntries } from "@/lib/search-index";
 import { useTheme } from "next-themes";
 import {
   PanelLeftClose,
@@ -80,6 +81,7 @@ export function WorkspaceShell({
 }) {
   const { data } = useWorkspace();
   const path = usePathname();
+  const router = useRouter();
   useEffect(() => {
     const viewport = window.visualViewport;
     const adjust = () => {
@@ -126,6 +128,17 @@ export function WorkspaceShell({
       live = false;
     };
   }, [search, searchAcademic, courseRetry]);
+  const index = useMemo(
+    () =>
+      buildSearchIndex({
+        tasks: data.tasks,
+        projects: data.projects.filter(availableProject),
+        goals: data.goals,
+        academic: searchAcademic,
+      }),
+    [data.tasks, data.projects, data.goals, searchAcademic],
+  );
+  const results = useMemo(() => searchEntries(index, query), [index, query]);
   const { setTheme } = useTheme();
   useEffect(() => {
     setTheme(data.profile.theme);
@@ -345,7 +358,7 @@ export function WorkspaceShell({
         open={search}
         onOpenChange={setSearch}
         title="Search"
-        description="Tasks, projects, goals and workspaces."
+        description="Find anything and jump straight to it."
       >
         <label className="sr-only" htmlFor="workspace-search">
           Search
@@ -364,6 +377,13 @@ export function WorkspaceShell({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
+            if (e.key === "Enter" && results[0]) {
+              e.preventDefault();
+              setSearch(false);
+              setQuery("");
+              router.push(results[0].href);
+              return;
+            }
             if (e.key === "ArrowDown") {
               e.preventDefault();
               document
@@ -388,122 +408,33 @@ export function WorkspaceShell({
             e.preventDefault();
           }}
         >
-          {(query.trim() ? allPages : navigation)
-            .filter(
-              (n) =>
-                !query.trim() ||
-                `${n.label} ${"keywords" in n ? n.keywords : ""}`
-                  .toLowerCase()
-                  .includes(query.toLowerCase()),
-            )
-            .sort(
-              (a, b) =>
-                Number(!a.label.toLowerCase().includes(query.toLowerCase())) -
-                Number(!b.label.toLowerCase().includes(query.toLowerCase())),
-            )
-            .map((n) => (
-              <Link
-                className="search-result"
-                href={n.href}
-                key={n.href}
-                onClick={() => setSearch(false)}
-              >
-                {n.label}
-                <small>Workspace</small>
-              </Link>
-            ))}
-          {query.trim() &&
-            searchAcademic?.courses
-              .filter((c) =>
-                `${c.code} ${c.title}`
-                  .toLowerCase()
-                  .includes(query.toLowerCase()),
-              )
-              .slice(0, 8)
-              .map((c) => (
-                <Link
-                  className="search-result"
-                  key={c.id}
-                  href={`/areas/academics?course=${c.id}`}
-                  onClick={() => setSearch(false)}
-                >
-                  {String(c.code)} · {String(c.title)}
-                  <small>Course</small>
-                </Link>
-              ))}
-          {query.trim() &&
-            data.tasks
-              .filter(
-                (t) =>
-                  !t.deleted_at &&
-                  t.title.toLowerCase().includes(query.toLowerCase()),
-              )
-              .slice(0, 12)
-              .map((t) => (
-                <button
-                  className="search-result"
-                  key={t.id}
-                  onClick={() => {
-                    setSearch(false);
-                    setEditor({ task: t });
-                  }}
-                >
-                  {t.title}
-                  <small>Task · {t.status.replaceAll("_", " ")}</small>
-                </button>
-              ))}
-          {query.trim() &&
-            data.projects
-              .filter(availableProject)
-              .filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
-              .slice(0, 6)
-              .map((p) => (
-                <Link
-                  className="search-result"
-                  href={`/areas/projects#project-${p.id}`}
-                  key={p.id}
-                  onClick={() => setSearch(false)}
-                >
-                  {p.name}
-                  <small>Project</small>
-                </Link>
-              ))}
-          {query.trim() &&
-            data.goals
-              .filter((g) =>
-                g.title.toLowerCase().includes(query.toLowerCase()),
-              )
-              .slice(0, 6)
-              .map((g) => (
-                <Link
-                  className="search-result"
-                  href={`/goals#goal-${g.id}`}
-                  key={g.id}
-                  onClick={() => setSearch(false)}
-                >
-                  {g.title}
-                  <small>Goal</small>
-                </Link>
-              ))}
-          {query.trim() &&
-            ![
-              ...allPages.map(
-                (n) => `${n.label} ${"keywords" in n ? n.keywords : ""}`,
-              ),
-              ...(searchAcademic?.courses.map((c) => `${c.code} ${c.title}`) ??
-                []),
-              ...data.tasks.filter((t) => !t.deleted_at).map((t) => t.title),
-              ...data.projects.filter(availableProject).map((p) => p.name),
-              ...data.goals.map((g) => g.title),
-            ].some((title) =>
-              title.toLowerCase().includes(query.toLowerCase()),
-            ) && (
-              <p className="muted small" role="status">
-                No results.
-              </p>
-            )}
+          {results.map((r) => (
+            <Link
+              className="search-result"
+              href={r.href}
+              key={r.kind + r.href + r.title}
+              onClick={() => {
+                setSearch(false);
+                setQuery("");
+              }}
+            >
+              <span className="search-result-text">
+                {r.title}
+                {r.subtitle && <span className="muted"> · {r.subtitle}</span>}
+              </span>
+              <small>{r.kind}</small>
+            </Link>
+          ))}
+          {query.trim() && !results.length && (
+            <p className="muted small" role="status">
+              No results for “{query.trim()}”.
+            </p>
+          )}
           {!query.trim() && (
-            <p className="muted small">Search your workspace.</p>
+            <p className="muted small">
+              Search courses, assessments, tasks, goals, projects, study topics
+              and settings.
+            </p>
           )}
         </div>
       </Modal>

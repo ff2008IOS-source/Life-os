@@ -1,4 +1,5 @@
 "use client";
+import { stamp } from "@/lib/display";
 import { availableProject } from "@/lib/visible-areas";
 import { useState, useEffect } from "react";
 import { calendarRequest } from "./use-calendar";
@@ -156,9 +157,7 @@ export function SheetSyncPanel() {
           <p className="small muted">
             {s.mode === "paused" ? "Paused" : "Import only"} · Last successful
             check:{" "}
-            {s.last_success_at
-              ? new Date(s.last_success_at).toLocaleString()
-              : "Not yet checked"}
+            {s.last_success_at ? stamp(s.last_success_at) : "Not yet checked"}
           </p>
           {s.last_error && <p className="error-message">{s.last_error}</p>}
           <div className="career-import-actions">

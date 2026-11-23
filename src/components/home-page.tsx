@@ -8,7 +8,6 @@ import { useCurrentTime } from "./use-current-time";
 import { useBriefing } from "./use-briefing";
 import { BriefingPanel } from "./briefing-page";
 import Link from "next/link";
-import { QuickCapture, TaskList } from "./task-list";
 import { SyncHealth } from "./sync-health";
 import { AttentionHistory } from "./attention-history";
 import { TodayView } from "./today-view";
@@ -66,19 +65,24 @@ export function HomePage({
         </div>
       )}
       <TodayView briefing={briefing} />
-      <section className="td td-capture" aria-label="Daily tasks">
-        <QuickCapture />
-        <details className="today-inbox td-inbox">
-          <summary>Inbox · {inbox.length} not planned yet</summary>
-          <TaskList tasks={inbox.slice(0, 8)} />
-          <Link className="td-link" href="/planner?section=inbox">
-            Open inbox
-          </Link>
-        </details>
-        <div className="td-actions td-capture-actions">
+      <div className="td">
+        {(!!missed?.length || !!briefing.data?.planning_decisions?.length) && (
+          <PlanningDecisions
+            initial={briefing.data?.planning_decisions}
+            checkKey={
+              missed
+                ?.map((b) => b.id + ":" + b.start_at + ":" + b.end_at)
+                .sort()
+                .join("|") ?? ""
+            }
+            needsCheck={!!missed?.length}
+          />
+        )}
+        <div className="td-footer">
           <button
             type="button"
-            className="td-btn td-btn-ghost td-btn-sm"
+            className="td-link"
+            aria-expanded={moreOpen}
             onClick={() => {
               setMoreOpen(true);
               requestAnimationFrame(() =>
@@ -90,36 +94,29 @@ export function HomePage({
           >
             Daily check-in
           </button>
+          <Link className="td-link" href="/planner?section=inbox">
+            Inbox{inbox.length ? ` · ${inbox.length}` : ""}
+          </Link>
         </div>
-      </section>
-      <div className="td">
-        <PlanningDecisions
-          initial={briefing.data?.planning_decisions}
-          checkKey={
-            missed
-              ?.map((b) => b.id + ":" + b.start_at + ":" + b.end_at)
-              .sort()
-              .join("|") ?? ""
-          }
-          needsCheck={!!missed?.length}
-        />
-        <details
-          id="day-review"
-          className="td-more"
-          open={moreOpen}
-          onToggle={(e) => setMoreOpen(e.currentTarget.open)}
-        >
-          <summary>Day review, alerts &amp; connections</summary>
-          {moreOpen && (
-            <>
-              <BriefingPanel controller={briefing} hideConnectionAlerts />
-              <div id="connected-data">
-                <SyncHealth controller={briefing} />
-              </div>
-              <AttentionHistory />
-            </>
-          )}
-        </details>
+        {moreOpen && (
+          <section id="day-review" className="td-card" aria-label="Day review">
+            <div className="td-card-head">
+              <h2 className="td-card-title">Day review</h2>
+              <button
+                type="button"
+                className="td-link"
+                onClick={() => setMoreOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <BriefingPanel controller={briefing} hideConnectionAlerts />
+            <div id="connected-data">
+              <SyncHealth controller={briefing} />
+            </div>
+            <AttentionHistory />
+          </section>
+        )}
       </div>
     </div>
   );

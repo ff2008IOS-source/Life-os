@@ -41,7 +41,7 @@ test("academic forms save unknown term dates, course rules and scores without in
   await expect(
     page.getByText("[TEST] Unknown score", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Results so far", { exact: true })).toBeVisible();
+  await expect(page.getByText("Average so far", { exact: true })).toBeVisible();
   await page.getByText("Grading details & syllabus", { exact: true }).click();
   await expect(
     page.getByText("The grading formula is not confirmed.", { exact: false }),
