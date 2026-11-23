@@ -390,3 +390,25 @@ it("ranks overdue work by priority before age", () => {
   });
   expect(a.items.map((i) => i.id)).toEqual(["new-urgent", "old-high", "soon"]);
 });
+
+it("shows an event copied onto two calendars once", () => {
+  const a = buildAgenda({
+    ...monday,
+    events: [
+      ...monday.events,
+      event(
+        "e3-copy",
+        "Study · ECON 113",
+        "2026-11-23T10:30:00",
+        "2026-11-23T12:00:00",
+        "sfu",
+      ),
+    ],
+  });
+  expect(
+    a.timeline.filter(
+      (e) => e.kind === "event" && e.title === "Study · ECON 113",
+    ),
+  ).toHaveLength(1);
+  expect(a.clashes).toHaveLength(1);
+});
