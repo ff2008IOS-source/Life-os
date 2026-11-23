@@ -46,22 +46,16 @@ test("deterministic briefing saves check-ins, performs approved task actions and
   const task = (await r.json()).data;
   await page.goto("/assistant");
   await expect(page).toHaveURL(/\/#daily-briefing$/);
+  const next = page.getByRole("region", { name: "Do this next", exact: true });
+  // Overdue, urgent work leads Today.
+  await expect(next).toContainText(task.title);
   await expect(
-    page.getByRole("heading", { name: "Focus", exact: true }),
+    next.getByRole("button", { name: "Start 30 min", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Your question")).toHaveCount(0);
   await expect(
     page.getByText("Optional AI perspective", { exact: true }),
   ).toHaveCount(0);
-  const primary = page.locator(".briefing-primary").filter({ visible: true });
-  await expect(primary).toContainText(task.title);
-  await expect(primary).toContainText("30 min estimated");
-  await primary.locator(".focus-secondary > summary").click();
-  await primary.getByRole("button", { name: "Schedule", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Enable scheduling eligibility",
-  );
-  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page
     .getByRole("button", { name: "Daily check-in", exact: true })
     .click();
@@ -108,45 +102,17 @@ test("deterministic briefing saves check-ins, performs approved task actions and
       .getByText("[TEST] Confirm a realistic study block.", { exact: true })
       .filter({ visible: true }),
   ).toBeVisible();
-  if (
-    !(await primary.locator(".focus-secondary").getAttribute("open")) &&
-    !(await primary
-      .getByRole("button", { name: "Mark Complete", exact: true })
-      .isVisible())
-  )
-    await primary.locator(".focus-secondary > summary").click();
-  await primary
-    .getByRole("button", { name: "Mark Complete", exact: true })
+  await next
+    .getByRole("button", { name: `Mark ${task.title} done`, exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Confirm task completion", exact: true })
-    .click();
-  await expect(
-    primary.getByRole("heading", { name: task.title, exact: true }),
-  ).toHaveCount(0);
-  expect(
-    (await (await page.request.get(`/api/v1/tasks/${task.id}`)).json()).data
-      .status,
-  ).toBe("completed");
-  const next = primary.getByRole("button", { name: "Not Now", exact: true });
-  if (await next.isVisible()) {
-    const deferredTitle = await primary.locator("h3").textContent();
-    const [saved] = await Promise.all([
-      page.waitForResponse(
-        (r) =>
-          new URL(r.url()).pathname === "/api/v1/briefing" &&
-          r.request().method() === "POST",
-      ),
-      next.click(),
-    ]);
-    expect(saved.status(), await saved.text()).toBe(200);
-    const snapshot = await (await page.request.get("/api/v1/briefing")).json();
-    expect(snapshot.weekly.deferrals).toBeGreaterThan(0);
-    if (deferredTitle)
-      await expect(
-        primary.getByRole("heading", { name: deferredTitle, exact: true }),
-      ).toHaveCount(0);
-  }
+  await expect
+    .poll(
+      async () =>
+        (await (await page.request.get(`/api/v1/tasks/${task.id}`)).json()).data
+          .status,
+    )
+    .toBe("completed");
+  await expect(next).not.toContainText(task.title);
   expect(aiPosts).toBe(0);
   for (const viewport of [
     { width: 1280, height: 900 },

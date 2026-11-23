@@ -30,18 +30,6 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
   await expect(
     page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
-  const originalDate = await page
-    .getByLabel("Dashboard date")
-    .filter({ visible: true })
-    .inputValue();
-  await page.getByRole("button", { name: "Next day", exact: true }).click();
-  await expect(
-    page.getByLabel("Dashboard date").filter({ visible: true }),
-  ).not.toHaveValue(originalDate);
-  await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(
-    page.getByLabel("Dashboard date").filter({ visible: true }),
-  ).toHaveValue(originalDate);
   const daily = page.getByRole("region", { name: "Daily tasks" });
   await daily.locator("summary").filter({ hasText: "Details" }).click();
   const title = "[TEST] Warm inline capture";
@@ -97,6 +85,7 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
       "/areas/career",
       "/learning",
       "/areas/projects",
+      "/growth",
       "/reviews",
       "/insights",
       "/settings",
@@ -176,9 +165,9 @@ test("retired sports destination redirects without hiding ordinary projects", as
     { data: { settings: oldLayout } },
   );
   await page.goto("/");
-  await expect(
-    page.locator(".today-primary").filter({ visible: true }),
-  ).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Do this next" })).toHaveCount(
+    1,
+  );
   await page.keyboard.press("Control+k");
   const search = page.getByRole("dialog");
   await search

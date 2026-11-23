@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./consumer.css";
 import "./warm.css";
+import "./today.css";
 import { Providers } from "@/components/providers";
 const interfaceFont = localFont({
   src: "./fonts/inter-latin.woff2",
@@ -29,8 +30,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f3ed" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c1a18" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f5f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1114" },
   ],
 };
 export default function RootLayout({

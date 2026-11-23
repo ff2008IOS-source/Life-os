@@ -19,6 +19,7 @@ import { GoalsPage } from "@/components/goals-page";
 import { ReviewsPage } from "@/components/conversational-reviews-page";
 import { InsightsPage } from "@/components/insights-page";
 import { SettingsPage } from "@/components/settings-page";
+import { GrowthPage } from "@/components/growth-page";
 export const dynamic = "force-dynamic";
 export default async function Page({
   params,
@@ -42,6 +43,7 @@ export default async function Page({
       "home",
       "basketball",
       "learning",
+      "growth",
       "assistant",
       "briefing",
       "planner",
@@ -117,6 +119,8 @@ export default async function Page({
                   : undefined
               }
             />
+          ) : page === "growth" ? (
+            <GrowthPage />
           ) : page === "goals" ? (
             <GoalsPage />
           ) : page === "reviews" ? (

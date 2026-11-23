@@ -52,6 +52,7 @@ export type Assessment = {
   source_key: string | null;
   source_status: string | null;
   score_unit: "points" | "percent";
+  version?: number;
 };
 export type BriefingAction = {
   id: string;

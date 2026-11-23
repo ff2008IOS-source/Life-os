@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { calendarRequest } from "./use-calendar";
 import { Button } from "./ui/button";
 import { ConnectedCareerRecords } from "./connected-career-records";
+import { cellText } from "@/lib/sheet-cell";
 import type { Dataset, Row } from "./sheet-rest-panel";
 type Section = { dataset: Dataset; rows: Row[]; more: boolean; error?: string };
 export function CareerRoadmap() {
@@ -103,7 +104,7 @@ export function CareerRoadmap() {
                 );
                 const title =
                   titleColumns
-                    .map((c) => String(row.local_values[c.key] ?? ""))
+                    .map((c) => cellText(c.header, row.local_values[c.key]))
                     .filter(Boolean)
                     .join(" · ") || "Untitled record";
                 const details = section.dataset.config.columns.filter(
@@ -128,7 +129,7 @@ export function CareerRoadmap() {
                       {details.map((c) => (
                         <div key={c.key}>
                           <dt>{c.header}</dt>
-                          <dd>{String(row.local_values[c.key] ?? "")}</dd>
+                          <dd>{cellText(c.header, row.local_values[c.key])}</dd>
                         </div>
                       ))}
                     </dl>
@@ -142,7 +143,7 @@ export function CareerRoadmap() {
                   <div className="roadmap-item" key={row.id}>
                     {section.dataset.config.columns
                       .filter((c) => c.key_part)
-                      .map((c) => String(row.local_values[c.key] ?? ""))
+                      .map((c) => cellText(c.header, row.local_values[c.key]))
                       .join(" · ")}
                   </div>
                 ))}

@@ -27,10 +27,7 @@ test("native review snapshots persist and assistant remains disabled without a c
     page.locator("summary").filter({ hasText: "Daily Missed Task Check" }),
   ).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("navigation", { name: "Mobile navigation" })
-    .getByRole("link", { name: "More", exact: true })
-    .click();
+  await page.goto("/more");
   await expect(
     page
       .locator(".more-list")

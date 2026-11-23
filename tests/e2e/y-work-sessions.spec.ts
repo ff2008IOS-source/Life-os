@@ -189,7 +189,12 @@ test("synthetic reservation → actual completion → academic history and revie
   expect(reservation.ok()).toBe(true);
   await page.goto("/planner");
   await page.getByRole("tab", { name: "Scheduling preview" }).click();
-  await page.getByRole("button", { name: "Record work", exact: true }).click();
+  // Other specs can leave their own reservations; record this task's session.
+  await page
+    .locator(".setting-line")
+    .filter({ hasText: task.title })
+    .getByRole("button", { name: "Record work", exact: true })
+    .click();
   for (const viewport of [
     { width: 1280, height: 900 },
     { width: 1024, height: 768 },

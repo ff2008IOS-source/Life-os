@@ -515,15 +515,12 @@ summary:focus-visible {
   }
 }
 
-.mobile-nav .mobile-add {
-  background: var(--surface);
-  color: white;
+.mobile-nav .mobile-add,
+.dark .mobile-nav .mobile-add {
+  background: var(--accent);
+  color: var(--on-accent);
   box-shadow: none;
   border-radius: 11px;
-}
-.dark .mobile-nav .mobile-add {
-  background: var(--surface);
-  color: var(--text);
 }
 @media (max-width: 700px) {
   .content {

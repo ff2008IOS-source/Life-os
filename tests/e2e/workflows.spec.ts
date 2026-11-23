@@ -151,9 +151,15 @@ test("mobile setup and private routes fit an iPhone viewport", async ({
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "Mobile navigation" })
-    .getByRole("link", { name: "Planner", exact: true })
+    .getByRole("link", { name: "Week", exact: true })
     .click();
   await expect(page.getByRole("heading", { name: "Planner" })).toBeVisible();
+  for (const name of ["Today", "School", "Growth"])
+    await expect(
+      page
+        .getByRole("navigation", { name: "Mobile navigation" })
+        .getByRole("link", { name, exact: true }),
+    ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
