@@ -58,4 +58,14 @@ test("academic forms save unknown term dates, course rules and scores without in
       (a: { title: string }) => a.title === "[TEST] Unknown score",
     ).earned_score,
   ).toBe(null);
+  // New term setup lists the term's courses with a syllabus reader.
+  await page.goto("/settings?section=advanced");
+  const setup = page.getByRole("region", { name: "New term setup" });
+  await setup
+    .getByRole("combobox", { name: "Term to set up" })
+    .selectOption({ label: "[TEST] Unknown dates term" });
+  await expect(setup.getByText("[TEST]101")).toBeVisible();
+  await expect(
+    setup.getByRole("button", { name: /Read weights from syllabus/ }),
+  ).toBeVisible();
 });
