@@ -87,6 +87,7 @@ export function groupMaterials<T extends LibraryRecord>(
 }
 
 export function materialAvailability(status: string, text: string) {
+  if (/^no_text\b/.test(status)) return "This file couldn't be read (scanned)";
   if (/^(unavailable|unsupported|too_large|no_text|failed)\b/.test(status))
     return "Unavailable";
   if (/^(queued|pending|processing|reading)\b/.test(status))

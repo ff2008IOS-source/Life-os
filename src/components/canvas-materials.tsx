@@ -36,10 +36,16 @@ type Data = {
 };
 export function CanvasMaterials({
   localCourseId,
+  onTopics,
   embedded = false,
-}: { localCourseId?: string; embedded?: boolean } = {}) {
+}: {
+  onTopics?: () => Promise<void>;
+  localCourseId?: string;
+  embedded?: boolean;
+} = {}) {
   const [revision, setRevision] = useState(0);
   const [query, setQuery] = useState("");
+  const [topicMessage, setTopicMessage] = useState("");
   const [reading, setReading] = useState(false);
   const [data, setData] = useState<Data | null>(null),
     [course, setCourse] = useState(""),
@@ -160,7 +166,40 @@ export function CanvasMaterials({
         >
           {reading ? "Reading course files…" : "Make files searchable"}
         </Button>
+        {localCourseId && data?.mapped_course && (
+          <Button
+            variant="outline"
+            disabled={reading}
+            onClick={async () => {
+              setReading(true);
+              try {
+                const response = await fetch("/api/canvas/topics", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "find",
+                    course: localCourseId,
+                    canvas: data.mapped_course,
+                  }),
+                });
+                const result = await response.json();
+                if (!response.ok)
+                  throw Error(result.error?.message ?? "Topic search failed.");
+                setTopicMessage(result.message);
+                setRevision((v) => v + 1);
+                await onTopics?.();
+              } catch (e) {
+                setTopicMessage((e as Error).message);
+              } finally {
+                setReading(false);
+              }
+            }}
+          >
+            Find topics
+          </Button>
+        )}
       </div>
+      {topicMessage && <p role="status">{topicMessage}</p>}
       {data?.library_limited && (
         <p className="notice">
           Showing 999 materials. Search applies to these loaded items; use Next

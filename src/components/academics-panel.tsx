@@ -1,6 +1,7 @@
 "use client";
 import { orderTerms, visibleCourses } from "@/lib/course-visibility";
 import { SyllabusReference } from "./syllabus-reference";
+import { studyTopicEvidence } from "@/lib/study-topic-evidence";
 import { AssessmentTable } from "./assessment-table";
 import { useCurrentTime } from "./use-current-time";
 import { CanvasMaterials } from "./canvas-materials";
@@ -65,6 +66,7 @@ export function AcademicsPanel({
     [edit, setEdit] = useState<{
       kind: AcademicKind;
       record?: AcademicRow;
+      seed?: Record<string, unknown>;
     } | null>(null);
   const refresh = useCallback(async () => {
     setData(await calendarRequest<AcademicData>("/api/v1/academics"));
@@ -189,12 +191,39 @@ export function AcademicsPanel({
       : [];
   const remainingCount = targets.find((t) => t.r.status === "required")?.r;
   const order = ["needs_review", "practicing", "unstudied", "mastered"];
-  const sortedTopics = topics.toSorted(
-    (x, y) =>
-      order.indexOf(String(x.mastery ?? "unstudied")) -
-      order.indexOf(String(y.mastery ?? "unstudied")),
+  const suggestions = (data.topic_suggestions ?? []).filter(
+    (t) => t.course_id === selected,
   );
-  const toReview = topics.filter((t) => t.mastery !== "mastered").length;
+  async function review(action: "add" | "dismiss", ids: string[]) {
+    try {
+      await calendarRequest("/api/canvas/topics", {
+        method: "POST",
+        body: JSON.stringify({ action, ids, course: selected }),
+      });
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  const sortedTopics = topics
+    .map(
+      (t) =>
+        ({
+          ...t,
+          ...studyTopicEvidence(
+            { ...t, mastery: t.stored_mastery ?? t.mastery },
+            assessments,
+            sessions,
+            now,
+          ),
+        }) as AcademicRow,
+    )
+    .toSorted(
+      (x, y) =>
+        order.indexOf(String(x.mastery ?? "unstudied")) -
+        order.indexOf(String(y.mastery ?? "unstudied")),
+    );
+  const toReview = sortedTopics.filter((t) => t.mastery !== "mastered").length;
   const openGrades = (sub: "assessments" | "categories" = "assessments") => {
     setView("grades");
     setTab(sub);
@@ -478,6 +507,48 @@ export function AcademicsPanel({
                   </div>
                   {studyTab === "topics" ? (
                     <>
+                      {suggestions.length > 0 && (
+                        <div>
+                          <strong>Suggested</strong>{" "}
+                          <button
+                            className="td-link"
+                            onClick={() =>
+                              review(
+                                "add",
+                                suggestions.map((t) => t.id),
+                              )
+                            }
+                          >
+                            Add all
+                          </button>
+                          <ul className="topic-list">
+                            {suggestions.map((t) => (
+                              <li className="topic" key={t.id}>
+                                <div>
+                                  {String(t.title)}
+                                  <div className="course-note">
+                                    {[t.section, t.source_file]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </div>
+                                </div>
+                                <button
+                                  className="td-link"
+                                  onClick={() => review("add", [t.id])}
+                                >
+                                  Add
+                                </button>
+                                <button
+                                  className="td-link"
+                                  onClick={() => review("dismiss", [t.id])}
+                                >
+                                  Dismiss
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       {!toReview && (
                         <p className="course-empty">
                           No topics currently require review.
@@ -503,6 +574,13 @@ export function AcademicsPanel({
                                   }
                                 >
                                   {String(t.title)}
+                                  {Boolean(t.reason || t.source_file) && (
+                                    <span
+                                      style={{ display: "block", fontSize: 12 }}
+                                    >
+                                      {String(t.reason || t.source_file)}
+                                    </span>
+                                  )}
                                 </button>
                                 <span
                                   className="topic-meter"
@@ -530,7 +608,10 @@ export function AcademicsPanel({
                                   <button
                                     className="td-link"
                                     onClick={() =>
-                                      setEdit({ kind: "study_sessions" })
+                                      setEdit({
+                                        kind: "study_sessions",
+                                        seed: { topic_id: t.id },
+                                      })
                                     }
                                   >
                                     Continue studying
@@ -816,6 +897,7 @@ export function AcademicsPanel({
                     </section>
                     <CanvasMaterials
                       key={selected}
+                      onTopics={refresh}
                       localCourseId={selected}
                       embedded
                     />
@@ -847,6 +929,7 @@ export function AcademicsPanel({
       {edit && (
         <AcademicEditor
           kind={edit.kind}
+          seed={edit.seed}
           record={edit.record}
           courseId={selected}
           data={data}

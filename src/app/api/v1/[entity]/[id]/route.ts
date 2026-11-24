@@ -16,7 +16,11 @@ export async function PATCH(request: Request, { params }: Context) {
     if (!schema) throw new ApiError(404, "Not found.");
     const { db, user } = await authorized();
     const body = z
-      .object({ version: z.number().int().positive(), data: z.unknown() })
+      .object({
+        version: z.number().int().positive(),
+        data: z.unknown(),
+        set_mastery: z.literal(true).optional(),
+      })
       .strict()
       .parse(await readJson(request));
     const values = schema.parse(body.data);
@@ -71,7 +75,15 @@ export async function PATCH(request: Request, { params }: Context) {
         : {};
     const { data, error } = await db
       .from(entity)
-      .update({ ...values, ...stamp })
+      .update({
+        ...values,
+        ...stamp,
+        ...(entity === "study_topics" &&
+        "mastery" in values &&
+        (body.set_mastery || values.mastery !== current.mastery)
+          ? { mastery_manual: true }
+          : {}),
+      })
       .eq("id", id)
       .eq("user_id", user.id)
       .eq("version", body.version)

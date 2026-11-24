@@ -37,12 +37,16 @@ export async function POST(request: Request) {
       "sheets_rest",
     ] as const;
     const managedRead = managedCalendarWorker();
+    const canvasSync = canvasWorker();
     const results = await Promise.allSettled([
       notificationWorker(),
       managedRead.then(() => runSchedulingAutomation()),
-      canvasWorker(),
+      canvasSync,
       personalWorkflowWorker(),
-      canvasDocumentWorker(),
+      canvasSync.then(
+        () => canvasDocumentWorker(),
+        () => canvasDocumentWorker(),
+      ),
       managedRead,
       sheetSyncWorker(),
       restSheetsWorker(),
