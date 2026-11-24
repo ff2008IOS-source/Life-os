@@ -1,4 +1,5 @@
 "use client";
+import { orderTerms } from "./new-term-setup";
 import { SyllabusReference } from "./syllabus-reference";
 import { AssessmentTable } from "./assessment-table";
 import { possibleAssessmentDuplicates } from "@/lib/academic-display";
@@ -63,7 +64,7 @@ export function AcademicsPanel({
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [courseId, setCourseId] = useState(initialCourse ?? ""),
-    [term, setTerm] = useState(""),
+    [termChoice, setTerm] = useState<string | null>(null),
     [tab, setTab] = useState("assessments"),
     [edit, setEdit] = useState<{
       kind: AcademicKind;
@@ -91,6 +92,14 @@ export function AcademicsPanel({
       live = false;
     };
   }, []);
+  // School opens on the newest term that has courses (or the linked course's).
+  const newest = orderTerms(data.academic_terms).find((t) =>
+    data.courses.some((c) => c.term_id === t.id),
+  );
+  const linked = data.courses.find((c) => c.id === initialCourse);
+  const term =
+    termChoice ??
+    (linked ? String(linked.term_id ?? "") : String(newest?.id ?? ""));
   const courses = data.courses.filter((c) => !term || c.term_id === term);
   const current = courses.find((c) => c.id === courseId) ?? courses[0];
   const selected = current?.id;
@@ -258,7 +267,7 @@ export function AcademicsPanel({
               onChange={(e) => setTerm(e.currentTarget.value)}
             >
               <option value="">All terms</option>
-              {data.academic_terms.map((t) => (
+              {orderTerms(data.academic_terms).map((t) => (
                 <option key={t.id} value={t.id}>
                   {String(t.name)}
                 </option>
