@@ -123,13 +123,28 @@ export function AcademicsPanel({
           a.maximum_score as number | null,
           a.score_unit === "percent" ? "percent" : "points",
         );
-  /** Plain average of graded work; used when grading rules are not confirmed. */
+  /**
+   * The course's current grade, weighted by its syllabus rules. Never a plain
+   * average: without confirmed rules there is no grade to show.
+   */
   const averageFor = (courseKey: string) => {
-    const p = data.assessments
-      .filter((a) => a.course_id === courseKey)
-      .map(pctOf)
-      .filter((x): x is number => x !== null);
-    return p.length ? p.reduce((a, b) => a + b, 0) / p.length : null;
+    const course = data.courses.find((c) => c.id === courseKey);
+    const rows = data.assessments.filter((a) => a.course_id === courseKey);
+    if (
+      course?.grading_rules_confirmed === true &&
+      course.grading_method !== "unknown"
+    ) {
+      const weighted = academicGrade(
+        String(course.grading_method),
+        rows as unknown as GradeAssessment[],
+        data.grading_categories.filter(
+          (g) => g.course_id === courseKey,
+        ) as unknown as GradeCategory[],
+        { inventoryComplete: false, rulesVerified: true },
+      ).graded_average;
+      return weighted;
+    }
+    return null;
   };
   const nowMs = now.getTime();
   const dueMs = (a: AcademicRow) =>
@@ -351,21 +366,11 @@ export function AcademicsPanel({
               <>
                 <div className="course-stats">
                   <div>
-                    <span>
-                      {standingSupported && summary.graded_average !== null
-                        ? "Current standing"
-                        : "Average so far"}
-                    </span>
-                    {(standingSupported && summary.graded_average !== null
-                      ? summary.graded_average
-                      : averageFor(selected!)) !== null ? (
+                    <span>Current grade</span>
+                    {averageFor(selected!) !== null ? (
                       <strong>
                         <Mark
-                          earned={
-                            standingSupported && summary.graded_average !== null
-                              ? summary.graded_average
-                              : averageFor(selected!)
-                          }
+                          earned={averageFor(selected!)}
                           unit="percent"
                           showFraction={false}
                         />
@@ -374,11 +379,25 @@ export function AcademicsPanel({
                       <strong>—</strong>
                     )}
                     <small>
-                      {standingSupported
-                        ? "Weighted by your syllabus"
-                        : graded.length
-                          ? `Unweighted, ${graded.length} graded`
-                          : "No grades yet"}
+                      {current.grading_rules_confirmed === true &&
+                      current.grading_method !== "unknown" ? (
+                        averageFor(selected!) !== null ? (
+                          "Weighted by your syllabus"
+                        ) : (
+                          "No graded work yet"
+                        )
+                      ) : (
+                        <button
+                          type="button"
+                          className="td-link"
+                          onClick={() => {
+                            setView("assessments");
+                            setTab("categories");
+                          }}
+                        >
+                          Add syllabus weights
+                        </button>
+                      )}
                     </small>
                   </div>
                   <div>
