@@ -122,7 +122,7 @@ export function Login({
                   <strong>Start with test data</strong>
                   <small>
                     Sign in, initialize your workspace, then create clearly
-                    labeled beta records.
+                    labeled test records.
                   </small>
                 </p>
               </div>

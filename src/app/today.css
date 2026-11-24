@@ -1410,3 +1410,32 @@ html:not([data-diagnostics]) .tech-detail {
 .back-link:hover {
   text-decoration: underline;
 }
+
+/* Settings groups and plain connection status */
+.settings-group {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 32px 0 12px;
+}
+.connection-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.connection-status {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--secondary);
+}
+.connection-status.ok {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+}
+.connection-status.warn {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}

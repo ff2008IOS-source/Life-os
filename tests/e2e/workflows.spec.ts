@@ -69,13 +69,13 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     .click();
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await expect(page.getByText("Task restored", { exact: true })).toBeVisible();
-  await page.goto("/settings?section=advanced");
-  await page
-    .getByRole("button", { name: "Add [TEST] examples", exact: true })
-    .click();
-  await expect(
-    page.getByText("Clearly labeled test examples added"),
-  ).toBeVisible();
+  // The example data is a test fixture now, not a Settings feature.
+  expect(
+    await page.evaluate(
+      async () =>
+        (await fetch("/api/v1/workspace/examples", { method: "POST" })).ok,
+    ),
+  ).toBe(true);
   await page.goto("/goals");
   await expect(
     page.getByRole("heading", { name: "[TEST] Explore a complete workflow" }),

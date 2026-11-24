@@ -10,7 +10,7 @@ import { ProfilePictureSettings } from "./profile-identity";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
-import { Download, LogOut, FlaskConical } from "lucide-react";
+import { Download, LogOut } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
 import { PasswordForm } from "./password-forms";
@@ -27,13 +27,23 @@ export function SettingsPage({
   initialSection?: string;
   initialCanvasOpen?: boolean;
 }) {
+  // Account · Connections · Notifications · Privacy & security · Data.
+  // Older links (?section=advanced) open the tab that now holds that content.
   const [section, setSection] = useState(
-    ["profile", "integrations", "privacy", "advanced"].includes(initialSection)
-      ? initialSection
-      : "profile",
+    initialSection === "advanced"
+      ? "integrations"
+      : [
+            "profile",
+            "integrations",
+            "notifications",
+            "privacy",
+            "data",
+          ].includes(initialSection)
+        ? initialSection
+        : "profile",
   );
   const router = useRouter();
-  const { data, request, refresh, notify, pending } = useWorkspace();
+  const { data, request, refresh, notify } = useWorkspace();
   const { setTheme } = useTheme();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -67,16 +77,16 @@ export function SettingsPage({
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">MAKE IT YOURS</span>
           <h1>Settings</h1>
         </div>
       </div>
       <div className="tabs settings-tabs" aria-label="Settings sections">
         {[
-          { id: "profile", label: "Preferences" },
+          { id: "profile", label: "Account" },
           { id: "integrations", label: "Connections" },
-          { id: "privacy", label: "Privacy & account" },
-          { id: "advanced", label: "Advanced" },
+          { id: "notifications", label: "Notifications" },
+          { id: "privacy", label: "Privacy & security" },
+          { id: "data", label: "Data" },
         ].map((t) => (
           <button
             key={t.id}
@@ -94,8 +104,7 @@ export function SettingsPage({
             <div className="settings-grid">
               <ProfilePictureSettings />
               <section className="panel settings-panel">
-                <h2>Your workspace</h2>
-                <p>Preferences are saved to your private account.</p>
+                <h2>Preferences</h2>
                 <form onSubmit={submit}>
                   <label>
                     Display name
@@ -132,8 +141,7 @@ export function SettingsPage({
                   </div>
                   <div className="setting-line">
                     <div>
-                      <strong>Timezone</strong>
-                      <p>Scheduling and deadlines use Vancouver local time.</p>
+                      <strong>Time zone</strong>
                     </div>
                     <span className="badge">America/Vancouver</span>
                   </div>
@@ -158,86 +166,54 @@ export function SettingsPage({
         {section === "integrations" && (
           <div>
             <ConnectedSyncAll />
+            <h2 className="settings-group">Calendar</h2>
             <div className="settings-grid">
-              <CanvasConnectionSettings initialOpen={initialCanvasOpen} />
               <GoogleCalendarPanel settings />
-              <SheetRestPanel />
-              <details className="panel settings-panel">
-                <summary>Legacy imports and migration tools</summary>
-                <p className="small muted">
-                  These preserve earlier imported records. Use Google Sheets
-                  synchronization above for current mapped two-way tables.
-                </p>
-                <CareerPanel compact />
-                <SheetSyncPanel />
-              </details>
               <section className="panel settings-panel">
                 <h2>Planning preferences</h2>
-                <p>
-                  Work hours, session lengths and calendar reservations live
-                  together in Planner.
-                </p>
+                <p>Work hours, session lengths and calendar reservations.</p>
                 <Link className="text-link" href="/planner?section=schedule">
                   Open planning controls
                 </Link>
               </section>
             </div>
+            <h2 className="settings-group">Academic integrations</h2>
+            <div className="settings-grid">
+              <CanvasConnectionSettings initialOpen={initialCanvasOpen} />
+            </div>
+            <NewTermSetup />
+            <h2 className="settings-group">Spreadsheets</h2>
+            <div className="settings-grid">
+              <SheetRestPanel />
+              <details className="panel settings-panel">
+                <summary>Legacy imports and migration tools</summary>
+                <p className="small muted">
+                  Records imported before two-way sync. New tables use Google
+                  Sheets above.
+                </p>
+                <CareerPanel compact />
+                <SheetSyncPanel />
+              </details>
+            </div>
+          </div>
+        )}
+        {section === "notifications" && (
+          <div className="settings-grid">
+            <section className="panel settings-panel">
+              <h2>Reminders</h2>
+              <NotificationsPanel />
+            </section>
           </div>
         )}
         {section === "privacy" && (
           <div>
             <div className="settings-grid">
-              <section className="panel settings-panel">
-                <h2>Notifications</h2>
-                <p>Manage reminders, quiet hours and device push in Updates.</p>
-                <details>
-                  <summary>Reminder preferences and devices</summary>
-                  <NotificationsPanel />
-                </details>
-              </section>
               <MfaPanel />
               <PasswordForm />
-              <ActivityReset />
               <AccountDeletion />
               <section className="panel settings-panel">
-                <h2>Privacy & recovery</h2>
-                <Link className="text-link" href="/assistant/history">
-                  Past conversations
-                </Link>
-                <p>Only your approved account can access your workspace.</p>
-                <div className="setting-line">
-                  <div>
-                    <strong>Export your records</strong>
-                    <p>
-                      Download JSON, excluding credentials. This is not a full
-                      database backup.
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/api/v1/export" download>
-                      <Download size={13} />
-                      Export
-                    </a>
-                  </Button>
-                </div>
-                <div className="setting-line">
-                  <div>
-                    <strong>Independent backups</strong>
-                    <p>
-                      Encrypted backups and restoration need separate
-                      verification. Hosted recovery is not yet verified. Keep
-                      encryption keys separately from the backup.
-                    </p>
-                  </div>
-                  <a
-                    className="text-link"
-                    href="https://github.com/ff2008IOS-source/Life-os/blob/main/docs/HOSTED_RECOVERY_SETUP.md"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Recovery instructions
-                  </a>
-                </div>
+                <h2>Sign out</h2>
+                <p>Only your account can open your workspace.</p>
                 <Button
                   variant="ghost"
                   style={{ marginTop: 15 }}
@@ -260,53 +236,53 @@ export function SettingsPage({
             </div>
           </div>
         )}
-        {section === "advanced" && (
+        {section === "data" && (
           <div>
-            <NewTermSetup />
-            <section className="panel settings-panel">
-              <h2>Technical details</h2>
-              <TechnicalDetailsToggle />
-            </section>
             <div className="settings-grid">
               <section className="panel settings-panel">
-                <h2 className="inline">
-                  <FlaskConical size={17} />
-                  Safe beta examples
-                </h2>
-                <p>
-                  Add a small, clearly labeled synthetic project, goal,
-                  milestone, and two tasks. No personal records or external
-                  events are created. Repeating this action does not duplicate
-                  examples.
-                </p>
-                <Button
-                  variant="outline"
-                  disabled={pending || saving}
-                  onClick={async () => {
-                    setSaving(true);
-                    try {
-                      await request("/api/v1/workspace/examples", {
-                        method: "POST",
-                      });
-                      await refresh();
-                      notify("Clearly labeled test examples added");
-                    } catch (e) {
-                      notify(
-                        e instanceof Error
-                          ? e.message
-                          : "Unable to add examples",
-                      );
-                    } finally {
-                      setSaving(false);
-                    }
-                  }}
-                >
-                  <FlaskConical size={14} />
-                  Add [TEST] examples
-                </Button>
-                <p className="form-hint" style={{ marginTop: 15 }}>
-                  Finance and Wellbeing remain empty.
-                </p>
+                <h2>Your data</h2>
+                <div className="setting-line">
+                  <div>
+                    <strong>Export your records</strong>
+                    <p>A JSON download of your workspace, without passwords.</p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href="/api/v1/export" download>
+                      <Download size={13} />
+                      Export
+                    </a>
+                  </Button>
+                </div>
+                <div className="setting-line">
+                  <div>
+                    <strong>Backups</strong>
+                    <p>
+                      Encrypted backups are set up separately. Restoring one
+                      hasn’t been tested on the hosted site yet.
+                    </p>
+                  </div>
+                  <a
+                    className="text-link"
+                    href="https://github.com/ff2008IOS-source/Life-os/blob/main/docs/HOSTED_RECOVERY_SETUP.md"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Recovery instructions
+                  </a>
+                </div>
+                <div className="setting-line">
+                  <div>
+                    <strong>Past conversations</strong>
+                  </div>
+                  <Link className="text-link" href="/assistant/history">
+                    Open archive
+                  </Link>
+                </div>
+              </section>
+              <ActivityReset />
+              <section className="panel settings-panel">
+                <h2>Technical details</h2>
+                <TechnicalDetailsToggle />
               </section>
             </div>
           </div>

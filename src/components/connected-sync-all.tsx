@@ -202,9 +202,7 @@ export function ConnectedSyncAll() {
         </Button>
       </div>
       <p className="small muted">
-        Refresh Canvas, selected calendars and active spreadsheets. Rebuild
-        source-backed projects and current actions when enabled by your clean
-        reset. Your existing outgoing-change approvals still apply.
+        Refreshes Canvas, your calendars and your spreadsheets.
       </p>
       <p role="status" aria-live="polite">
         {busy

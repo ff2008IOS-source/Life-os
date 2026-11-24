@@ -47,7 +47,7 @@ test("canonical exam results survive a clean activity reset; Sync all rebuilds s
     page.getByRole("dialog").getByText("21 / 45 · 46.7%", { exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.goto("/settings?section=privacy");
+  await page.goto("/settings?section=data");
   await page
     .getByRole("button", { name: "Review activity reset", exact: true })
     .click();
