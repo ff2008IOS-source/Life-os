@@ -412,3 +412,23 @@ it("shows an event copied onto two calendars once", () => {
   ).toHaveLength(1);
   expect(a.clashes).toHaveLength(1);
 });
+
+it("ignores overlaps between two repeating events but flags a one-off", () => {
+  const weekly = buildAgenda({
+    ...monday,
+    events: monday.events.map((e) =>
+      e.id === "e4" || e.id === "e5" ? { ...e, recurring: true } : e,
+    ),
+  });
+  expect(weekly.clashes).toEqual([]);
+  expect(weekly.timeline.some((e) => e.kind === "event" && e.clash)).toBe(
+    false,
+  );
+  const oneOff = buildAgenda({
+    ...monday,
+    events: monday.events.map((e) =>
+      e.id === "e5" ? { ...e, recurring: true } : e,
+    ),
+  });
+  expect(oneOff.clashes).toHaveLength(1);
+});

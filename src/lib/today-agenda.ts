@@ -15,6 +15,8 @@ export type AgendaEvent = {
   end_at: string | null;
   all_day_start: string | null;
   busy_status?: string | null;
+  /** Repeats week to week; two repeating events overlapping are not a clash. */
+  recurring?: boolean;
   /** Set when the event is a Life OS work session; its block represents it. */
   work_session?: unknown;
 };
@@ -213,6 +215,7 @@ export function buildAgenda(input: AgendaInput) {
       start: Date.parse(e.start_at!),
       end: Date.parse(e.end_at!),
       meta: calendarName(e.calendar_id),
+      recurring: !!e.recurring,
     }))
     .sort((a, b) => a.start - b.start || a.end - b.end)
     // The same event copied onto several calendars shows once.
@@ -238,6 +241,8 @@ export function buildAgenda(input: AgendaInput) {
         b = timed[j];
       if (b.start >= a.end) break;
       if (a.title === b.title && a.start === b.start) continue;
+      // Standing weekly overlaps are known; only a one-off event makes a clash.
+      if (a.recurring && b.recurring) continue;
       clashing.add(a.id).add(b.id);
       if (a.end > nowMs)
         clashes.push({

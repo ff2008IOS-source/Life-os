@@ -537,14 +537,24 @@ export function PlannerCalendar({
                         if (columns <= 3)
                           return cluster.items.map((item) => {
                             const g = item;
-                            const clash =
-                              item.columns > 1 || overlaps.has(g.id);
+                            // Two weekly events overlapping is a standing
+                            // arrangement; only a one-off event makes a clash.
+                            const clashesWith = cluster.items.some(
+                              (other) =>
+                                other.id !== item.id &&
+                                other.start < item.end &&
+                                item.start < other.end &&
+                                !(
+                                  item.event.recurring && other.event.recurring
+                                ),
+                            );
+                            const clash = clashesWith || overlaps.has(g.id);
                             const width = `calc((100% - 4px) / ${item.columns})`;
                             return (
                               <button
                                 key={item.id}
                                 className={`time-event ${clash ? "time-event-clash" : ""} ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
-                                aria-label={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((src) => name(src.calendar_id)).join(", ")}${item.columns > 1 ? " · Overlaps another event" : overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
+                                aria-label={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((src) => name(src.calendar_id)).join(", ")}${clashesWith ? " · Overlaps another event" : overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
                                 onClick={() => {
                                   setDayDetail(null);
                                   setDetails(g);
