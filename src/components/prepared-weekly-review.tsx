@@ -155,8 +155,14 @@ export function PreparedWeeklyReview({
                           : `${a.weight}%`}
                       </td>
                       <td>
-                        {a.submission_state.replaceAll("_", " ")} ·{" "}
-                        {a.verification_status.replaceAll("_", " ")}
+                        {a.submission_state.replaceAll("_", " ")}
+                        <span className="tech-detail">
+                          {" "}
+                          <span className="tech-detail">
+                            {" "}
+                            · {a.verification_status.replaceAll("_", " ")}
+                          </span>
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -193,7 +199,10 @@ export function PreparedWeeklyReview({
                     {a.score_unit === "percent"
                       ? `${a.earned_score}%`
                       : `${a.earned_score} / ${a.maximum_score ?? "unknown maximum"}`}{" "}
-                    · {a.verification_status.replaceAll("_", " ")}
+                    <span className="tech-detail">
+                      {" "}
+                      · {a.verification_status.replaceAll("_", " ")}
+                    </span>
                   </li>
                 ))}
             </ul>

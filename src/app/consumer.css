@@ -33,7 +33,7 @@ h1 {
 }
 .panel-description,
 .form-hint {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
 }
 .panel-description {
@@ -46,7 +46,7 @@ h1 {
   padding-inline: 6px;
 }
 .text-link {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
 }
 .button {
@@ -94,11 +94,11 @@ summary:focus-visible {
   display: none;
 }
 .sidebar-label {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1.4px;
 }
 .area-link {
-  font-size: 12px;
+  font-size: 13px;
 }
 .topbar {
   background: color-mix(in srgb, var(--bg) 93%, transparent);
@@ -106,20 +106,20 @@ summary:focus-visible {
   border-bottom-color: color-mix(in srgb, var(--border) 65%, transparent);
 }
 .search-trigger {
-  font-size: 12px;
+  font-size: 13px;
 }
 .account strong {
-  font-size: 12px;
+  font-size: 13px;
 }
 .footer-note {
   opacity: 1;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.2px;
 }
 .date-chip {
   border-radius: 100px;
   background: var(--surface);
-  font-size: 12px;
+  font-size: 13px;
   padding: 9px 13px;
 }
 .home-welcome {
@@ -127,7 +127,7 @@ summary:focus-visible {
 }
 .home-welcome .eyebrow {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   margin-bottom: 9px;
   letter-spacing: 1.8px;
 }
@@ -153,7 +153,7 @@ summary:focus-visible {
   justify-content: center;
 }
 .home-overview .stat-label {
-  font-size: 12px;
+  font-size: 13px;
   gap: 8px;
 }
 .home-overview .stat-label svg {
@@ -169,7 +169,7 @@ summary:focus-visible {
   margin: 5px 0 3px;
 }
 .home-overview .stat-note {
-  font-size: 11px;
+  font-size: 12px;
 }
 .focus-card.panel {
   position: relative;
@@ -198,7 +198,7 @@ summary:focus-visible {
   align-items: center;
 }
 .focus-card .panel-heading h2 {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 1.2px;
   text-transform: uppercase;
@@ -206,7 +206,7 @@ summary:focus-visible {
 }
 .focus-card .panel-heading .text-link {
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
 }
 .focus-card h3 {
   font-size: clamp(23px, 2.2vw, 30px);
@@ -262,7 +262,7 @@ summary:focus-visible {
   border: 1px solid var(--border);
   border-radius: 100px;
   padding: 5px 9px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text);
   background: var(--surface);
 }
@@ -297,7 +297,7 @@ summary:focus-visible {
   color: var(--text);
 }
 .focus-explanation {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
   margin: 0 0 14px;
 }
@@ -312,7 +312,7 @@ summary:focus-visible {
 .focus-overline {
   display: block;
   color: var(--text);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1px;
   margin-bottom: 8px;
 }
@@ -323,7 +323,7 @@ summary:focus-visible {
   justify-content: space-between;
   gap: 12px;
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
 }
 .focus-footer a {
   display: inline-flex;
@@ -356,7 +356,7 @@ summary:focus-visible {
 }
 .home-capture-empty small {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   font-weight: 400;
   margin-top: 2px;
@@ -376,7 +376,7 @@ summary:focus-visible {
   gap: 16px;
 }
 .home-calendar .agenda-compact-row time {
-  font-size: 12px;
+  font-size: 13px;
   width: 68px;
   flex-basis: 68px;
 }
@@ -386,13 +386,13 @@ summary:focus-visible {
   line-height: 1.4;
 }
 .home-calendar .agenda-compact-row small {
-  font-size: 11px;
+  font-size: 12px;
 }
 .home-calendar .agenda-compact-row:hover {
   border-radius: 10px;
 }
 .home-calendar .panel-footer {
-  font-size: 11px;
+  font-size: 12px;
 }
 .review-banner {
   border-radius: 18px;
@@ -405,7 +405,7 @@ summary:focus-visible {
   letter-spacing: -0.5px;
 }
 .review-banner p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .dark .review-banner {
   background: var(--surface);
@@ -415,7 +415,7 @@ summary:focus-visible {
   font-size: 14px;
 }
 .goal-row p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .briefing-hero h2 {
   letter-spacing: -0.8px;
@@ -483,7 +483,7 @@ summary:focus-visible {
 .metric-details {
   margin-block: 10px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .metric-details summary {
   cursor: pointer;
@@ -541,11 +541,11 @@ summary:focus-visible {
     align-items: flex-start;
   }
   .home-welcome .date-chip {
-    font-size: 10px;
+    font-size: 12px;
     padding: 8px 9px;
   }
   .home-welcome .eyebrow {
-    font-size: 8px;
+    font-size: 12px;
     letter-spacing: 1px;
   }
   .home-overview .stats-grid {
@@ -571,10 +571,10 @@ summary:focus-visible {
     max-width: 90%;
   }
   .focus-card .panel-heading h2 {
-    font-size: 10px;
+    font-size: 12px;
   }
   .focus-card .panel-heading .text-link {
-    font-size: 10px;
+    font-size: 12px;
   }
   .focus-art {
     right: -45px;
@@ -606,7 +606,7 @@ summary:focus-visible {
   .home-overview .stat-label {
     align-items: flex-start;
     grid-column: 1;
-    font-size: 11px;
+    font-size: 12px;
     min-height: auto;
   }
   .home-overview .stat-label svg {
@@ -620,7 +620,7 @@ summary:focus-visible {
   }
   .home-overview .stat-note {
     grid-column: 1;
-    font-size: 10px;
+    font-size: 12px;
   }
   .home-experience .dashboard-grid {
     display: flex;
@@ -764,7 +764,7 @@ summary:focus-visible {
   align-items: center;
   justify-content: space-between;
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
 }
 .focus-update .button-ghost,
 .focus-card .button-ghost {
@@ -973,13 +973,13 @@ summary:focus-visible {
 }
 .dashboard-records span {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 4px;
 }
 .widget-pin {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 6px;
 }
@@ -1041,7 +1041,7 @@ summary:focus-visible {
   align-items: center;
 }
 .widget-control-actions label {
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
 }
 .widget-control-actions select {
@@ -1177,7 +1177,7 @@ body:has(.focus-dock) .content {
 }
 .focus-calendar-context {
   margin: 10px 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text);
 }

@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { AcademicData } from "./academic-editor";
 import { calendarRequest } from "./use-calendar";
 import { useState, useEffect, useMemo } from "react";
+import { useTechnicalDetails } from "./technical-details";
 import { buildSearchIndex, searchEntries } from "@/lib/search-index";
 import { useTheme } from "next-themes";
 import {
@@ -28,6 +29,7 @@ import {
   NotebookPen,
   Inbox,
   TrendingUp,
+  ArrowLeft,
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
@@ -82,6 +84,7 @@ export function WorkspaceShell({
   const { data } = useWorkspace();
   const path = usePathname();
   const router = useRouter();
+  useTechnicalDetails();
   useEffect(() => {
     const viewport = window.visualViewport;
     const adjust = () => {
@@ -158,6 +161,14 @@ export function WorkspaceShell({
       ? path === "/"
       : path.startsWith(n.href) || n.also.some((a) => path.startsWith(a)),
   );
+  // Sub-pages get one clear way back, always in the same place.
+  const back =
+    active && path !== active.href
+      ? { href: active.href, label: active.label }
+      : ["/reviews", "/insights"].includes(path) ||
+          path.startsWith("/assistant")
+        ? { href: "/", label: "Today" }
+        : null;
   const inbox = data.tasks.filter(
     (t) => !t.deleted_at && t.status === "inbox",
   ).length;
@@ -318,6 +329,11 @@ export function WorkspaceShell({
         </header>
         <main className="content" id="main-content">
           <OfflineNotice />
+          {back && (
+            <Link href={back.href} className="back-link">
+              <ArrowLeft size={16} aria-hidden /> Back to {back.label}
+            </Link>
+          )}
           {children}
         </main>
       </div>

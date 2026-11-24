@@ -349,7 +349,7 @@ export function TaskEditor({
           </>
         )}{" "}
         {task && (
-          <p className="form-hint">
+          <p className="form-hint tech-detail">
             Created {friendlyDate(task.created_at)} · Version {task.version} ·
             Source: {task.source_type}
           </p>

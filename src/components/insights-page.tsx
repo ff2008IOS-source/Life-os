@@ -228,7 +228,7 @@ export function InsightsPage() {
                 description="Finish a task to see your progress here."
               />
             )}
-            <p className="data-source">
+            <p className="data-source tech-detail">
               Source: task and recurring-occurrence completion timestamps ·{" "}
               {start}–{end} · {zone}. Each completed record counts once. Missing
               history is not evidence that no work happened. Timer totals are
@@ -280,7 +280,7 @@ export function InsightsPage() {
                 description="Set up your workspace to see recorded task distribution."
               />
             )}
-            <p className="data-source">
+            <p className="data-source tech-detail">
               Source: user-entered tasks · completions {start}–{end}; active
               tasks are a current snapshot. Counts are not hours or productivity
               scores.

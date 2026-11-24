@@ -17,6 +17,7 @@ import { PasswordForm } from "./password-forms";
 import { AccountDeletion } from "./account-deletion";
 import { MfaPanel } from "./mfa-panel";
 import { NewTermSetup } from "./new-term-setup";
+import { TechnicalDetailsToggle } from "./technical-details";
 import { CareerPanel } from "./career-panel";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
 export function SettingsPage({
@@ -262,6 +263,10 @@ export function SettingsPage({
         {section === "advanced" && (
           <div>
             <NewTermSetup />
+            <section className="panel settings-panel">
+              <h2>Technical details</h2>
+              <TechnicalDetailsToggle />
+            </section>
             <div className="settings-grid">
               <section className="panel settings-panel">
                 <h2 className="inline">
