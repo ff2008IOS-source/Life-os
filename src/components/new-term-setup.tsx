@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Check, RefreshCw, FileText, Plus, Trash2 } from "lucide-react";
 import { calendarRequest } from "./use-calendar";
 import type { AcademicData, AcademicRow } from "./academic-editor";
-import { termKey } from "@/lib/career-order";
+import { orderTerms } from "@/lib/course-visibility";
 import {
   extractSyllabusWeights,
   matchWeightRow,
@@ -21,16 +21,7 @@ type Draft = {
 
 const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
 
-/** Newest term first: Spring 2027 before Fall 2026; unnamed terms last. */
-export function orderTerms<T extends Record<string, unknown> & { id: string }>(
-  terms: T[],
-) {
-  return [...terms].sort(
-    (a, b) =>
-      (termKey(str(b.name)) ?? -1) - (termKey(str(a.name)) ?? -1) ||
-      str(b.created_at).localeCompare(str(a.created_at)),
-  );
-}
+export { orderTerms };
 
 async function json<T>(url: string, init?: RequestInit) {
   return calendarRequest<T>(url, {

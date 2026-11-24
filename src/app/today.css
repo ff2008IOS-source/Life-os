@@ -1266,3 +1266,126 @@
   color: var(--good, #2f7d4f);
   font-weight: 600;
 }
+
+/* Course page: Overview · Grades · Materials */
+.course-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 4px;
+}
+.course-head h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.course-head p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--secondary);
+}
+.course-section {
+  margin-top: 28px;
+}
+.course-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.course-section-head h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+.course-count {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--secondary);
+  margin-left: 6px;
+}
+.course-empty {
+  font-size: 14px;
+  color: var(--secondary);
+  margin: 6px 0 10px;
+}
+.course-note {
+  font-size: 13px;
+  color: var(--secondary);
+  margin-top: 10px;
+}
+.course-when {
+  font-size: 13px;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+.topic-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+}
+.topic {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--border);
+}
+.topic-title {
+  text-align: left;
+  font-size: 15px;
+  font-weight: 500;
+  background: none;
+  border: 0;
+  padding: 10px 0;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.topic-meter {
+  display: inline-flex;
+  gap: 3px;
+}
+.topic-meter i {
+  width: 18px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+}
+.topic-meter i.on {
+  background: var(--accent);
+}
+.topic-mastered .topic-meter i.on {
+  background: var(--success);
+}
+.topic-state {
+  font-size: 13px;
+  color: var(--secondary);
+  min-width: 88px;
+}
+.topic-mastered .topic-title {
+  color: var(--secondary);
+}
+.materials-actions {
+  margin: 8px 0 12px;
+}
+@media (max-width: 560px) {
+  .topic {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 0;
+  }
+  .topic-state {
+    min-width: 0;
+  }
+  .topic .td-link {
+    grid-column: 1 / -1;
+    justify-self: start;
+    padding-bottom: 8px;
+  }
+}

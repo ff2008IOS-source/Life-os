@@ -152,11 +152,14 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     .filter({ hasText: "[TEST] Linked course" })
     .click();
   await expect(
-    content.getByText("[TEST] Verified course reading", { exact: true }),
+    content
+      .locator(".course-materials")
+      .getByText("[TEST] Verified course reading", { exact: true }),
   ).toBeVisible();
 
   await content
-    .getByText("Browse other Canvas courses", { exact: true })
+    .getByRole("button", { name: "All Canvas courses", exact: true })
+    .filter({ visible: true })
     .click();
   const library = content
     .locator(".canvas-library-disclosure")
@@ -174,12 +177,9 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     .selectOption("771201");
   await expect(library).toContainText("Materials temporarily unavailable.");
   await expect(library.locator(".setting-line")).toHaveCount(0);
-  await library
-    .getByText("Reading & file preparation", { exact: true })
-    .click();
   await expect(
     library.getByRole("button", {
-      name: "Prepare available files",
+      name: "Make files searchable",
       exact: true,
     }),
   ).toBeDisabled();
