@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { canvasAdmin } from "./secure";
+import type { AssistantLimits } from "../assistant/limits";
 import { dbError } from "../http";
 import {
   AssistantProviderError,
@@ -24,14 +25,12 @@ export async function discoverTopics(
   if (!process.env.GROQ_API_KEY) return "Groq is not configured.";
   const request = prepareGroqRequest(
     "Find study topics.",
-    [
-      {
-        id: "canvas-file:" + d.canvas_file_id,
-        title: d.title,
-        text: d.text,
-        url: "",
-      },
-    ],
+    (d.excerpts as string[]).map((text, i) => ({
+      id: "canvas-file:" + d.canvas_file_id + "#" + (d.chunk_index + i),
+      title: d.title,
+      text,
+      url: "",
+    })),
     8000,
     "topics",
   );
@@ -48,10 +47,27 @@ export async function discoverTopics(
     p_cursor: d.chunk_index,
   });
   dbError(reservation.error);
-  if (reservation.data) return String(reservation.data);
+  if (reservation.data) {
+    const messages: Record<NonNullable<AssistantLimits["reason"]>, string> = {
+      disabled: "Enable the assistant in Settings to find topics.",
+      provider: "Waiting for Groq to accept requests.",
+      daily:
+        "Daily allowance reached. Processing resumes after midnight in Vancouver.",
+      tokens: "Waiting for the next free request window.",
+      busy: "Another request is processing.",
+    };
+    return (
+      messages[reservation.data as keyof typeof messages] ??
+      "The file changed. Processing will resume."
+    );
+  }
   try {
     const { parsed, body } = await sendGroqRequest(request);
-    const topics = parseTopicReply(parsed, d.title, request.sources[0].text);
+    const topics = parseTopicReply(
+      parsed,
+      d.title,
+      request.sources.map((s) => s.text).join("\n"),
+    );
     const saved = await db.rpc("finish_topic_excerpt", {
       p_user: user,
       p_course: d.course_id,
@@ -59,6 +75,7 @@ export async function discoverTopics(
       p_file: d.canvas_file_id,
       p_version: d.source_version,
       p_cursor: d.chunk_index,
+      p_count: request.sources.length,
       p_topics: topics,
       p_folder: d.folder,
     });

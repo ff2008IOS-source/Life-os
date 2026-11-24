@@ -1,3 +1,4 @@
+import { processCanvasDocuments } from "@/lib/canvas/documents-server";
 import { discoverTopics } from "@/lib/canvas/topic-discovery";
 import { after, NextResponse } from "next/server";
 import { authorized } from "@/lib/auth";
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
       discover: new URL(request.url).searchParams.get("discover") === "true",
     });
     after(async () => {
+      await processCanvasDocuments(user.id, null, null, 1);
       await discoverTopics(user.id);
     });
     return NextResponse.json(synced, {

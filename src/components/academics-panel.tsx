@@ -574,11 +574,11 @@ export function AcademicsPanel({
                                   }
                                 >
                                   {String(t.title)}
-                                  {Boolean(t.reason) && (
+                                  {Boolean(t.reason || t.source_file) && (
                                     <span
                                       style={{ display: "block", fontSize: 12 }}
                                     >
-                                      {String(t.reason)}
+                                      {String(t.reason || t.source_file)}
                                     </span>
                                   )}
                                 </button>

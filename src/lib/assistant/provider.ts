@@ -60,9 +60,10 @@ export function boundedPrompt(
     const candidate = { ...s, text: s.text.slice(0, 1400) };
     if (
       new TextEncoder().encode(activeSystem + content([...selected, candidate]))
-        .length <= 4500
+        .length <= (mode === "topics" ? 6500 : 4500)
     )
       selected.push(candidate);
+    else if (mode === "topics") break;
   }
   return {
     messages: [
@@ -107,6 +108,7 @@ export function prepareGroqRequest(
   for (const source of prompt.sources) {
     const test = [...selected, source];
     if (cost(make(test)) <= available) selected.push(source);
+    else if (mode === "topics") break;
     else
       for (const ratio of [0.7, 0.5, 0.3]) {
         const short = {

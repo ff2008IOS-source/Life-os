@@ -109,7 +109,10 @@ export function studyTopicEvidence(
     const examMatch =
       /\b(exam|midterm|final)\b/i.test(title) &&
       ((" " + topicKey(scope) + " ").includes(" " + topicKey(title) + " ") ||
-        overlap(scope, coverage, "weeks?"));
+        overlap(scope, coverage, "weeks?") ||
+        ["exam", "midterm", "final"].some((kind) =>
+          overlap(scope, title, kind),
+        ));
     if (
       examMatch &&
       days >= 0 &&

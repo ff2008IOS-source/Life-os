@@ -154,3 +154,85 @@ it("requeues changed content or rotated tokens while preserving historical extra
     (await db.query("select state from canvas_documents")).rows[0],
   ).toEqual({ state: "pending" });
 });
+it("keeps approval and dismissal across changed files and withdraws obsolete suggestions", async () => {
+  const term = randomUUID(),
+    course = randomUUID();
+  await db.query(
+    "insert into academic_terms(user_id,id,name) values($1,$2,'Test term')",
+    [owner, term],
+  );
+  await db.query(
+    "insert into courses(user_id,id,term_id,code,title) values($1,$2,$3,'TEST','Test course')",
+    [owner, course, term],
+  );
+  await db.query(
+    "insert into canvas_records(user_id,resource_type,canvas_id,payload) values($1,'course','56','{}')",
+    [owner],
+  );
+  await db.query(
+    "insert into canvas_mappings(user_id,resource_type,canvas_id,local_id,local_table) values($1,'course','56',$2,'courses')",
+    [owner, course],
+  );
+  await db.query(
+    "insert into canvas_documents(user_id,course_canvas_id,canvas_file_id,title,content_type,source_version,connection_generation,state) values($1,'56','9','Lecture.pdf','application/pdf','v1',$2,'ready')",
+    [owner, generation],
+  );
+  const save = async (version: string, titles: string[]) =>
+    db.query(
+      "select finish_topic_excerpt($1,$2,'56','9',$3,0,1,$4::jsonb,null) n",
+      [
+        owner,
+        course,
+        version,
+        JSON.stringify(titles.map((title) => ({ title, section: "" }))),
+      ],
+    );
+  expect(
+    (
+      await save("v1", [
+        "Working memory",
+        "Working-memory",
+        "Recall",
+        "Old topic",
+      ])
+    ).rows[0],
+  ).toEqual({ n: 3 });
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [
+    owner,
+  ]);
+  await db.exec("set role authenticated");
+  await db.query(
+    "select review_topic_suggestions($1,array(select id from topic_suggestions where title='Recall'),false)",
+    [course],
+  );
+  await db.query(
+    "select review_topic_suggestions($1,array(select id from topic_suggestions where title='Working memory'),true)",
+    [course],
+  );
+  await db.exec("reset role");
+  await db.query(
+    "update canvas_documents set source_version='v2' where canvas_file_id='9'",
+  );
+  expect((await save("v1", ["Stale"])).rows[0]).toEqual({ n: 0 });
+  expect(
+    (await save("v2", ["Working memory", "Recall", "New topic"])).rows[0],
+  ).toEqual({ n: 1 });
+  expect(
+    (
+      await db.query(
+        "select title from topic_suggestions where state='suggested'",
+      )
+    ).rows,
+  ).toEqual([{ title: "New topic" }]);
+  expect(
+    (await db.query("select source_key,title from study_topics")).rows,
+  ).toEqual([{ source_key: "canvas-file:9", title: "Working memory" }]);
+  await db.exec("set role authenticated");
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [
+    other,
+  ]);
+  expect(
+    (await db.query("select id from topic_suggestions")).rows,
+  ).toHaveLength(0);
+  await db.exec("reset role");
+});
