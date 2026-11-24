@@ -8,6 +8,7 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { dueLabel, markPercent } from "@/lib/display";
 import { Mark } from "./mark";
 import { GradePlanner } from "./grade-planner";
+import { gradeScenario } from "@/lib/grade-scenario";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, BookOpen } from "lucide-react";
 import { Button } from "./ui/button";
@@ -170,6 +171,23 @@ export function AcademicsPanel({
   const graded = assessments
     .filter((a) => pctOf(a) !== null)
     .sort((a, b) => (dueMs(b) ?? 0) - (dueMs(a) ?? 0));
+  // What each final grade would take on the work that's left. Based on the
+  // assessments listed in School; nothing is shown without confirmed rules.
+  const targets =
+    current?.grading_rules_confirmed === true &&
+    current.grading_method !== "unknown"
+      ? [90, 85, 80, 75].map((goal) => ({
+          goal,
+          r: gradeScenario(
+            String(current.grading_method),
+            assessments as unknown as GradeAssessment[],
+            categories as unknown as GradeCategory[],
+            goal,
+            { inventoryComplete: true, rulesVerified: true },
+          ),
+        }))
+      : [];
+  const remainingCount = targets.find((t) => t.r.status === "required")?.r;
   const order = ["needs_review", "practicing", "unstudied", "mastered"];
   const sortedTopics = topics.toSorted(
     (x, y) =>
@@ -382,6 +400,52 @@ export function AcademicsPanel({
                     )}
                   </div>
                 </div>
+
+                {remainingCount && remainingCount.status === "required" && (
+                  <section
+                    className="course-section"
+                    aria-label="What you need"
+                  >
+                    <div className="course-section-head">
+                      <h3>
+                        What you need{" "}
+                        <span className="course-count">
+                          average on the {remainingCount.remaining} remaining{" "}
+                          {remainingCount.remaining === 1
+                            ? "assessment"
+                            : "assessments"}
+                        </span>
+                      </h3>
+                    </div>
+                    <ul className="target-list">
+                      {targets.map(({ goal, r }) => (
+                        <li key={goal}>
+                          <span className="target-goal">{goal}% final</span>
+                          <span
+                            className={`target-need ${r.status === "required" ? (r.percent <= 70 ? "easy" : r.percent <= 90 ? "" : "hard") : "off"}`}
+                          >
+                            {r.status === "required"
+                              ? r.percent < 0.5
+                                ? "Already secured"
+                                : `${Math.ceil(r.percent)}%`
+                              : r.status === "unreachable"
+                                ? "Out of reach"
+                                : "—"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {remainingCount.excluded > 0 && (
+                      <p className="course-note">
+                        {remainingCount.excluded} ungraded{" "}
+                        {remainingCount.excluded === 1
+                          ? "item has"
+                          : "items have"}{" "}
+                        no listed points and isn’t counted.
+                      </p>
+                    )}
+                  </section>
+                )}
 
                 <section
                   className="course-section"

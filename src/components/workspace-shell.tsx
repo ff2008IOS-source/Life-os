@@ -30,6 +30,7 @@ import {
   Inbox,
   TrendingUp,
   ArrowLeft,
+  Trophy,
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
@@ -50,7 +51,14 @@ const navigation = [
     label: "Growth",
     href: "/growth",
     icon: TrendingUp,
-    also: ["/areas/career", "/learning", "/areas/projects", "/goals", "/areas"],
+    also: [
+      "/areas/career",
+      "/learning",
+      "/areas/projects",
+      "/goals",
+      "/areas",
+      "/basketball",
+    ],
   },
 ];
 const allPages = [
@@ -69,6 +77,12 @@ const allPages = [
     keywords: "goals career learning projects",
   },
   { label: "Career", href: "/areas/career", icon: Briefcase },
+  {
+    label: "Basketball",
+    href: "/basketball",
+    icon: Trophy,
+    keywords: "mbb games practices team manager",
+  },
   { label: "Learning", href: "/learning", icon: NotebookPen },
   { label: "Projects", href: "/areas/projects", icon: Layers3 },
   { label: "Goals", href: "/goals", icon: Target },
@@ -280,13 +294,15 @@ export function WorkspaceShell({
             <strong>
               {(path.startsWith("/areas/career")
                 ? "Career"
-                : path.startsWith("/learning")
-                  ? "Learning"
-                  : path.startsWith("/areas/projects")
-                    ? "Projects"
-                    : path === "/goals"
-                      ? "Goals"
-                      : null) ??
+                : path.startsWith("/basketball")
+                  ? "Basketball"
+                  : path.startsWith("/learning")
+                    ? "Learning"
+                    : path.startsWith("/areas/projects")
+                      ? "Projects"
+                      : path === "/goals"
+                        ? "Goals"
+                        : null) ??
                 active?.label ??
                 (path === "/reviews"
                   ? "Weekly review"

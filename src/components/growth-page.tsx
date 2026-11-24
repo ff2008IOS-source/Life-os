@@ -7,6 +7,7 @@ import {
   Briefcase,
   ChartNoAxesCombined,
   Layers3,
+  Trophy,
   NotebookPen,
   Target,
 } from "lucide-react";
@@ -14,6 +15,7 @@ import { realWorkspace } from "@/lib/real-workspace";
 import { reviewAvailability } from "@/lib/temporal-context";
 import { useWorkspace } from "./workspace-provider";
 import { useCurrentTime } from "./use-current-time";
+import { CareerFollowUps } from "./career-follow-ups";
 
 export function GrowthPage() {
   const { data: raw } = useWorkspace();
@@ -56,6 +58,12 @@ export function GrowthPage() {
       icon: NotebookPen,
       title: "Learning",
       text: "Skill paths and study topics",
+    },
+    {
+      href: "/basketball",
+      icon: Trophy,
+      title: "Basketball",
+      text: "Games, practices and manager tasks",
     },
     {
       href: "/areas/projects",
@@ -127,6 +135,7 @@ export function GrowthPage() {
             ))}
           </ul>
         </section>
+        <CareerFollowUps />
         <nav className="td-tiles" aria-label="Growth areas">
           {tiles.map((t) => (
             <Link key={t.href} href={t.href} className="td-tile">

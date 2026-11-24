@@ -1,4 +1,5 @@
 "use client";
+import { FollowUpNudge } from "./career-follow-ups";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
@@ -770,6 +771,8 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
               </p>
             )}
           </section>
+
+          <FollowUpNudge />
 
           {(nudgeOverdue || nudgeStep || quickWins.length > 0) && (
             <section className="td-card" aria-label="Keep your goals moving">

@@ -1,4 +1,6 @@
 "use client";
+import { WeekRecapCard, useWeekRecap } from "./week-recap-card";
+import { recapText } from "@/lib/week-recap";
 import { PlanningDecisions } from "./planning-decisions";
 import { reviewAvailability } from "@/lib/temporal-context";
 import { useId, useState } from "react";
@@ -37,6 +39,7 @@ export function ReviewsPage() {
     ),
   );
   const [commitmentOpening, setCommitmentOpening] = useState("");
+  const recap = useWeekRecap(gate.weekStart, gate.weekEnd);
   const [active, setActive] = useState<string | null>(null),
     [summary, setSummary] = useState(""),
     [checked, setChecked] = useState(false),
@@ -79,10 +82,12 @@ export function ReviewsPage() {
         open(old);
         return;
       }
+      // A new review starts with the week's recorded highlights filled in.
       const saved = (await mutate("reviews", null, {
         ...payload(),
         period_start: gate.weekStart,
         period_end: gate.weekEnd,
+        achievements: recapText(recap),
       })) as {
         data: Review;
       };
@@ -134,6 +139,10 @@ export function ReviewsPage() {
             <h1>Reviews</h1>
           </div>
         </div>
+        <WeekRecapCard
+          recap={recap}
+          title={gate.open ? "This week" : "This week so far"}
+        />
         <section className="panel settings-panel">
           <h2>
             {gate.open ? "Review history" : "Your review opens on Sunday"}
@@ -186,10 +195,10 @@ export function ReviewsPage() {
       <PlanningDecisions review />
       <div className="page-heading">
         <div>
-          <span className="eyebrow">REFLECT. DECIDE. FOLLOW THROUGH.</span>
           <h1>Reviews</h1>
         </div>
       </div>
+      <WeekRecapCard recap={recap} />
       <section className="panel weekly-review-start">
         <div>
           <strong>Week of {friendlyDate(week)}</strong>
