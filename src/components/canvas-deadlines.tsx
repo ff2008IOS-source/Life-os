@@ -151,45 +151,31 @@ export function CanvasDeadlines() {
                 {r.course_code ? `${r.course_code} · ` : ""}
                 {r.title}
               </strong>
-              <div className="deadline-facts">
-                <div>
-                  <span className="small muted">Due</span>
-                  <p>{dueLabel(r.due_at, new Date(now))}</p>
-                </div>
-                <div>
-                  <span className="small muted">Submission</span>
-                  <p>
-                    {deadlineStatusLabel(
-                      r.submission_state,
-                      Date.parse(r.due_at) < now,
-                    )}
-                    {r.late ? " · Late" : ""}
-                  </p>
-                </div>
-                <div>
-                  <span className="small muted">Result</span>
-                  <p>
-                    {typeof r.earned_score === "number" &&
-                    typeof r.maximum_score === "number" ? (
-                      <Mark earned={r.earned_score} maximum={r.maximum_score} />
-                    ) : r.submission_state === "submitted" ? (
-                      "Awaiting grade"
-                    ) : r.submission_state === "graded" ? (
-                      "View in Canvas"
-                    ) : (
-                      "Not recorded"
-                    )}
-                  </p>
-                </div>
-              </div>
-              <p className="small muted">
-                {r.conflict ? "Source details need review. " : ""}
-                {now - Date.parse(r.synced_at) > 2 * 3600000 ||
-                !r.submission_synced_at ||
-                now - Date.parse(r.submission_synced_at) > 2 * 3600000
-                  ? " · Source may be stale"
-                  : ""}
+              <p className="deadline-meta">
+                <span>{dueLabel(r.due_at, new Date(now))}</span>
+                <span>
+                  {deadlineStatusLabel(
+                    r.submission_state,
+                    Date.parse(r.due_at) < now,
+                  )}
+                  {r.late ? " · Late" : ""}
+                </span>
+                {typeof r.earned_score === "number" &&
+                typeof r.maximum_score === "number" ? (
+                  <Mark earned={r.earned_score} maximum={r.maximum_score} />
+                ) : r.submission_state === "submitted" ? (
+                  <span>Awaiting grade</span>
+                ) : null}
               </p>
+              {(r.conflict ||
+                now - Date.parse(r.synced_at) > 2 * 3600000 ||
+                !r.submission_synced_at ||
+                now - Date.parse(r.submission_synced_at) > 2 * 3600000) && (
+                <p className="small muted tech-detail">
+                  {r.conflict ? "Source details need review. " : ""}
+                  Source may be stale.
+                </p>
+              )}
               {canvasAssignmentLink(r.course_canvas_id, r.canvas_id) && (
                 <a
                   className="text-link small"

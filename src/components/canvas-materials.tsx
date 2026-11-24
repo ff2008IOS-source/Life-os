@@ -184,7 +184,6 @@ export function CanvasMaterials({
               />
               <span>{folder.title}</span>
               <span className="badge">{folder.records.length}</span>
-              {folder.suggested && <small>Suggested group</small>}
             </summary>
             <div className="material-folder-content">
               {folder.records.map((r) => (
@@ -196,8 +195,10 @@ export function CanvasMaterials({
                     </span>
                   </summary>
                   <div>
-                    <p className="small muted">Original name: {r.title}</p>
-                    <p className="form-hint">
+                    <p className="small muted tech-detail">
+                      Original name: {r.title}
+                    </p>
+                    <p className="form-hint tech-detail">
                       Retrieved {stamp(r.synced_at)} ·{" "}
                       {r.content_status === "Retrieved Canvas record"
                         ? "Synced from Canvas"
@@ -226,7 +227,7 @@ export function CanvasMaterials({
                     >
                       {r.text || "Text isn’t available for this item yet."}
                     </p>
-                    <details>
+                    <details className="tech-detail">
                       <summary>Source details</summary>
                       {Object.entries(r.facts ?? {}).map(([k, v]) => (
                         <p

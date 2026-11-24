@@ -8,7 +8,7 @@
   --border: #dde1e6;
   --text: #101318;
   --secondary: #4a515c;
-  --muted: #5b6270;
+  --muted: #4f5662;
   --accent: #b33a0a;
   --accent-hover: #9a3412;
   --accent-soft: #b33a0a12;
@@ -47,7 +47,7 @@
   --border: #2a2f37;
   --text: #f1f3f6;
   --secondary: #b4bac4;
-  --muted: #9aa1ac;
+  --muted: #a9b0ba;
   --accent: #ff9a62;
   --accent-hover: #ffb48a;
   --accent-soft: #ff9a6214;
@@ -60,26 +60,26 @@
 }
 body {
   font-family: var(--font-interface), Inter, system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.55;
   letter-spacing: -0.12px;
   font-variant-numeric: tabular-nums;
 }
 h1 {
   font-family: var(--font-interface), Inter, system-ui, sans-serif;
-  font-size: clamp(28px, 3.4vw, 36px);
-  font-weight: 650;
+  font-size: clamp(28px, 3vw, 32px);
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
 h2 {
   font-size: 20px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.35px;
 }
 h3 {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
 }
 button,
 input,
@@ -167,7 +167,7 @@ input[type="radio"] {
 .button-sm {
   min-height: 32px;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .button-icon {
   min-width: 38px;
@@ -240,10 +240,10 @@ input[type="radio"] {
   color: var(--muted);
   background: none;
   border-radius: 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 .sidebar-label {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.7px;
   margin: 32px 12px 12px;
   color: var(--muted);
@@ -265,11 +265,11 @@ input[type="radio"] {
   padding: 20px 8px 0;
 }
 .account strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .account p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .avatar {
@@ -287,7 +287,7 @@ input[type="radio"] {
   backdrop-filter: none;
 }
 .breadcrumb {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .breadcrumb strong {
@@ -295,7 +295,7 @@ input[type="radio"] {
   color: var(--secondary);
 }
 .search-trigger {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .search-trigger kbd {
@@ -358,7 +358,7 @@ input[type="radio"] {
 .panel-footer {
   padding: 12px 0;
   border-top: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
 }
 .panel-body {
   padding: 0;
@@ -407,7 +407,7 @@ input[type="radio"] {
 }
 .segmented button {
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .segmented button.active {
   background: var(--surface-hover);
@@ -451,7 +451,7 @@ input[type="radio"] {
   font-weight: 400;
 }
 .task-meta {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   gap: 6px;
   margin-top: 4px;
@@ -460,7 +460,7 @@ input[type="radio"] {
   display: none;
 }
 .task-due {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--secondary);
   white-space: nowrap;
 }
@@ -468,7 +468,7 @@ input[type="radio"] {
   color: var(--danger);
 }
 .task-priority {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
 }
 .task-completed .task-title {
@@ -527,7 +527,7 @@ input[type="radio"] {
   margin: 8px 0;
 }
 .quick-capture summary {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--secondary);
   min-height: 32px;
 }
@@ -536,7 +536,7 @@ input[type="radio"] {
   margin-top: 16px;
 }
 .quick-capture label {
-  font-size: 12px;
+  font-size: 13px;
 }
 .quick-capture textarea {
   width: 100%;
@@ -572,7 +572,7 @@ input[type="radio"] {
   background: transparent;
   border: 0;
   padding-inline: 4px;
-  font-size: 12px;
+  font-size: 13px;
   max-width: 140px;
 }
 .today-secondary {
@@ -597,7 +597,7 @@ input[type="radio"] {
   min-height: 34px;
 }
 .today-actions .text-link {
-  font-size: 12px;
+  font-size: 13px;
 }
 .today-focus {
   margin-bottom: 32px;
@@ -616,7 +616,7 @@ input[type="radio"] {
 }
 .today-focus .focus-card h2 {
   font-family: var(--font-interface), sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--secondary);
@@ -660,7 +660,7 @@ input[type="radio"] {
 .focus-card .focus-explanation {
   margin-top: 12px;
   color: var(--secondary);
-  font-size: 12px;
+  font-size: 13px;
 }
 .focus-card .briefing-actions {
   margin-top: 12px;
@@ -670,11 +670,11 @@ input[type="radio"] {
   padding-top: 12px;
   margin-top: 16px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .focus-card .focus-calendar-context {
   margin: 12px 0 0;
-  font-size: 12px;
+  font-size: 13px;
 }
 .focus-card .text-link,
 .focus-card .badge,
@@ -694,7 +694,7 @@ input[type="radio"] {
   background: none;
 }
 .agenda-compact-row time {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--secondary);
   min-width: 60px;
 }
@@ -703,7 +703,7 @@ input[type="radio"] {
   font-weight: 400;
 }
 .agenda-compact-row small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .home-calendar .panel-footer {
@@ -728,7 +728,7 @@ input[type="radio"] {
 .today-upcoming time {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   margin-top: 4px;
 }
 .today-week-row {
@@ -753,7 +753,7 @@ input[type="radio"] {
   font-size: 15px;
 }
 .today-review p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--secondary);
   margin-top: 4px;
 }
@@ -784,7 +784,7 @@ input[type="radio"] {
   gap: 32px;
 }
 .widget-pin {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .dashboard-domain-card .panel-heading {
@@ -802,12 +802,12 @@ input[type="radio"] {
   margin-top: 40px;
 }
 .sync-health h2 {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   color: var(--secondary);
 }
 .sync-health p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--secondary);
 }
 .sync-health .briefing-detail {
@@ -845,7 +845,7 @@ input[type="radio"] {
 .status-pill {
   border-radius: 4px;
   background: var(--accent-soft);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--secondary);
   border: 0;
@@ -879,7 +879,7 @@ input[type="radio"] {
   font-weight: 400;
 }
 .academic-score-grid small {
-  font-size: 11px;
+  font-size: 12px;
 }
 .course-layout {
   display: block;
@@ -915,7 +915,7 @@ input[type="radio"] {
   border-radius: 0;
 }
 th {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.3px;
   color: var(--muted);
@@ -993,10 +993,10 @@ thead {
 }
 .calendar-source-chip {
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .calendar-context-note {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
 }
 .planning-summary,
@@ -1057,7 +1057,7 @@ thead {
   background: var(--surface-hover);
 }
 .search-group-title {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin: 16px 0 4px;
 }
@@ -1326,7 +1326,7 @@ thead {
     max-width: 120px;
   }
   .today-summary {
-    font-size: 12px;
+    font-size: 13px;
   }
   .today-focus .focus-card {
     padding: 16px;
@@ -1343,7 +1343,7 @@ thead {
     font-size: 14px;
   }
   .task-due {
-    font-size: 11px;
+    font-size: 12px;
     max-width: 64px;
     white-space: normal;
     text-align: right;
@@ -1392,7 +1392,7 @@ thead {
     font-size: 19px;
   }
   .academic-score-grid small {
-    font-size: 10px;
+    font-size: 12px;
   }
   .academic-score-grid > div {
     min-width: 0;
@@ -1526,7 +1526,7 @@ textarea,
   width: 100%;
 }
 .project-milestones > summary {
-  font-size: 12px;
+  font-size: 13px;
   min-height: 32px;
   color: var(--secondary);
 }

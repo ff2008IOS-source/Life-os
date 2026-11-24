@@ -72,7 +72,7 @@ export function MfaPanel({
       <p>
         {challenge
           ? "Enter the current six-digit code from your authenticator app."
-          : "Optional TOTP protection. Once enabled, private records require both your password and an authenticator code."}
+          : "Optional. Once on, signing in needs your password and a code from an authenticator app."}
       </p>
       {!state && !error && (
         <p role="status" className="muted small">
@@ -228,9 +228,8 @@ export function MfaPanel({
       )}
       {!challenge && (
         <p className="muted small academic-note">
-          If you lose your authenticator, the Supabase project owner must verify
-          your identity and remove the factor. No SMS service or paid MFA is
-          enabled.
+          If you lose your authenticator app, you’ll need the site owner to
+          reset it. There is no SMS backup.
         </p>
       )}
     </section>

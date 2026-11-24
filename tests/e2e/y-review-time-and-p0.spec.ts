@@ -77,7 +77,9 @@ test("Sunday-only review, past-exam wording, unified status and responsive P0 sh
   await page
     .getByRole("button", { name: "Collapse sidebar", exact: true })
     .click();
-  await expect(page.locator(".app-shell")).toHaveClass(/sidebar-collapsed/);
+  await expect(
+    page.locator(".app-shell").filter({ visible: true }),
+  ).toHaveClass(/sidebar-collapsed/);
   await page
     .getByRole("button", { name: "Expand sidebar", exact: true })
     .click();

@@ -151,6 +151,6 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
     .getByRole("button", { name: "Manage work session", exact: true })
     .click();
   await expect(
-    page.getByRole("tab", { name: "Scheduling preview", exact: true }),
+    page.getByRole("tab", { name: "Work hours & sessions", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
 });

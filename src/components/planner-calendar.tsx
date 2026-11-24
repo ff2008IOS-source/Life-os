@@ -630,7 +630,6 @@ export function PlannerCalendar({
         </>
       )}
       <div className="calendar-footnote">
-        <span>Tap a day for its full schedule</span>
         <Link href="/settings?section=integrations">Sync settings</Link>
       </div>
       {details && (

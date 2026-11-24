@@ -289,10 +289,8 @@ export function AssessmentPreparation({
             Allow scheduling under my current automation preferences
           </label>
           <p className="small muted">
-            Recorded deadline verification:{" "}
-            {String(a.verification_status ?? "unverified").replaceAll("_", " ")}
-            . Leave this off to keep the task manual. Completing preparation
-            never submits an assignment or marks a topic mastered.
+            Leave this off to schedule it yourself. Finishing preparation never
+            submits an assignment.
           </p>
           {error && (
             <p role="alert" className="error-message">

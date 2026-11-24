@@ -259,11 +259,7 @@ export function SheetRestPanel() {
       className="panel settings-panel"
       aria-label="Two-way Google Sheets"
     >
-      <h2>Google Sheets synchronization</h2>
-      <p className="small muted">
-        Keep Life OS and your spreadsheets connected. Choose what to sync and
-        when to allow changes.
-      </p>
+      <h2>Google Sheets</h2>
       <Button
         disabled={
           busy ||
@@ -273,10 +269,7 @@ export function SheetRestPanel() {
       >
         {batchRunning ? "Syncing tables…" : "Sync Sheets tables"}
       </Button>
-      <p className="small muted">
-        Updates all active tables using your existing permissions. Paused tables
-        and test workbooks are skipped.
-      </p>
+
       {batch.length > 0 && (
         <section
           aria-label="Sync all results"
@@ -313,7 +306,7 @@ export function SheetRestPanel() {
         </section>
       )}
       <div className="stack">
-        <label>
+        <label className="tech-detail">
           Connected Google account
           <select
             value={connection}
@@ -360,10 +353,10 @@ export function SheetRestPanel() {
             }
           }}
         >
-          Authorize Sheets permission
+          Reconnect Google Sheets
         </Button>
         <a
-          className="button button-outline"
+          className="button button-outline tech-detail"
           href="https://lifeos-beta-ivory.vercel.app/settings?section=integrations"
           target="_blank"
           rel="noreferrer"
@@ -371,7 +364,7 @@ export function SheetRestPanel() {
           Open primary Life OS integration settings
         </a>
       </div>
-      <details>
+      <details className="tech-detail">
         <summary>Verify a disposable workbook</summary>
         <p className="small muted">
           Creates a clearly labelled synthetic workbook. Tests imports, approved

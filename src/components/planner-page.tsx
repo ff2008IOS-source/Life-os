@@ -124,7 +124,7 @@ export function PlannerPage({
             label: `Inbox · ${data.tasks.filter((t) => !t.deleted_at && t.status === "inbox").length}`,
           },
           { id: "recurring", label: "Recurring" },
-          { id: "schedule", label: "Scheduling preview" },
+          { id: "schedule", label: "Work hours & sessions" },
         ].map((t) => (
           <button
             key={t.id}

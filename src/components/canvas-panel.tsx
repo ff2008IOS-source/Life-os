@@ -95,31 +95,23 @@ export function CanvasPanel({ embedded = false }: { embedded?: boolean } = {}) {
         Your courses, deadlines and grades, connected. Life OS never changes
         your Canvas records.
       </p>
-      <p role="status">
-        {state
-          ? state.connected
-            ? state.connection?.enabled
-              ? "Connected"
-              : "Paused or authorization needs renewal"
-            : "Not connected"
-          : "Checking connection…"}
-      </p>
+      <p role="status">{state ? connectionLabel(state) : "Checking…"}</p>
       {state?.connection?.expires_at && (
         <p className="small">
-          Token expires{" "}
+          Canvas access expires{" "}
           {formatInTimeZone(
             state.connection.expires_at,
             "America/Vancouver",
             "MMM d, yyyy h:mm a",
           )}{" "}
-          Vancouver (the date you saved).
+          .
         </p>
       )}
       {state?.warning !== null && state?.warning !== undefined && (
         <p className="notice">
           {state.warning === 0
-            ? "Token expired. Replace it to resume synchronization."
-            : `Renew your Canvas token within ${state.warning} day(s).`}
+            ? "Canvas access expired. Add a new access token to keep syncing."
+            : `Canvas access expires in ${state.warning} day${state.warning === 1 ? "" : "s"}. Add a new access token before then.`}
         </p>
       )}
       <p className="form-hint">
@@ -438,12 +430,34 @@ function ConflictReview({
   );
 }
 
+/** Connected, Not connected or Action required: nothing else. */
+function connectionLabel(state: Status) {
+  if (!state.connected) return "Not connected";
+  if (!state.connection?.enabled) return "Action required";
+  if (state.warning === 0) return "Action required";
+  return "Connected";
+}
+
 export function CanvasConnectionSettings({
   initialOpen = false,
 }: {
   initialOpen?: boolean;
 }) {
   const [open, setOpen] = useState(initialOpen);
+  const [status, setStatus] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void call<Status>("/api/canvas/connection")
+      .then((d) => {
+        if (live) setStatus(connectionLabel(d));
+      })
+      .catch(() => {
+        if (live) setStatus("Action required");
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
   return (
     <details
       id="canvas-connection"
@@ -451,8 +465,15 @@ export function CanvasConnectionSettings({
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
-      <summary>
+      <summary className="connection-summary">
         <h2>SFU Canvas</h2>
+        {status && (
+          <span
+            className={`connection-status ${status === "Connected" ? "ok" : status === "Not connected" ? "" : "warn"}`}
+          >
+            {status}
+          </span>
+        )}
       </summary>
       <p className="small muted">Courses, grades, deadlines and materials.</p>
       {open && <CanvasPanel embedded />}

@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useEffect, useState, useId } from "react";
 import { calendarRequest } from "./use-calendar";
 export function ConversationArchive() {
@@ -56,14 +55,7 @@ export function ConversationArchive() {
       <div className="page-heading">
         <div>
           <h1>Saved conversation archive</h1>
-          <p>
-            Your original history is preserved. AI now belongs inside specific
-            workflows.
-          </p>
         </div>
-        <Link href="/briefing" className="text-link">
-          Back to Briefing
-        </Link>
       </div>
       <section className="panel briefing-card">
         <label htmlFor={selectId}>Saved conversations</label>

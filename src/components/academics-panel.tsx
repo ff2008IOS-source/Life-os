@@ -53,6 +53,7 @@ export function AcademicsPanel({
         : "overview";
   });
   const [library, setLibrary] = useState(false);
+  const [allTopics, setAllTopics] = useState(false);
   const [studyTab, setStudyTab] = useState<"topics" | "sessions">("topics");
   const [data, setData] = useState<AcademicData>(empty),
     [error, setError] = useState(""),
@@ -419,60 +420,72 @@ export function AcademicsPanel({
                         </p>
                       )}
                       <ul className="topic-list">
-                        {sortedTopics.map((t) => {
-                          const m = String(t.mastery ?? "unstudied");
-                          const level = {
-                            unstudied: 0,
-                            needs_review: 1,
-                            practicing: 2,
-                            mastered: 3,
-                          }[m];
-                          return (
-                            <li key={t.id} className={`topic topic-${m}`}>
-                              <button
-                                className="topic-title"
-                                onClick={() =>
-                                  setEdit({ kind: "study_topics", record: t })
-                                }
-                              >
-                                {String(t.title)}
-                              </button>
-                              <span
-                                className="topic-meter"
-                                role="img"
-                                aria-label={`${m.replace("_", " ")}`}
-                              >
-                                {[1, 2, 3].map((i) => (
-                                  <i
-                                    key={i}
-                                    className={(level ?? 0) >= i ? "on" : ""}
-                                  />
-                                ))}
-                              </span>
-                              <span className="topic-state">
-                                {
-                                  {
-                                    unstudied: "Not started",
-                                    needs_review: "Needs review",
-                                    practicing: "Practicing",
-                                    mastered: "Mastered",
-                                  }[m]
-                                }
-                              </span>
-                              {m !== "mastered" && (
+                        {sortedTopics
+                          .slice(0, allTopics ? undefined : 5)
+                          .map((t) => {
+                            const m = String(t.mastery ?? "unstudied");
+                            const level = {
+                              unstudied: 0,
+                              needs_review: 1,
+                              practicing: 2,
+                              mastered: 3,
+                            }[m];
+                            return (
+                              <li key={t.id} className={`topic topic-${m}`}>
                                 <button
-                                  className="td-link"
+                                  className="topic-title"
                                   onClick={() =>
-                                    setEdit({ kind: "study_sessions" })
+                                    setEdit({ kind: "study_topics", record: t })
                                   }
                                 >
-                                  Continue studying
+                                  {String(t.title)}
                                 </button>
-                              )}
-                            </li>
-                          );
-                        })}
+                                <span
+                                  className="topic-meter"
+                                  role="img"
+                                  aria-label={`${m.replace("_", " ")}`}
+                                >
+                                  {[1, 2, 3].map((i) => (
+                                    <i
+                                      key={i}
+                                      className={(level ?? 0) >= i ? "on" : ""}
+                                    />
+                                  ))}
+                                </span>
+                                <span className="topic-state">
+                                  {
+                                    {
+                                      unstudied: "Not started",
+                                      needs_review: "Needs review",
+                                      practicing: "Practicing",
+                                      mastered: "Mastered",
+                                    }[m]
+                                  }
+                                </span>
+                                {m !== "mastered" && (
+                                  <button
+                                    className="td-link"
+                                    onClick={() =>
+                                      setEdit({ kind: "study_sessions" })
+                                    }
+                                  >
+                                    Continue studying
+                                  </button>
+                                )}
+                              </li>
+                            );
+                          })}
                       </ul>
+                      {sortedTopics.length > 5 && (
+                        <button
+                          className="td-link"
+                          onClick={() => setAllTopics((v) => !v)}
+                        >
+                          {allTopics
+                            ? "Show fewer"
+                            : `Show all ${sortedTopics.length}`}
+                        </button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

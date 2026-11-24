@@ -280,7 +280,7 @@ export function WrittenReviewsPage() {
                     concrete tasks separately when you are ready.
                   </p>
                 )}
-                <p className="data-source">
+                <p className="data-source tech-detail">
                   Source: recorded tasks, goals, milestones · {period}–
                   {periodEnd}. Current overdue snapshot is labeled separately.
                 </p>

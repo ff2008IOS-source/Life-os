@@ -281,7 +281,7 @@ export function AssessmentTable({
               </section>
             )}
             <AssessmentPreparation assessment={detail} onSaved={onSaved} />
-            <details className="briefing-detail">
+            <details className="briefing-detail tech-detail">
               <summary>Source & verification</summary>
               <p>
                 {String(detail.verification_status ?? "unverified").replaceAll(

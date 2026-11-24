@@ -68,13 +68,13 @@ p {
 }
 small,
 .small {
-  font-size: 12px;
+  font-size: 13px;
 }
 .muted {
   color: var(--muted);
 }
 .eyebrow {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1.5px;
   font-weight: 650;
   color: var(--muted);
@@ -101,7 +101,7 @@ small,
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 9px 14px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   min-height: 38px;
   transition:
@@ -135,7 +135,7 @@ small,
 .button-sm {
   padding: 5px 10px;
   min-height: 30px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .button-icon {
   padding: 9px;
@@ -150,7 +150,7 @@ label {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
 }
 input,
@@ -236,7 +236,7 @@ fieldset legend {
   letter-spacing: -0.6px;
 }
 .beta-pill {
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.7px;
   padding: 3px 6px;
   border: 1px solid var(--border);
@@ -276,7 +276,7 @@ fieldset legend {
   color: var(--muted);
   padding: 10px 13px;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   min-height: 41px;
 }
@@ -303,14 +303,14 @@ fieldset legend {
 }
 .nav-count {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 12px;
   background: var(--elevated);
   padding: 0 6px;
   border-radius: 4px;
 }
 .sidebar-label {
   margin: 30px 13px 10px;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   letter-spacing: 1.4px;
   font-weight: 600;
@@ -321,7 +321,7 @@ fieldset legend {
   align-items: center;
   padding: 8px 14px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   border-radius: 6px;
 }
 .area-link:hover {
@@ -345,13 +345,13 @@ fieldset legend {
   margin: 18px 0 12px;
 }
 .beta-notice strong {
-  font-size: 11px;
+  font-size: 12px;
   display: flex;
   gap: 7px;
   align-items: center;
 }
 .beta-notice p {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -371,15 +371,15 @@ fieldset legend {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .account strong {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 550;
 }
 .account p {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
 }
 .main-shell {
@@ -400,7 +400,7 @@ fieldset legend {
   display: flex;
   gap: 10px;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .breadcrumb strong {
@@ -416,14 +416,14 @@ fieldset legend {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   background: none;
   border: 0;
   color: var(--muted);
   padding: 6px;
 }
 .search-trigger kbd {
-  font-size: 9px;
+  font-size: 12px;
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1px 4px;
@@ -446,7 +446,7 @@ fieldset legend {
   margin-bottom: 28px;
 }
 .page-heading p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 8px;
 }
@@ -455,7 +455,7 @@ fieldset legend {
   margin-bottom: 10px;
 }
 .date-chip {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -482,7 +482,7 @@ fieldset legend {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .stat-label svg {
@@ -498,7 +498,7 @@ fieldset legend {
   line-height: 1.2;
 }
 .stat-note {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .stat-card.danger .stat-number {
@@ -547,7 +547,7 @@ fieldset legend {
   color: var(--muted);
 }
 .count-pill {
-  font-size: 9px;
+  font-size: 12px;
   min-width: 19px;
   height: 18px;
   display: inline-flex;
@@ -559,7 +559,7 @@ fieldset legend {
   padding: 0 5px;
 }
 .text-link {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--blue);
   display: inline-flex;
   gap: 5px;
@@ -569,7 +569,7 @@ fieldset legend {
   padding: 4px;
 }
 .panel-description {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   padding: 0 20px 15px;
 }
@@ -614,7 +614,7 @@ fieldset legend {
 }
 .task-title {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -624,7 +624,7 @@ fieldset legend {
   align-items: center;
   gap: 8px;
   margin-top: 5px;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   flex-wrap: wrap;
 }
@@ -637,7 +637,7 @@ fieldset legend {
   color: var(--muted);
 }
 .task-due {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -676,7 +676,7 @@ fieldset legend {
   padding: 9px 0;
   border: 0;
   background: transparent;
-  font-size: 11px;
+  font-size: 12px;
   min-height: 36px;
   flex: 1;
   min-width: 0;
@@ -709,12 +709,12 @@ fieldset legend {
   color: var(--muted);
 }
 .empty-state h3 {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
   margin-bottom: 5px;
 }
 .empty-state p {
-  font-size: 11px;
+  font-size: 12px;
   max-width: 300px;
   margin: 0 auto 15px;
 }
@@ -737,7 +737,7 @@ fieldset legend {
   background: var(--blue-soft);
   border: 1px solid color-mix(in srgb, var(--blue) 25%, transparent);
   margin-bottom: 24px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .notice svg {
   width: 17px;
@@ -748,7 +748,7 @@ fieldset legend {
 }
 .notice p {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 3px;
 }
 .notice .button {
@@ -772,11 +772,11 @@ fieldset legend {
   flex-shrink: 0;
 }
 .review-banner h2 {
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 5px;
 }
 .review-banner p {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 12px;
 }
@@ -798,10 +798,10 @@ fieldset legend {
   border-top: 1px solid var(--border);
 }
 .goal-row h3 {
-  font-size: 11px;
+  font-size: 12px;
 }
 .goal-row p {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -820,7 +820,7 @@ fieldset legend {
 .panel-footer {
   border-top: 1px solid var(--border);
   padding: 12px 20px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .agenda-empty {
@@ -831,11 +831,11 @@ fieldset legend {
   gap: 14px;
   padding: 13px 0;
   border-top: 1px solid var(--border);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .agenda-placeholder span {
-  font-size: 9px;
+  font-size: 12px;
   min-width: 40px;
 }
 .agenda-placeholder div {
@@ -844,7 +844,7 @@ fieldset legend {
 }
 .agenda-placeholder strong {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text);
   font-weight: 500;
 }
@@ -859,7 +859,7 @@ fieldset legend {
   justify-content: center;
   gap: 6px;
   align-items: center;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 30px;
 }
@@ -875,7 +875,7 @@ fieldset legend {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
 }
@@ -892,13 +892,13 @@ fieldset legend {
 }
 .filter-row input {
   max-width: 260px;
-  font-size: 11px;
+  font-size: 12px;
   min-height: 36px;
 }
 .filter-row select {
   width: auto;
   max-width: 180px;
-  font-size: 11px;
+  font-size: 12px;
   min-height: 36px;
 }
 .filter-row .button {
@@ -924,7 +924,7 @@ fieldset legend {
 }
 .entity-card p {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .entity-card .card-footer {
   display: flex;
@@ -934,7 +934,7 @@ fieldset legend {
   padding-top: 12px;
   margin-top: auto;
   border-top: 1px solid var(--border);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .badge {
@@ -943,7 +943,7 @@ fieldset legend {
   gap: 5px;
   padding: 3px 7px;
   border-radius: 5px;
-  font-size: 9px;
+  font-size: 12px;
   background: var(--elevated);
   color: var(--muted);
 }
@@ -977,7 +977,7 @@ fieldset legend {
   font-size: 26px;
 }
 .area-workspace-header p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -992,7 +992,7 @@ fieldset legend {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .area-summary strong {
@@ -1014,7 +1014,7 @@ fieldset legend {
   padding: 10px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  font-size: 10px;
+  font-size: 12px;
 }
 .calendar-label {
   text-align: center;
@@ -1045,7 +1045,7 @@ fieldset legend {
   color: var(--text);
 }
 .calendar-task {
-  font-size: 9px;
+  font-size: 12px;
   padding: 3px 5px;
   background: var(--blue-soft);
   color: var(--blue);
@@ -1081,7 +1081,7 @@ fieldset legend {
   background: none;
   border-radius: 4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   padding: 5px 9px;
 }
 .segmented button.active {
@@ -1097,7 +1097,7 @@ fieldset legend {
 .day-agenda-heading {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .weekly-grid {
@@ -1117,7 +1117,7 @@ fieldset legend {
   border: 0;
 }
 .weekly-day h3 {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 14px;
 }
@@ -1133,7 +1133,7 @@ fieldset legend {
   gap: 16px;
 }
 .form-hint {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   font-weight: 400;
 }
@@ -1176,7 +1176,7 @@ fieldset legend {
   margin: 0 35px 6px 0;
 }
 .dialog-description {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 24px;
 }
@@ -1198,7 +1198,7 @@ fieldset legend {
   margin-right: auto;
 }
 .error-message {
-  font-size: 12px;
+  font-size: 13px;
   padding: 12px;
   background: var(--danger);
   color: var(--danger);
@@ -1219,7 +1219,7 @@ fieldset legend {
   border: 1px solid var(--border);
   border-radius: 9px;
   box-shadow: none;
-  font-size: 12px;
+  font-size: 13px;
 }
 .toast svg {
   color: var(--success);
@@ -1238,12 +1238,12 @@ fieldset legend {
   border-radius: 7px;
   text-align: left;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
 }
 .search-result small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 3px;
 }
 .settings-grid {
@@ -1258,7 +1258,7 @@ fieldset legend {
   margin-bottom: 7px;
 }
 .settings-panel > p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 20px;
 }
@@ -1272,13 +1272,13 @@ fieldset legend {
   gap: 10px;
   padding: 15px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 12px;
 }
 .settings-panel .setting-line:last-child {
   border: 0;
 }
 .setting-line p {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 4px;
 }
@@ -1293,7 +1293,7 @@ fieldset legend {
   gap: 10px;
   padding: 13px 10px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   border: 0;
   background: none;
   width: 100%;
@@ -1312,7 +1312,7 @@ fieldset legend {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 .review-form {
@@ -1323,7 +1323,7 @@ fieldset legend {
   margin-bottom: 10px;
 }
 .review-form > p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 22px;
 }
@@ -1333,7 +1333,7 @@ fieldset legend {
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-bottom: 20px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .review-history {
@@ -1342,7 +1342,7 @@ fieldset legend {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
 }
 .insight-bars {
   display: flex;
@@ -1362,7 +1362,7 @@ fieldset legend {
   min-width: 0;
 }
 .bar-column span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .bar-column .bar {
@@ -1372,7 +1372,7 @@ fieldset legend {
   min-height: 0;
 }
 .bar-column small {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
 }
 .table-wrap {
@@ -1381,7 +1381,7 @@ fieldset legend {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
 }
 th,
@@ -1391,7 +1391,7 @@ td {
 }
 th {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
 }
 .mobile-nav {
@@ -1437,7 +1437,7 @@ th {
   gap: 10px;
   align-items: center;
   margin-top: 22px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .example-check {
   border: 1px solid var(--border);
@@ -1451,7 +1451,7 @@ th {
   justify-content: center;
 }
 .login-foot {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .login-form {
@@ -1470,7 +1470,7 @@ th {
   margin: 22px 0 9px;
 }
 .login-form p.muted {
-  font-size: 12px;
+  font-size: 13px;
 }
 .login-form form {
   margin: 30px 0 20px;
@@ -1482,7 +1482,7 @@ th {
   padding-top: 22px;
   margin-top: 24px;
   border-top: 1px solid var(--border);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .privacy-note svg {
@@ -1491,7 +1491,7 @@ th {
 }
 .privacy-note + p {
   margin-top: 16px !important;
-  font-size: 9px !important;
+  font-size: 12px !important;
 }
 .setup-steps {
   margin-top: 28px;
@@ -1510,18 +1510,18 @@ th {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--blue);
   flex-shrink: 0;
 }
 .setup-steps strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
   display: block;
   margin-bottom: 5px;
 }
 .setup-steps small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   display: block;
 }
@@ -1550,7 +1550,7 @@ th {
 .schedule-item {
   padding: 13px 16px;
   border-top: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 12px;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -1558,10 +1558,10 @@ th {
 .schedule-item .time {
   min-width: 100px;
   color: var(--blue);
-  font-size: 10px;
+  font-size: 12px;
 }
 .schedule-item p {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .policy-grid {
@@ -1574,7 +1574,7 @@ th {
   padding: 12px;
   background: var(--bg);
   border-radius: 7px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .policy-item strong {
@@ -1603,7 +1603,7 @@ th {
   color: var(--muted);
 }
 .data-source {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 15px;
 }
@@ -1622,18 +1622,18 @@ th {
   align-items: center;
   flex-direction: row;
   gap: 10px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .danger-text {
   color: var(--danger);
 }
 .test-label {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--warning);
   letter-spacing: 0.4px;
 }
 .mfa-note {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   padding: 10px 0;
 }
@@ -1825,7 +1825,7 @@ th {
     display: none;
   }
   .top-actions .button-primary {
-    font-size: 10px;
+    font-size: 12px;
     padding: 7px 10px;
     min-height: 33px;
   }
@@ -1841,13 +1841,13 @@ th {
     font-size: 27px;
   }
   .page-heading p {
-    font-size: 11px;
+    font-size: 12px;
   }
   .page-heading .eyebrow {
-    font-size: 9px;
+    font-size: 12px;
   }
   .date-chip {
-    font-size: 9px;
+    font-size: 12px;
     padding: 6px 8px;
   }
   .dashboard-grid {
@@ -1861,14 +1861,14 @@ th {
     padding: 14px 15px;
   }
   .stat-label {
-    font-size: 10px;
+    font-size: 12px;
   }
   .stat-number {
     font-size: 26px;
     margin-top: 9px;
   }
   .stat-note {
-    font-size: 9px;
+    font-size: 12px;
   }
   .mobile-nav {
     display: flex;
@@ -1891,7 +1891,7 @@ th {
     flex-direction: column;
     gap: 4px;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 12px;
     min-width: 52px;
     min-height: 44px;
     justify-content: center;
@@ -1937,13 +1937,13 @@ th {
     padding-right: 16px;
   }
   .task-title {
-    font-size: 12px;
+    font-size: 13px;
   }
   .task-meta {
-    font-size: 10px;
+    font-size: 12px;
   }
   .task-due {
-    font-size: 9px;
+    font-size: 12px;
   }
   .task-row > .priority-flag {
     display: none;
@@ -1962,14 +1962,14 @@ th {
   .calendar-day {
     min-height: 74px;
     padding: 4px;
-    font-size: 9px;
+    font-size: 12px;
   }
   .calendar-label {
     padding: 8px 2px;
-    font-size: 9px;
+    font-size: 12px;
   }
   .calendar-task {
-    font-size: 8px;
+    font-size: 12px;
     padding: 3px;
   }
   .calendar-day .day-number {
@@ -2026,7 +2026,7 @@ th {
     margin: 14px 0;
   }
   .login-story p {
-    font-size: 12px;
+    font-size: 13px;
   }
   .login-example,
   .login-foot {
@@ -2052,20 +2052,20 @@ th {
     margin-bottom: 17px;
   }
   .footer-note {
-    font-size: 8px;
+    font-size: 12px;
   }
   .area-metrics {
     gap: 8px;
   }
   .area-summary {
     padding: 12px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .area-summary strong {
     font-size: 21px;
   }
   .page-heading .button {
-    font-size: 10px;
+    font-size: 12px;
     white-space: nowrap;
   }
   .review-banner {
@@ -2195,7 +2195,7 @@ input[type="checkbox"] {
   flex-direction: row;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 13px;
   min-height: 44px;
 }
 .inline-check {
@@ -2211,7 +2211,7 @@ input[type="checkbox"] {
   flex: 1;
 }
 .connection-heading p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .connection-icon {
@@ -2228,7 +2228,7 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   padding-bottom: 12px;
 }
@@ -2251,7 +2251,7 @@ input[type="checkbox"] {
   min-width: 0;
 }
 .calendar-choice-status {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--muted);
 }
@@ -2268,20 +2268,20 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 .daily-sync-setting strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
 }
 .daily-sync-setting small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   margin-top: 3px;
 }
 .connection-details {
   border-top: 1px solid var(--border);
   padding-top: 12px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .connection-details summary,
 .connection-menu summary {
@@ -2300,14 +2300,14 @@ input[type="checkbox"] {
   gap: 8px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 12px;
 }
 .sync-detail p {
   flex-basis: 100%;
 }
 .sync-detail span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 .connection-actions {
   display: flex;
@@ -2326,7 +2326,7 @@ input[type="checkbox"] {
   display: block;
 }
 .connection-feedback {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   padding: 8px 0;
 }
@@ -2363,16 +2363,16 @@ input[type="checkbox"] {
 .agenda-compact-row time {
   width: 64px;
   flex: 0 0 64px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .agenda-compact-row strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
   display: block;
 }
 .agenda-compact-row small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   display: block;
   margin-top: 2px;
@@ -2403,7 +2403,7 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .status-dot {
@@ -2439,7 +2439,7 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   min-height: 34px;
 }
 .source-filter[aria-pressed="false"] {
@@ -2447,7 +2447,7 @@ input[type="checkbox"] {
   opacity: 0.7;
 }
 .calendar-inline-alert {
-  font-size: 11px;
+  font-size: 12px;
   padding: 8px 12px;
   margin: 0;
   border-bottom: 1px solid var(--border);
@@ -2462,7 +2462,7 @@ input[type="checkbox"] {
   border-bottom: 1px solid var(--border);
 }
 .time-axis-label {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   padding: 10px 4px;
   text-align: center;
@@ -2477,7 +2477,7 @@ input[type="checkbox"] {
   background: none;
   color: var(--muted);
   padding: 10px 4px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .time-day-heading strong {
   font-size: 18px;
@@ -2506,7 +2506,7 @@ input[type="checkbox"] {
 }
 .calendar-event-chip,
 .deadline-chip {
-  font-size: 10px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2539,7 +2539,7 @@ input[type="checkbox"] {
   border: 0;
   background: none;
   color: var(--blue);
-  font-size: 10px;
+  font-size: 12px;
   text-align: left;
   padding: 3px 4px;
   min-height: 24px;
@@ -2562,7 +2562,7 @@ input[type="checkbox"] {
   left: 0;
   right: 0;
   transform: translateY(-50%);
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   text-align: center;
 }
@@ -2592,11 +2592,11 @@ input[type="checkbox"] {
   text-align: left;
   color: var(--text);
   padding: 3px 4px;
-  font-size: 10px;
+  font-size: 12px;
   min-width: 0;
 }
 .time-event strong {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 550;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2607,7 +2607,7 @@ input[type="checkbox"] {
 }
 .time-event small {
   display: block;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.4;
   opacity: 0.8;
 }
@@ -2622,7 +2622,7 @@ input[type="checkbox"] {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   border-top: 1px solid var(--border);
 }
@@ -2637,7 +2637,7 @@ input[type="checkbox"] {
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 .month-weekday {
-  font-size: 10px;
+  font-size: 12px;
   text-align: center;
   color: var(--muted);
   padding: 8px;
@@ -2669,7 +2669,7 @@ input[type="checkbox"] {
   border-radius: 50%;
   background: none;
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
   margin-bottom: 3px;
 }
 .is-today .month-date {
@@ -2697,7 +2697,7 @@ input[type="checkbox"] {
   justify-content: center;
   flex-direction: column;
   gap: 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .event-detail {
@@ -2751,7 +2751,7 @@ input[type="checkbox"] {
     margin-bottom: 14px;
   }
   .page-heading p {
-    font-size: 11px;
+    font-size: 12px;
   }
   .stats-grid {
     gap: 8px;
@@ -2771,7 +2771,7 @@ input[type="checkbox"] {
   }
   .settings-tabs .tab {
     padding-inline: 9px;
-    font-size: 11px;
+    font-size: 12px;
   }
   .calendar-toolbar {
     flex-wrap: wrap;
@@ -2789,10 +2789,10 @@ input[type="checkbox"] {
     padding-inline: 8px;
   }
   .calendar-status-text {
-    font-size: 10px;
+    font-size: 12px;
   }
   .calendar-footnote {
-    font-size: 9px;
+    font-size: 12px;
   }
   .calendar-footnote > span {
     max-width: 70%;
@@ -2814,7 +2814,7 @@ input[type="checkbox"] {
     gap: 3px;
     padding: 4px 0;
     min-height: 48px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .mobile-week-picker strong {
     width: 25px;
@@ -2822,7 +2822,7 @@ input[type="checkbox"] {
     border-radius: 50%;
     display: grid;
     place-items: center;
-    font-size: 12px;
+    font-size: 13px;
   }
   .time-grid-header,
   .all-day-grid,
@@ -2841,10 +2841,10 @@ input[type="checkbox"] {
     padding: 6px;
   }
   .time-event strong {
-    font-size: 12px;
+    font-size: 13px;
   }
   .time-event small {
-    font-size: 10px;
+    font-size: 12px;
   }
   .month-cell {
     min-height: 78px;
@@ -2852,16 +2852,16 @@ input[type="checkbox"] {
   }
   .month-cell .calendar-event-chip {
     min-height: 14px;
-    font-size: 8px;
+    font-size: 12px;
     padding: 1px 2px;
   }
   .month-cell .deadline-chip {
-    font-size: 8px;
+    font-size: 12px;
     min-height: 14px;
     padding: 1px 2px;
   }
   .calendar-more {
-    font-size: 9px;
+    font-size: 12px;
   }
   .month-date {
     width: 23px;
@@ -2871,7 +2871,7 @@ input[type="checkbox"] {
     padding-inline: 9px;
   }
   .calendar-choice-status {
-    font-size: 9px;
+    font-size: 12px;
   }
   .connection-summary {
     flex-wrap: wrap;
@@ -2889,7 +2889,7 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   border-top: 1px solid var(--border);
 }
@@ -2912,7 +2912,7 @@ input[type="checkbox"] {
 .academic-toolbar select {
   width: auto;
   max-width: 100%;
-  font-size: 11px;
+  font-size: 12px;
   min-height: 36px;
   padding: 7px 9px;
 }
@@ -2930,7 +2930,7 @@ input[type="checkbox"] {
 }
 .academic-score-grid span,
 .academic-score-grid small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   display: block;
 }
@@ -2955,7 +2955,8 @@ input[type="checkbox"] {
   border: 0;
   border-bottom: 1px solid var(--border);
   padding: 12px 0;
-  font-size: 11px;
+  font-size: 15px;
+  min-height: 44px;
 }
 .academic-record-row > div {
   flex: 1;
@@ -2968,7 +2969,7 @@ input[type="checkbox"] {
 .academic-record-row small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 4px;
 }
 .academic-record-row:hover {
@@ -2991,7 +2992,7 @@ input[type="checkbox"] {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
   gap: 12px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .source-detail-list dt {
   color: var(--muted);
@@ -3013,12 +3014,12 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 .career-record summary strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
   display: block;
 }
 .career-record summary small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   display: block;
   margin-top: 3px;
@@ -3033,7 +3034,7 @@ input[type="checkbox"] {
 .source-import-preview {
   max-height: 55dvh;
   overflow: auto;
-  font-size: 12px;
+  font-size: 13px;
 }
 .source-import-preview details {
   padding: 10px 0;
@@ -3095,7 +3096,7 @@ input[type="checkbox"] {
   display: block;
   overflow-wrap: anywhere;
   user-select: all;
-  font-size: 11px;
+  font-size: 12px;
   padding: 8px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -3117,7 +3118,7 @@ input[type="checkbox"] {
   display: flex;
   gap: 7px;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
 }
 .notification-preference input[type="checkbox"] {
   width: 16px;
@@ -3293,7 +3294,7 @@ input[type="checkbox"] {
 .chat-evidence summary {
   color: var(--muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   min-height: 36px;
   padding-top: 8px;
 }
@@ -3358,7 +3359,7 @@ input[type="checkbox"] {
 }
 .assistant-footnote {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   text-align: center;
   margin: 10px 0;
 }
@@ -3367,7 +3368,7 @@ input[type="checkbox"] {
     font-size: 21px;
   }
   .assistant-header p {
-    font-size: 12px;
+    font-size: 13px;
   }
   .assistant-welcome {
     padding: 24px 0;
@@ -3418,7 +3419,7 @@ input[type="checkbox"] {
   margin-top: 8px;
 }
 .assistant-limit {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   padding: 8px 0;
 }
@@ -3426,7 +3427,7 @@ input[type="checkbox"] {
   max-height: 72px;
   overflow: auto;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 13px;
 }
 .chat-source-chips {
   display: flex;
@@ -3439,13 +3440,13 @@ input[type="checkbox"] {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px 9px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
 }
 .chat-source-chip span {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 @media (max-width: 650px) {
   .assistant-chat {
@@ -3453,7 +3454,7 @@ input[type="checkbox"] {
     min-height: 240px;
   }
   .assistant-footnote {
-    font-size: 10px;
+    font-size: 12px;
     margin: 6px 0;
   }
   .assistant-header p {
@@ -3464,7 +3465,7 @@ input[type="checkbox"] {
   margin-left: auto;
   align-self: center;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .assistant-chat[data-compact="true"] .assistant-tools,
 .assistant-chat[data-compact="true"] .assistant-footnote {
@@ -3502,7 +3503,7 @@ input[type="checkbox"] {
   border-radius: 5px;
   background: transparent;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .calendar-kind-legend button[aria-pressed="true"] {
   color: var(--text);
@@ -3668,7 +3669,7 @@ input[type="checkbox"] {
 .briefing-metrics span,
 .briefing-refresh {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 13px;
 }
 .briefing-refresh {
   margin-top: 14px;
@@ -3725,7 +3726,7 @@ input[type="checkbox"] {
   margin: 10px 0 6px;
 }
 .briefing-alerts p {
-  font-size: 0.8rem;
+  font-size: 13px;
   line-height: 1.6;
 }
 .briefing-reflection {
@@ -3768,7 +3769,7 @@ input[type="checkbox"] {
 .weekly-prepared table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: 13px;
 }
 .weekly-prepared caption {
   text-align: left;
@@ -3847,7 +3848,7 @@ input[type="checkbox"] {
 .record-search label,
 .library-search {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .record-search input,
@@ -3872,7 +3873,7 @@ input[type="checkbox"] {
   text-align: left;
   background: var(--elevated);
   padding: 12px 15px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
@@ -3911,7 +3912,7 @@ input[type="checkbox"] {
   background: var(--elevated);
   color: var(--muted);
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .status-positive {
@@ -3928,7 +3929,7 @@ input[type="checkbox"] {
 .assessment-details dt,
 .roadmap-item dt {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .assessment-details dd,
 .roadmap-item dd {
@@ -3965,7 +3966,7 @@ input[type="checkbox"] {
   margin: 0;
 }
 .date-field-summary {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .date-field input {
@@ -4036,7 +4037,7 @@ input[type="checkbox"] {
 }
 .material-folder > summary small {
   font-weight: 400;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-left: 10px;
 }
@@ -4101,7 +4102,7 @@ input[type="checkbox"] {
   padding-right: 12px;
 }
 .time-event {
-  font-size: 11px;
+  font-size: 12px;
   padding: 5px 7px;
 }
 .time-event strong {
@@ -4136,7 +4137,7 @@ input[type="checkbox"] {
 }
 .insight-highlights small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .insight-list {
   margin: 12px 0;
@@ -4175,7 +4176,7 @@ input[type="checkbox"] {
 .standing-card span,
 .standing-card small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .syllabus-reference {
   padding: 12px 0;
@@ -4274,7 +4275,7 @@ input[type="checkbox"] {
     min-width: 0;
     padding: 0;
     border: 0;
-    font-size: 12px;
+    font-size: 13px;
   }
   .assessment-table td:first-child {
     grid-column: 1 / -1;
@@ -4285,7 +4286,7 @@ input[type="checkbox"] {
     content: attr(data-label);
     display: block;
     color: var(--muted);
-    font-size: 11px;
+    font-size: 12px;
     margin-bottom: 4px;
     font-weight: 400;
   }

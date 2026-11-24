@@ -40,7 +40,6 @@ export function SyllabusReference({ course }: { course: string }) {
   }, [course, revision]);
   return (
     <section className="syllabus-reference">
-      <h4>Syllabus reference</h4>
       {error ? (
         <p role="alert">
           {error}
