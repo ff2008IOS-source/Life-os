@@ -157,7 +157,7 @@ export function AreasPage({
             <Icon />
           </span>
           <div>
-            <h1>{area.name}</h1>
+            <h1>{slug === "academics" ? "School" : area.name}</h1>
           </div>
         </div>
         {slug === "projects" && (

@@ -2955,7 +2955,8 @@ input[type="checkbox"] {
   border: 0;
   border-bottom: 1px solid var(--border);
   padding: 12px 0;
-  font-size: 12px;
+  font-size: 15px;
+  min-height: 44px;
 }
 .academic-record-row > div {
   flex: 1;

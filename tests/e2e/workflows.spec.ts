@@ -81,7 +81,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
     page.getByRole("heading", { name: "[TEST] Explore a complete workflow" }),
   ).toBeVisible();
   await page.goto("/planner");
-  await page.getByRole("tab", { name: "Scheduling preview" }).click();
+  await page.getByRole("tab", { name: "Work hours & sessions" }).click();
   await page.getByRole("button", { name: "Generate preview" }).click();
   await expect(
     page.locator(".error-message[role=alert]").filter({ visible: true }),

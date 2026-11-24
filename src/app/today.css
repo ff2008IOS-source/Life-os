@@ -921,7 +921,10 @@
 }
 @media (max-width: 720px) {
   .course-stats {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr 1fr;
+  }
+  .course-stats > div:last-child {
+    grid-column: 1 / -1;
   }
 }
 .course-stats > div {
@@ -1438,4 +1441,13 @@ html:not([data-diagnostics]) .tech-detail {
 .connection-status.warn {
   color: var(--warning);
   border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+
+.deadline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0;
+  font-size: 14px;
+  color: var(--secondary);
 }

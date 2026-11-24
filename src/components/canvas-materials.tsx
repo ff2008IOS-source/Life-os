@@ -184,7 +184,6 @@ export function CanvasMaterials({
               />
               <span>{folder.title}</span>
               <span className="badge">{folder.records.length}</span>
-              {folder.suggested && <small>Suggested group</small>}
             </summary>
             <div className="material-folder-content">
               {folder.records.map((r) => (
