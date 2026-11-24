@@ -1,4 +1,5 @@
 import { calendarCoverage } from "./calendar-availability";
+import { recurringEventIds } from "./recurring-events";
 import { aggregateSyncHealth, type SyncSource } from "./sync-health";
 import { realWorkspace } from "./real-workspace";
 import { z } from "zod";
@@ -203,6 +204,7 @@ export function buildBriefing(input: BriefingInput) {
   const selectedEvents = input.events.filter((e) =>
     selected.some((c) => c.id === e.calendar_id),
   );
+  const repeating = recurringEventIds(selectedEvents);
   const events = groupCalendarEvents(selectedEvents).map((g) => ({
     ...g.event,
     busy_status: g.sources.some((e) => e.busy_status === "busy")
@@ -757,6 +759,7 @@ export function buildBriefing(input: BriefingInput) {
     planning: {
       blocks: input.blocks,
       events: selectedEvents.map((e) => ({
+        recurring: repeating.has(e.id),
         id: e.id,
         calendar_id: e.calendar_id,
         title: e.title,

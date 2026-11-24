@@ -30,6 +30,8 @@ export type CalendarEvent = {
   timezone: string;
   busy_status: "busy" | "free";
   raw_metadata: Record<string, unknown>;
+  /** Repeats week to week (set by the events endpoint). */
+  recurring?: boolean;
 };
 export type ConnectionState = {
   daily_sync_configured?: boolean;
