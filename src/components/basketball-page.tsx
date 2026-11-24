@@ -24,6 +24,7 @@ const label: Record<TeamEventKind, string> = {
   practice: "Practice",
   weights: "Weights",
   shoot: "Shootaround",
+  off: "Off day",
   other: "Team",
 };
 const icon = (k: TeamEventKind) =>
@@ -137,7 +138,11 @@ export function BasketballPage() {
                         <span className="bb-what">
                           <strong>{e.title}</strong>
                           <span>
-                            {label[e.kind]} · {time(e.start)}–{time(e.end)}
+                            {e.kind === "off" || e.end - e.start >= 20 * 3600000
+                              ? label[e.kind] === "Team"
+                                ? "All day"
+                                : label[e.kind]
+                              : `${label[e.kind]} · ${time(e.start)}–${time(e.end)}`}
                           </span>
                           {e.kind === "game" && (
                             <span className="bb-protect">
