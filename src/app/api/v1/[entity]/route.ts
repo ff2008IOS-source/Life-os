@@ -65,6 +65,11 @@ export async function POST(request: Request, { params }: Context) {
       .insert({
         ...values,
         ...stamp,
+        ...(entity === "study_topics" &&
+        "mastery" in values &&
+        values.mastery !== "unstudied"
+          ? { mastery_manual: true }
+          : {}),
         ...(operation ? { id: operation } : {}),
         user_id: user.id,
       })

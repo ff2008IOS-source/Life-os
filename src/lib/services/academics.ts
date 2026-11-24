@@ -1,3 +1,4 @@
+import { studyTopicEvidence } from "../study-topic-evidence";
 import { reconcileAssessments } from "../assessment-identity";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,7 +22,17 @@ export async function readAcademics(
   const data = Object.fromEntries(
     tables.map((t, i) => [t, results[i]]),
   ) as unknown as AcademicData;
-  return { ...data, assessments: reconcileAssessments(data.assessments) };
+  const assessments = reconcileAssessments(data.assessments);
+  const now = new Date();
+  return {
+    ...data,
+    assessments,
+    study_topics: data.study_topics.map((topic) => ({
+      ...topic,
+      stored_mastery: topic.mastery,
+      ...studyTopicEvidence(topic, assessments, data.study_sessions, now),
+    })),
+  };
 }
 
 export async function readAcademicRows(

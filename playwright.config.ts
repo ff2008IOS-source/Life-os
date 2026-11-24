@@ -27,6 +27,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60000,
       env: {
+        GROQ_API_KEY: "synthetic-topics-key",
         SUPABASE_SECRET_KEY: "synthetic-test-server-key",
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54329",
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "synthetic-test-publishable-key",

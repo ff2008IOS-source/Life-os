@@ -16,6 +16,7 @@ export type AcademicData = {
   courses: AcademicRow[];
   assessments: AcademicRow[];
   grading_categories: AcademicRow[];
+  topic_suggestions?: AcademicRow[];
   study_topics: AcademicRow[];
   study_sessions: AcademicRow[];
 };
@@ -27,7 +28,7 @@ type Field = {
     "text" | "textarea" | "number" | "date" | "datetime-local" | "checkbox";
   required?: boolean;
   options?: [string, string][];
-  table?: keyof AcademicData;
+  table?: Exclude<keyof AcademicData, "topic_suggestions">;
 };
 const definitions: Record<AcademicKind, Field[]> = {
   academic_terms: [
@@ -259,11 +260,21 @@ export function AcademicEditor({
       }
       if (kind === "courses" && !record)
         raw.verification_status = "user_confirmed";
+      const setMastery =
+        kind === "study_topics" && record && raw.mastery !== record.mastery;
+      if (kind === "study_topics" && record && !setMastery)
+        raw.mastery = record.stored_mastery ?? record.mastery;
       const values = schema.parse(raw);
       await calendarRequest(`/api/v1/${kind}${record ? "/" + record.id : ""}`, {
         method: record ? "PATCH" : "POST",
         body: JSON.stringify(
-          record ? { version: record.version, data: values } : values,
+          record
+            ? {
+                version: record.version,
+                data: values,
+                ...(setMastery ? { set_mastery: true } : {}),
+              }
+            : values,
         ),
       });
       await onSaved();

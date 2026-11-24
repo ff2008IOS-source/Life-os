@@ -235,6 +235,24 @@ const server = createServer((req, res) => {
         );
         return send(200, { ok: true });
       }
+      if (
+        url.pathname === "/__fixtures/topic-document" &&
+        req.method === "POST"
+      ) {
+        await db.query(
+          "insert into assistant_settings(user_id,enabled,free_plan_confirmed) values($1,true,true) on conflict(user_id) do update set enabled=true,free_plan_confirmed=true",
+          [uid],
+        );
+        await db.query(
+          "insert into canvas_documents(user_id,course_canvas_id,canvas_file_id,title,content_type,source_version,connection_generation,state) values($1,'777','888','Lecture 10.pdf','application/pdf','1',$1,'ready')",
+          [uid],
+        );
+        await db.query(
+          "insert into canvas_document_chunks(user_id,course_canvas_id,canvas_file_id,chunk_index,page,text) values($1,'777','888',0,1,'Ch. 10: Synaptic pruning during brain development.')",
+          [uid],
+        );
+        return send(200, { ok: true });
+      }
       // Synthetic calendars exist only in this loopback test adapter.
       if (
         url.pathname === "/__fixtures/calendar-ready" &&
@@ -352,6 +370,12 @@ const server = createServer((req, res) => {
           const fn = url.pathname.split("/").at(-1);
           if (
             ![
+              "next_topic_excerpt",
+              "reserve_topic_excerpt",
+              "finish_topic_excerpt",
+              "review_topic_suggestions",
+              "canvas_seed_documents",
+              "canvas_claim_document",
               "prepare_assessment",
               "complete_work_session",
               "change_focus_session",
@@ -374,7 +398,9 @@ const server = createServer((req, res) => {
           const entries = Object.entries(body);
           const result = await db.query(
             `select public.${quote(fn)}(${entries.map(([key], i) => quote(key) + " => $" + (i + 1)).join(",")}) as value`,
-            entries.map(([, value]) => value),
+            entries.map(([key, value]) =>
+              key === "p_topics" ? JSON.stringify(value) : value,
+            ),
           );
           await db.exec("commit");
           return send(200, result.rows[0].value ?? null);
@@ -427,6 +453,7 @@ const server = createServer((req, res) => {
           "courses",
           "grading_categories",
           "assessments",
+          "topic_suggestions",
           "study_topics",
           "study_sessions",
           "financial_accounts",

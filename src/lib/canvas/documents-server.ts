@@ -122,10 +122,13 @@ export async function canvasDocumentWorker(
   if ((owners.data?.length ?? 0) > 1)
     throw Error("Canvas document owner limit exceeded");
   const results = [];
-  for (const owner of owners.data ?? [])
+  for (const owner of owners.data ?? []) {
     results.push(
       await processCanvasDocuments(owner.user_id, course, file, file ? 1 : 2),
     );
+    const { discoverTopics } = await import("./topic-discovery");
+    await discoverTopics(owner.user_id);
+  }
   return results;
 }
 
