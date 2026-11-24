@@ -30,10 +30,7 @@ test("academic forms save unknown term dates, course rules and scores without in
   await page.getByLabel("Course title").fill("[TEST] Confirmed course");
   await page.getByRole("button", { name: "Save record", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Assessments", exact: true })
-    .first()
-    .click();
+  await page.getByRole("button", { name: "Grades", exact: true }).click();
   await page.getByRole("button", { name: /Add assessment/ }).click();
   await page.getByLabel("Assessment title").fill("[TEST] Unknown score");
   await page.getByRole("button", { name: "Save record", exact: true }).click();
@@ -41,8 +38,19 @@ test("academic forms save unknown term dates, course rules and scores without in
   await expect(
     page.getByText("[TEST] Unknown score", { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText("The grading formula is not confirmed.", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
   await expect(page.getByText("Current grade", { exact: true })).toBeVisible();
-  await page.getByText("Grading details & syllabus", { exact: true }).click();
+  // Study topics are always shown, even before any exist.
+  await expect(
+    page.getByText("No topics currently require review.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add syllabus weights" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Grades", exact: true }).click();
   await expect(
     page.getByText("The grading formula is not confirmed.", { exact: false }),
   ).toBeVisible();

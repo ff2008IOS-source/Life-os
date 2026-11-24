@@ -327,19 +327,6 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       ? `Now until ${fmt(agenda.nextWindow.end)} · ${Math.round(agenda.nextWindow.minutes)} min`
       : `${clock(agenda.nextWindow.start)}–${fmt(agenda.nextWindow.end)} · ${Math.round(agenda.nextWindow.minutes)} min free`
     : null;
-  const why = (item: WorkItem) => {
-    const due = dueLabel(item);
-    const first = agenda.items[0]?.key === item.key;
-    const fits = agenda.nextWindow && agenda.nextWindow.minutes >= item.minutes;
-    return `${due}${first ? " — the soonest thing on your list" : ""}. ${
-      !agenda.nextWindow
-        ? "No free window is left today, so start here when you next can."
-        : fits
-          ? "It fits in this window."
-          : `This window covers ${Math.round(agenda.nextWindow.minutes)} of about ${item.minutes} minutes.`
-    }`;
-  };
-
   const clash = agenda.clashes.find(
     (c) => `${c.a.title}|${c.b.title}|${c.at}` !== hiddenClash,
   );
@@ -486,7 +473,6 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                   )}
                 </div>
                 <h2 className="td-now-title">{choice.item.title}</h2>
-                <p className="td-now-why">{why(choice.item)}</p>
                 <div className="td-chips">
                   <span className="td-chip">{choice.item.label}</span>
                   <span className="td-chip td-chip-hot">
@@ -539,17 +525,12 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             ) : (
               <>
                 <div className="td-now-top">
-                  <span className="td-kicker">You’re clear</span>
+                  <span className="td-kicker">All done</span>
                   {windowText && (
                     <span className="td-now-window">{windowText}</span>
                   )}
                 </div>
-                <h2 className="td-now-title">
-                  Nothing due in the next week needs time today.
-                </h2>
-                <p className="td-now-why">
-                  Use the time for a goal below, or capture something new.
-                </p>
+                <h2 className="td-now-title">Nothing needs doing right now.</h2>
               </>
             )}
           </section>

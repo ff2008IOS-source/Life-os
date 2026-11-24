@@ -1,12 +1,9 @@
 "use client";
-import { termKey } from "@/lib/career-order";
-import { orderTerms } from "./new-term-setup";
+import { orderTerms, visibleCourses } from "@/lib/course-visibility";
 import { SyllabusReference } from "./syllabus-reference";
 import { AssessmentTable } from "./assessment-table";
-import { possibleAssessmentDuplicates } from "@/lib/academic-display";
 import { useCurrentTime } from "./use-current-time";
 import { CanvasMaterials } from "./canvas-materials";
-import { AssessmentPreparation } from "./assessment-preparation";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { dueLabel, markPercent } from "@/lib/display";
 import { Mark } from "./mark";
@@ -45,28 +42,24 @@ export function AcademicsPanel({
 } = {}) {
   const [limit, setLimit] = useState(8);
   const now = useCurrentTime();
-  const [view, setView] = useState(
-    initialAssessment
-      ? "assessments"
-      : [
-            "overview",
-            "assessments",
-            "materials",
-            "study",
-            "grades",
-            "notes",
-          ].includes(initialView ?? "")
-        ? initialView!
-        : "overview",
-  );
-  const [syllabusOpen, setSyllabusOpen] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  // Overview · Grades · Materials. Older links (?view=assessments, study,
+  // notes) land on the tab that now holds that content.
+  const [view, setView] = useState(() => {
+    const v = initialAssessment ? "assessments" : (initialView ?? "");
+    return v === "assessments" || v === "grades"
+      ? "grades"
+      : v === "materials" || v === "notes"
+        ? "materials"
+        : "overview";
+  });
+  const [library, setLibrary] = useState(false);
+  const [studyTab, setStudyTab] = useState<"topics" | "sessions">("topics");
   const [data, setData] = useState<AcademicData>(empty),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [courseId, setCourseId] = useState(initialCourse ?? ""),
     [termChoice, setTerm] = useState<string | null>(null),
-    [tab, setTab] = useState("assessments"),
+    [tab, setTab] = useState<"assessments" | "categories">("assessments"),
     [edit, setEdit] = useState<{
       kind: AcademicKind;
       record?: AcademicRow;
@@ -93,27 +86,11 @@ export function AcademicsPanel({
       live = false;
     };
   }, []);
-  // School opens on the newest semester that has courses (or the linked
-  // course's). Courses in an undated term, like Canvas's "Default Term" for
-  // year-round courses, show alongside whichever semester is selected.
-  const dated = (id: unknown) =>
-    termKey(
-      String(data.academic_terms.find((t) => t.id === id)?.name ?? ""),
-    ) !== null;
-  // With no named semester at all, show every term rather than guess one.
-  const newest = orderTerms(data.academic_terms).find(
-    (t) => dated(t.id) && data.courses.some((c) => c.term_id === t.id),
-  );
-  const linked = data.courses.find((c) => c.id === initialCourse);
-  const term =
-    termChoice ??
-    (linked && dated(linked.term_id)
-      ? String(linked.term_id ?? "")
-      : linked
-        ? ""
-        : String(newest?.id ?? ""));
-  const courses = data.courses.filter(
-    (c) => !term || c.term_id === term || (dated(term) && !dated(c.term_id)),
+  const { term, courses } = visibleCourses(
+    data.academic_terms,
+    data.courses,
+    termChoice,
+    initialCourse,
   );
   const current = courses.find((c) => c.id === courseId) ?? courses[0];
   const selected = current?.id;
@@ -192,32 +169,18 @@ export function AcademicsPanel({
   const graded = assessments
     .filter((a) => pctOf(a) !== null)
     .sort((a, b) => (dueMs(b) ?? 0) - (dueMs(a) ?? 0));
-  const standingSupported =
-    current?.grading_rules_confirmed === true &&
-    possibleAssessmentDuplicates(assessments).length === 0 &&
-    assessments
-      .filter((a) => !a.dropped && typeof a.earned_score === "number")
-      .every((a) =>
-        ["verified", "user_confirmed"].includes(String(a.verification_status)),
-      );
-  const weightSupported =
-    standingSupported && current?.grading_method === "assessment_weights";
-  const kind: AcademicKind =
-    tab === "topics"
-      ? "study_topics"
-      : tab === "sessions"
-        ? "study_sessions"
-        : tab === "categories"
-          ? "grading_categories"
-          : "assessments";
-  const rows =
-    tab === "topics"
-      ? topics
-      : tab === "sessions"
-        ? sessions
-        : tab === "categories"
-          ? categories
-          : assessments;
+  const order = ["needs_review", "practicing", "unstudied", "mastered"];
+  const sortedTopics = topics.toSorted(
+    (x, y) =>
+      order.indexOf(String(x.mastery ?? "unstudied")) -
+      order.indexOf(String(y.mastery ?? "unstudied")),
+  );
+  const toReview = topics.filter((t) => t.mastery !== "mastered").length;
+  const openGrades = (sub: "assessments" | "categories" = "assessments") => {
+    setView("grades");
+    setTab(sub);
+    setLimit(8);
+  };
   return (
     <section className="academic-workspace">
       {loading && (
@@ -320,22 +283,24 @@ export function AcademicsPanel({
         <div className="empty-state compact">
           <BookOpen />
           <h3>Add a term and course</h3>
-          <p>
-            Start with a term and your first course. You can add the details
-            later.
-          </p>
+          <p>Start with a term and your first course.</p>
         </div>
       ) : (
         current && (
           <>
+            <div className="course-head">
+              <div>
+                <h2>{String(current.code)}</h2>
+                {current.title && current.title !== current.code ? (
+                  <p>{String(current.title)}</p>
+                ) : null}
+              </div>
+            </div>
             <div className="tabs course-tabs" aria-label="Course sections">
               {[
                 ["overview", "Overview"],
-                ["assessments", "Assessments"],
-                ["materials", "Materials"],
                 ["grades", "Grades"],
-                ["study", "Study"],
-                ["notes", "Notes"],
+                ["materials", "Materials"],
               ].map(([id, label]) => (
                 <button
                   key={id}
@@ -343,7 +308,6 @@ export function AcademicsPanel({
                   aria-pressed={view === id}
                   onClick={() => {
                     setView(id);
-                    setTab(id === "study" ? "topics" : "assessments");
                     setLimit(8);
                   }}
                 >
@@ -351,41 +315,8 @@ export function AcademicsPanel({
                 </button>
               ))}
             </div>
-            {view === "grades" ? (
-              <GradePlanner
-                course={current}
-                assessments={assessments}
-                categories={categories}
-                onRules={() => {
-                  setView("assessments");
-                  setTab("categories");
-                }}
-              />
-            ) : view === "notes" ? (
-              <section>
-                <div className="panel-heading">
-                  <h2>Course notes</h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setEdit({ kind: "courses", record: current })
-                    }
-                  >
-                    Edit notes
-                  </Button>
-                </div>
-                <p className="preserve-lines">
-                  {String(current.description || "No notes.")}
-                </p>
-              </section>
-            ) : view === "materials" ? (
-              <CanvasMaterials
-                key={selected}
-                localCourseId={selected}
-                embedded
-              />
-            ) : (
+
+            {view === "overview" && (
               <>
                 <div className="course-stats">
                   <div>
@@ -401,27 +332,22 @@ export function AcademicsPanel({
                     ) : (
                       <strong>—</strong>
                     )}
-                    <small>
-                      {current.grading_rules_confirmed === true &&
-                      current.grading_method !== "unknown" ? (
-                        averageFor(selected!) !== null ? (
-                          "Weighted by your syllabus"
-                        ) : (
-                          "No graded work yet"
-                        )
-                      ) : (
+                    {current.grading_rules_confirmed === true &&
+                    current.grading_method !== "unknown" ? (
+                      averageFor(selected!) === null && (
+                        <small>No graded work yet</small>
+                      )
+                    ) : (
+                      <small>
                         <button
                           type="button"
                           className="td-link"
-                          onClick={() => {
-                            setView("assessments");
-                            setTab("categories");
-                          }}
+                          onClick={() => openGrades("categories")}
                         >
                           Add syllabus weights
                         </button>
-                      )}
-                    </small>
+                      </small>
+                    )}
                   </div>
                   <div>
                     <span>Graded</span>
@@ -432,40 +358,241 @@ export function AcademicsPanel({
                         of {assessments.filter((a) => !a.dropped).length}
                       </small>
                     </strong>
-                    <small>
-                      {summary.graded_weight !== null && weightSupported
-                        ? `${Number(summary.graded_weight.toFixed(1))}% of the course weight`
-                        : "Course weights not confirmed"}
-                    </small>
+                    {current.grading_rules_confirmed === true &&
+                      summary.graded_weight !== null && (
+                        <small>
+                          {Number(summary.graded_weight.toFixed(1))}% of the
+                          course
+                        </small>
+                      )}
                   </div>
                   <div>
                     <span>Next due</span>
                     <strong className="course-next">
                       {upcoming[0] ? String(upcoming[0].title) : "Nothing due"}
                     </strong>
-                    <small>
-                      {upcoming[0]
-                        ? dueLabel({
-                            due_at: upcoming[0].due_at as string | null,
-                            due_date: upcoming[0].due_date as string | null,
-                          })
-                        : undated.length
-                          ? `${undated.length} without a date`
-                          : "You’re all caught up"}
-                    </small>
+                    {upcoming[0] && (
+                      <small>
+                        {dueLabel({
+                          due_at: upcoming[0].due_at as string | null,
+                          due_date: upcoming[0].due_date as string | null,
+                        })}
+                      </small>
+                    )}
                   </div>
                 </div>
-                {view === "overview" && graded.length > 0 && (
-                  <section className="course-results">
-                    <h3>Recent results</h3>
-                    {graded.slice(0, 6).map((a) => (
+
+                <section
+                  className="course-section"
+                  aria-label="Topics to review"
+                >
+                  <div className="course-section-head">
+                    <h3>
+                      Topics to review{" "}
+                      <span className="course-count">
+                        {toReview} {toReview === 1 ? "topic" : "topics"}
+                      </span>
+                    </h3>
+                    <div className="segmented">
+                      {(
+                        [
+                          ["topics", "Topics"],
+                          ["sessions", "Study log"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          aria-pressed={studyTab === id}
+                          className={studyTab === id ? "active" : ""}
+                          onClick={() => setStudyTab(id)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {studyTab === "topics" ? (
+                    <>
+                      {!toReview && (
+                        <p className="course-empty">
+                          No topics currently require review.
+                        </p>
+                      )}
+                      <ul className="topic-list">
+                        {sortedTopics.map((t) => {
+                          const m = String(t.mastery ?? "unstudied");
+                          const level = {
+                            unstudied: 0,
+                            needs_review: 1,
+                            practicing: 2,
+                            mastered: 3,
+                          }[m];
+                          return (
+                            <li key={t.id} className={`topic topic-${m}`}>
+                              <button
+                                className="topic-title"
+                                onClick={() =>
+                                  setEdit({ kind: "study_topics", record: t })
+                                }
+                              >
+                                {String(t.title)}
+                              </button>
+                              <span
+                                className="topic-meter"
+                                role="img"
+                                aria-label={`${m.replace("_", " ")}`}
+                              >
+                                {[1, 2, 3].map((i) => (
+                                  <i
+                                    key={i}
+                                    className={(level ?? 0) >= i ? "on" : ""}
+                                  />
+                                ))}
+                              </span>
+                              <span className="topic-state">
+                                {
+                                  {
+                                    unstudied: "Not started",
+                                    needs_review: "Needs review",
+                                    practicing: "Practicing",
+                                    mastered: "Mastered",
+                                  }[m]
+                                }
+                              </span>
+                              {m !== "mastered" && (
+                                <button
+                                  className="td-link"
+                                  onClick={() =>
+                                    setEdit({ kind: "study_sessions" })
+                                  }
+                                >
+                                  Continue studying
+                                </button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEdit({ kind: "study_topics" })}
+                      >
+                        <Plus size={12} />
+                        Add topic
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {!sessions.length && (
+                        <p className="course-empty">
+                          No study sessions logged.
+                        </p>
+                      )}
+                      <ul className="topic-list">
+                        {sessions.slice(0, limit).map((row) => (
+                          <li key={row.id} className="topic">
+                            <button
+                              className="topic-title"
+                              onClick={() =>
+                                setEdit({ kind: "study_sessions", record: row })
+                              }
+                            >
+                              {row.start_at
+                                ? formatInTimeZone(
+                                    String(row.start_at),
+                                    "America/Vancouver",
+                                    "EEE, MMM d · h:mm a",
+                                  )
+                                : "Study session"}
+                            </button>
+                            <span className="topic-state">
+                              {row.actual_minutes
+                                ? `${row.actual_minutes} min`
+                                : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {sessions.length > limit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setLimit((n) => n + 8)}
+                        >
+                          Show more
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEdit({ kind: "study_sessions" })}
+                      >
+                        <Plus size={12} />
+                        Log a session
+                      </Button>
+                    </>
+                  )}
+                </section>
+
+                <section className="course-section" aria-label="Coming up">
+                  <div className="course-section-head">
+                    <h3>Coming up</h3>
+                  </div>
+                  {upcoming.slice(0, 5).map((a) => (
+                    <button
+                      className="academic-record-row"
+                      key={a.id}
+                      onClick={() =>
+                        setEdit({ kind: "assessments", record: a })
+                      }
+                    >
+                      <strong>{String(a.title)}</strong>
+                      <span className="course-when">
+                        {dueLabel({
+                          due_at: a.due_at as string | null,
+                          due_date: a.due_date as string | null,
+                        })}
+                      </span>
+                    </button>
+                  ))}
+                  {undated.map((a) => (
+                    <button
+                      className="academic-record-row"
+                      key={a.id}
+                      onClick={() =>
+                        setEdit({ kind: "assessments", record: a })
+                      }
+                    >
+                      <strong>{String(a.title)}</strong>
+                      <span className="course-when">No due date</span>
+                    </button>
+                  ))}
+                  {!upcoming.length && !undated.length && (
+                    <p className="course-empty">
+                      {assessments.length
+                        ? "Nothing due."
+                        : "Assessments appear here after a Canvas sync."}
+                    </p>
+                  )}
+                </section>
+
+                {graded.length > 0 && (
+                  <section
+                    className="course-section"
+                    aria-label="Recent results"
+                  >
+                    <div className="course-section-head">
+                      <h3>Recent results</h3>
+                      <button className="td-link" onClick={() => openGrades()}>
+                        All grades
+                      </button>
+                    </div>
+                    {graded.slice(0, 5).map((a) => (
                       <button
                         className="academic-record-row"
                         key={a.id}
-                        onClick={() => {
-                          setView("assessments");
-                          setTab("assessments");
-                        }}
+                        onClick={() => openGrades()}
                       >
                         <strong>{String(a.title)}</strong>
                         <span className="assessment-result">
@@ -479,274 +606,160 @@ export function AcademicsPanel({
                         </span>
                       </button>
                     ))}
-                    {graded.length > 6 && (
-                      <button
-                        className="td-link"
-                        onClick={() => {
-                          setView("assessments");
-                          setTab("assessments");
-                        }}
-                      >
-                        All {graded.length} results
-                      </button>
-                    )}
                   </section>
                 )}
-                <details
-                  className="briefing-detail"
-                  onToggle={(e) => setSyllabusOpen(e.currentTarget.open)}
-                >
-                  <summary>Grading details & syllabus</summary>
-                  <p className="small">
-                    {current.grading_rules_confirmed === true
-                      ? "Grading rules confirmed."
-                      : "Confirm the syllabus grading rules to calculate your current standing."}{" "}
-                    Missing results are left out, never counted as zero.
+              </>
+            )}
+
+            {view === "grades" && (
+              <>
+                {current.grading_rules_confirmed === true &&
+                current.grading_method !== "unknown" ? (
+                  <GradePlanner
+                    course={current}
+                    assessments={assessments}
+                    categories={categories}
+                    onRules={() => openGrades("categories")}
+                  />
+                ) : (
+                  <p className="notice">
+                    The grading formula is not confirmed. Add the syllabus
+                    weights under Grading rules to see your grade.
                   </p>
-                  {summary.warnings.length > 0 && (
-                    <p className="small muted">
-                      {[...new Set(summary.warnings)].join(" ")}
-                    </p>
-                  )}
-                  {syllabusOpen && selected && (
-                    <SyllabusReference key={selected} course={selected} />
-                  )}
-                  <div className="inline">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setView("materials");
-                      }}
-                    >
-                      Open syllabus & materials
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setView("assessments");
-                        setTab("categories");
-                      }}
-                    >
-                      Review grading rules
-                    </Button>
-                  </div>
-                </details>
-                {view === "overview" ? (
-                  <div className="course-overview">
-                    <h3>Coming up</h3>
-                    {upcoming.slice(0, 5).map((a) => (
+                )}
+                <div className="academic-toolbar">
+                  <div className="segmented">
+                    {(
+                      [
+                        ["assessments", "Assessments"],
+                        ["categories", "Grading rules"],
+                      ] as const
+                    ).map(([id, label]) => (
                       <button
-                        className="academic-record-row"
-                        key={a.id}
-                        onClick={() => {
-                          setView("assessments");
-                          setTab("assessments");
-                          setEdit({ kind: "assessments", record: a });
-                        }}
+                        key={id}
+                        aria-pressed={tab === id}
+                        className={tab === id ? "active" : ""}
+                        onClick={() => setTab(id)}
                       >
-                        <strong>{String(a.title)}</strong>
-                        <span className="small muted">
-                          {dueLabel({
-                            due_at: a.due_at as string | null,
-                            due_date: a.due_date as string | null,
-                          })}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setEdit({
+                        kind:
+                          tab === "assessments"
+                            ? "assessments"
+                            : "grading_categories",
+                      })
+                    }
+                  >
+                    <Plus size={12} />
+                    {tab === "assessments" ? "Add assessment" : "Add category"}
+                  </Button>
+                </div>
+                {tab === "assessments" ? (
+                  <AssessmentTable
+                    rows={assessments}
+                    initialAssessment={initialAssessment}
+                    onEdit={(record) =>
+                      setEdit({ kind: "assessments", record })
+                    }
+                    onSaved={refresh}
+                  />
+                ) : (
+                  <div className="academic-record-list">
+                    {categories.map((row) => (
+                      <button
+                        key={row.id}
+                        className="academic-record-row"
+                        onClick={() =>
+                          setEdit({ kind: "grading_categories", record: row })
+                        }
+                      >
+                        <strong>{String(row.name)}</strong>
+                        <span>
+                          {row.weight === null ? "—" : `${row.weight}%`}
+                          {Number(row.drop_lowest_count) > 0
+                            ? ` · lowest ${row.drop_lowest_count} dropped`
+                            : ""}
                         </span>
                       </button>
                     ))}
-                    {!upcoming.length && assessments.length > 0 && (
-                      <p className="small muted">Nothing due soon.</p>
-                    )}
-                    {undated.length > 0 && (
-                      <details className="briefing-detail">
-                        <summary>{undated.length} without a due date</summary>
-                        {undated.map((a) => (
-                          <button
-                            className="academic-record-row"
-                            key={a.id}
-                            onClick={() =>
-                              setEdit({ kind: "assessments", record: a })
-                            }
-                          >
-                            <strong>{String(a.title)}</strong>
-                            <span className="small muted">Add a date</span>
-                          </button>
-                        ))}
-                      </details>
-                    )}
-                    {!assessments.length && (
-                      <p>
-                        Your assessments will appear here after a sync or when
-                        you add one.
+                    {!categories.length && (
+                      <p className="course-empty">
+                        No grading rules yet. Read them from the syllabus in
+                        Settings → New term setup, or add them here.
                       </p>
                     )}
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setView("assessments");
-                        setTab("assessments");
-                      }}
+                    {summary.warnings.length > 0 && (
+                      <p className="course-note">
+                        {[...new Set(summary.warnings)].join(" ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {view === "materials" && (
+              <>
+                <div className="academic-toolbar">
+                  <div className="segmented">
+                    <button
+                      aria-pressed={!library}
+                      className={!library ? "active" : ""}
+                      onClick={() => setLibrary(false)}
                     >
-                      View assessments
-                    </Button>
+                      This course
+                    </button>
+                    <button
+                      aria-pressed={library}
+                      className={library ? "active" : ""}
+                      onClick={() => setLibrary(true)}
+                    >
+                      All Canvas courses
+                    </button>
+                  </div>
+                </div>
+                {library ? (
+                  <div className="canvas-library-disclosure">
+                    <CanvasMaterials embedded />
                   </div>
                 ) : (
                   <>
-                    <div className="academic-toolbar">
-                      <div className="segmented">
-                        {[
-                          ["assessments", "Assessments"],
-                          ["topics", "Study topics"],
-                          ["sessions", "Study log"],
-                          ["categories", "Grading rules"],
-                        ]
-                          .filter(([id]) =>
-                            view === "study"
-                              ? ["topics", "sessions"].includes(id)
-                              : ["assessments", "categories"].includes(id),
-                          )
-                          .map(([id, label]) => (
-                            <button
-                              key={id}
-                              aria-pressed={tab === id}
-                              className={tab === id ? "active" : ""}
-                              onClick={() => setTab(id)}
-                            >
-                              {label}
-                            </button>
-                          ))}
+                    <section className="course-section" aria-label="Syllabus">
+                      <div className="course-section-head">
+                        <h3>Syllabus</h3>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEdit({ kind })}
-                      >
-                        <Plus size={12} />
-                        Add{" "}
-                        {tab === "assessments"
-                          ? "assessment"
-                          : tab === "topics"
-                            ? "topic"
-                            : tab === "sessions"
-                              ? "session"
-                              : "category"}
-                      </Button>
-                    </div>
-                    {tab === "assessments" ? (
-                      <AssessmentTable
-                        rows={assessments}
-                        initialAssessment={initialAssessment}
-                        onEdit={(record) =>
-                          setEdit({ kind: "assessments", record })
-                        }
-                        onSaved={refresh}
-                      />
-                    ) : (
-                      <div className="academic-record-list">
-                        {rows.slice(0, limit).map((row) => (
-                          <div
-                            key={row.id}
-                            id={`assessment-${row.id}`}
-                            className={
-                              row.id === initialAssessment
-                                ? "assessment-highlight"
-                                : undefined
+                      <SyllabusReference key={selected} course={selected!} />
+                    </section>
+                    <CanvasMaterials
+                      key={selected}
+                      localCourseId={selected}
+                      embedded
+                    />
+                    {current.description ? (
+                      <section className="course-section" aria-label="Notes">
+                        <div className="course-section-head">
+                          <h3>Your notes</h3>
+                          <button
+                            className="td-link"
+                            onClick={() =>
+                              setEdit({ kind: "courses", record: current })
                             }
                           >
-                            <button
-                              className="academic-record-row"
-                              onClick={() => setEdit({ kind, record: row })}
-                            >
-                              <div>
-                                <strong>
-                                  {String(
-                                    row.title ??
-                                      row.name ??
-                                      (row.start_at
-                                        ? formatInTimeZone(
-                                            String(row.start_at),
-                                            "America/Vancouver",
-                                            "MMM d, h:mm a",
-                                          )
-                                        : "Study session"),
-                                  )}
-                                </strong>
-                                <small>
-                                  {tab === "assessments"
-                                    ? `${String(row.submission_state ?? "unknown").replaceAll("_", " ")} · ${row.due_date || row.due_at ? dueLabel({ due_at: row.due_at as string | null, due_date: row.due_date as string | null }, now) : "No due date"}`
-                                    : tab === "topics"
-                                      ? String(row.mastery ?? "unstudied")
-                                      : tab === "categories"
-                                        ? String(row.aggregation ?? "unknown")
-                                        : String(row.notes ?? "")}
-                                </small>
-                              </div>
-                              <span>
-                                {tab === "assessments" ? (
-                                  row.earned_score === null ? (
-                                    "Score unknown"
-                                  ) : (
-                                    <Mark
-                                      earned={row.earned_score as number}
-                                      maximum={
-                                        row.maximum_score as number | null
-                                      }
-                                      unit={
-                                        row.score_unit === "percent"
-                                          ? "percent"
-                                          : "points"
-                                      }
-                                    />
-                                  )
-                                ) : tab === "categories" ? (
-                                  row.weight === null ? (
-                                    "Weight unknown"
-                                  ) : (
-                                    `${row.weight}%`
-                                  )
-                                ) : tab === "sessions" ? (
-                                  row.actual_minutes ? (
-                                    `${row.actual_minutes} min`
-                                  ) : (
-                                    "Duration not recorded"
-                                  )
-                                ) : (
-                                  ""
-                                )}
-                              </span>
-                              {tab === "assessments" && (
-                                <span className="badge">
-                                  {String(
-                                    row.verification_status ?? "unverified",
-                                  ).replaceAll("_", " ")}
-                                </span>
-                              )}
-                            </button>
-                            {tab === "assessments" && (
-                              <AssessmentPreparation
-                                assessment={row}
-                                onSaved={refresh}
-                              />
-                            )}
-                          </div>
-                        ))}
-                        {rows.length > limit && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setLimit((n) => n + 8)}
-                          >
-                            Show more records ({rows.length - limit} remaining)
-                          </Button>
-                        )}
-                        {!rows.length && (
-                          <p className="academic-note muted small">
-                            No records in this section yet.
-                          </p>
-                        )}
-                      </div>
-                    )}
+                            Edit
+                          </button>
+                        </div>
+                        <p className="preserve-lines">
+                          {String(current.description)}
+                        </p>
+                      </section>
+                    ) : null}
                   </>
                 )}
               </>
@@ -754,17 +767,6 @@ export function AcademicsPanel({
           </>
         )
       )}
-      <details
-        className="canvas-library-disclosure"
-        onToggle={(e) => setLibraryOpen(e.currentTarget.open)}
-      >
-        <summary>Browse other Canvas courses</summary>
-        <p className="small muted">
-          This library includes Canvas courses that may not be linked to the
-          selected course.
-        </p>
-        {libraryOpen && <CanvasMaterials embedded />}
-      </details>
       {edit && (
         <AcademicEditor
           kind={edit.kind}

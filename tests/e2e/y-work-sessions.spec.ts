@@ -62,7 +62,7 @@ test("synthetic reservation → actual completion → academic history and revie
   await page.goto("/areas/academics");
   await page.locator(`[data-course-id="${course.id}"]`).click();
   await page
-    .getByRole("button", { name: "Assessments", exact: true })
+    .getByRole("button", { name: "Grades", exact: true })
     .filter({ visible: true })
     .first()
     .click();
@@ -287,7 +287,7 @@ test("synthetic reservation → actual completion → academic history and revie
   await page.goto("/areas/academics");
   await page.locator(`[data-course-id="${course.id}"]`).click();
   await page
-    .getByRole("button", { name: "Assessments", exact: true })
+    .getByRole("button", { name: "Grades", exact: true })
     .filter({ visible: true })
     .first()
     .click();

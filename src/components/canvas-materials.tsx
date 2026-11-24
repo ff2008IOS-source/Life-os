@@ -74,21 +74,7 @@ export function CanvasMaterials({
     <section className={embedded ? "course-materials" : "panel settings-panel"}>
       <div className="academic-toolbar">
         <h3>{localCourseId ? "Course materials" : "Canvas library"}</h3>
-        <Link href="/canvas-connect" className="text-link">
-          Connection
-        </Link>
       </div>
-      <p className="small muted">
-        Your imported readings, slides and course resources.
-      </p>
-      <details className="briefing-detail">
-        <summary>About these materials</summary>
-        <p>
-          Only material successfully retrieved from Canvas appears here.
-          Restricted files and scanned pages may be unavailable. This list does
-          not confirm complete exam coverage.
-        </p>
-      </details>
       {loading && <p role="status">Loading course materials…</p>}
       {data?.mapping_status === "unlinked" && (
         <p className="notice">
@@ -140,12 +126,7 @@ export function CanvasMaterials({
           onChange={(e) => setQuery(e.target.value)}
         />
       </label>
-      <details className="briefing-detail">
-        <summary>Reading & file preparation</summary>
-        <p className="small muted">
-          Prepare supported documents to make their text available for studying.
-          Files still open in Canvas while preparation is pending.
-        </p>
+      <div className="materials-actions">
         <Button
           variant="outline"
           disabled={
@@ -177,9 +158,9 @@ export function CanvasMaterials({
             }
           }}
         >
-          {reading ? "Reading course files…" : "Prepare available files"}
+          {reading ? "Reading course files…" : "Make files searchable"}
         </Button>
-      </details>
+      </div>
       {data?.library_limited && (
         <p className="notice">
           Showing 999 materials. Search applies to these loaded items; use Next
