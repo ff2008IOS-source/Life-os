@@ -100,13 +100,10 @@ export function AcademicsPanel({
     termKey(
       String(data.academic_terms.find((t) => t.id === id)?.name ?? ""),
     ) !== null;
-  const newest =
-    orderTerms(data.academic_terms).find(
-      (t) => dated(t.id) && data.courses.some((c) => c.term_id === t.id),
-    ) ??
-    data.academic_terms.find((t) =>
-      data.courses.some((c) => c.term_id === t.id),
-    );
+  // With no named semester at all, show every term rather than guess one.
+  const newest = orderTerms(data.academic_terms).find(
+    (t) => dated(t.id) && data.courses.some((c) => c.term_id === t.id),
+  );
   const linked = data.courses.find((c) => c.id === initialCourse);
   const term =
     termChoice ??
