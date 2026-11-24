@@ -56,9 +56,9 @@ test("populated Today keeps commitments and active focus accessible across width
     // The reserved block is committed work, not a new suggestion.
     await expect(plan.locator(".td-work-planned")).toContainText(title);
     await expect(plan.locator(".td-work-planned")).toContainText("30 min");
-    await expect(page.locator(".td-summary")).toContainText(
-      "1 work session planned",
-    );
+    await expect(
+      page.locator(".td-summary").filter({ visible: true }),
+    ).toContainText("1 work session planned");
     const focus = page.getByRole("region", {
       name: "Do this next",
       exact: true,

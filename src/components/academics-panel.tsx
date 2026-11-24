@@ -1,4 +1,5 @@
 "use client";
+import { termKey } from "@/lib/career-order";
 import { orderTerms } from "./new-term-setup";
 import { SyllabusReference } from "./syllabus-reference";
 import { AssessmentTable } from "./assessment-table";
@@ -92,15 +93,28 @@ export function AcademicsPanel({
       live = false;
     };
   }, []);
-  // School opens on the newest term that has courses (or the linked course's).
-  const newest = orderTerms(data.academic_terms).find((t) =>
-    data.courses.some((c) => c.term_id === t.id),
+  // School opens on the newest semester that has courses (or the linked
+  // course's). Courses in an undated term, like Canvas's "Default Term" for
+  // year-round courses, show alongside whichever semester is selected.
+  const dated = (id: unknown) =>
+    termKey(
+      String(data.academic_terms.find((t) => t.id === id)?.name ?? ""),
+    ) !== null;
+  // With no named semester at all, show every term rather than guess one.
+  const newest = orderTerms(data.academic_terms).find(
+    (t) => dated(t.id) && data.courses.some((c) => c.term_id === t.id),
   );
   const linked = data.courses.find((c) => c.id === initialCourse);
   const term =
     termChoice ??
-    (linked ? String(linked.term_id ?? "") : String(newest?.id ?? ""));
-  const courses = data.courses.filter((c) => !term || c.term_id === term);
+    (linked && dated(linked.term_id)
+      ? String(linked.term_id ?? "")
+      : linked
+        ? ""
+        : String(newest?.id ?? ""));
+  const courses = data.courses.filter(
+    (c) => !term || c.term_id === term || (dated(term) && !dated(c.term_id)),
+  );
   const current = courses.find((c) => c.id === courseId) ?? courses[0];
   const selected = current?.id;
   const assessments = data.assessments
