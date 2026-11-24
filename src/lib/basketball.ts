@@ -2,7 +2,8 @@
  * Basketball-manager helpers. Events come from the team calendar ("SFU Men's
  * Basketball") or carry the "MBB" prefix the owner uses for team events.
  */
-export type TeamEventKind = "game" | "practice" | "weights" | "shoot" | "other";
+export type TeamEventKind =
+  "game" | "practice" | "weights" | "shoot" | "off" | "other";
 
 const norm = (s: string) => s.toLowerCase();
 
@@ -17,7 +18,8 @@ export function teamEventKind(title: string): TeamEventKind {
   if (/\bgame\b|\bvs\.?\s|\s@\s|tip[- ]?off/.test(t)) return "game";
   if (/practice/.test(t)) return "practice";
   if (/weights|lift|strength/.test(t)) return "weights";
-  if (/shoot/.test(t)) return "shoot";
+  if (/shootaround|\bshoot\b(?!ing)/.test(t)) return "shoot";
+  if (/off day|day off|\bno practice\b/.test(t)) return "off";
   return "other";
 }
 

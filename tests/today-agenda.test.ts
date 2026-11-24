@@ -457,3 +457,12 @@ it("keeps time clear before and after a game", () => {
   ).toBe(false);
   expect(a.gaps.some((g) => hm(g.end) === "17:30")).toBe(true);
 });
+
+it("names team events by what they are", async () => {
+  const { teamEventKind } = await import("@/lib/basketball");
+  expect(teamEventKind("MBB · Game vs BHSU")).toBe("game");
+  expect(teamEventKind("MBB · Optional Shoot")).toBe("shoot");
+  expect(teamEventKind("Shooting Chart Renewal")).toBe("other");
+  expect(teamEventKind("MBB · Off Day")).toBe("off");
+  expect(teamEventKind("MBB · Weights")).toBe("weights");
+});
