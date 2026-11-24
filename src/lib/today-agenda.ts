@@ -7,6 +7,8 @@ import type { Goal, Milestone, Task } from "./schemas";
  * Suggestions are previews only; nothing here writes to a calendar.
  */
 
+import { GAME_AFTER_MIN, GAME_BEFORE_MIN, isGame } from "./basketball";
+
 export type AgendaEvent = {
   id: string;
   calendar_id: string;
@@ -270,7 +272,19 @@ export function buildAgenda(input: AgendaInput) {
     }))
     .sort((a, b) => a.start - b.start);
   const reservedTasks = new Set(reserved.map((b) => b.task_id));
-  const occupied = [...timed, ...reserved].sort((a, b) => a.start - b.start);
+  // Game days protect setup time before tip-off and wrap-up after.
+  const occupied = [
+    ...timed.map((e) =>
+      isGame(e.title, e.meta)
+        ? {
+            ...e,
+            start: e.start - GAME_BEFORE_MIN * 60000,
+            end: e.end + GAME_AFTER_MIN * 60000,
+          }
+        : e,
+    ),
+    ...reserved,
+  ].sort((a, b) => a.start - b.start);
 
   // Free windows inside the working day.
   const gaps: Gap[] = [];

@@ -1451,3 +1451,192 @@ html:not([data-diagnostics]) .tech-detail {
   font-size: 14px;
   color: var(--secondary);
 }
+
+.target-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.target-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.target-goal {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.target-need {
+  font-size: 20px;
+  font-weight: 600;
+}
+.target-need.easy {
+  color: var(--success);
+}
+.target-need.hard {
+  color: var(--warning);
+}
+.target-need.off {
+  font-size: 15px;
+  color: var(--secondary);
+  font-weight: 500;
+}
+@media (max-width: 560px) {
+  .target-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.person {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+}
+.person > div {
+  display: grid;
+  min-width: 0;
+}
+.person strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.person > div span {
+  font-size: 13px;
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+.person-since {
+  font-size: 13px;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+.person-since.due {
+  color: var(--warning);
+}
+@media (max-width: 560px) {
+  .person {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .person-since {
+    grid-column: 1;
+  }
+}
+
+/* Basketball */
+.bb-day {
+  margin-top: 14px;
+}
+.bb-day h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+}
+.bb-day ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.bb-event {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.bb-game {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+}
+.bb-icon {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--surface-hover);
+  color: var(--accent);
+}
+.bb-what {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.bb-what strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.bb-what span {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.bb-protect {
+  color: var(--accent) !important;
+}
+
+/* Week recap */
+.recap-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.recap-stats > div {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.recap-stats strong {
+  font-size: 20px;
+  font-weight: 600;
+}
+.recap-stats span {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.recap-block {
+  margin-top: 14px;
+}
+.recap-block h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.recap-block ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.recap-block li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+@media (max-width: 560px) {
+  .recap-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}

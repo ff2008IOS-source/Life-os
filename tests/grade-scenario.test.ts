@@ -66,3 +66,67 @@ it("never invents possible points when they determine assessment weight", () => 
     gradeScenario("points", [known, pending], [], 80, evidence).status,
   ).toBe("unavailable");
 });
+it("projects a category that is entirely ungraded even when its size is unknown", () => {
+  // ECON 113 shape: Midterm 87.5/100 (40%), Final exam of unknown size (50%),
+  // participation not graded yet (10%).
+  const cats = [
+    {
+      id: "mid",
+      weight: 40,
+      drop_lowest_count: 0,
+      aggregation: "points" as const,
+    },
+    {
+      id: "fin",
+      weight: 50,
+      drop_lowest_count: 0,
+      aggregation: "points" as const,
+    },
+    {
+      id: "par",
+      weight: 10,
+      drop_lowest_count: 0,
+      aggregation: "points" as const,
+    },
+  ];
+  const rows = [
+    { ...known, category_id: "mid", weight: null },
+    { ...pending, id: "final", category_id: "fin", weight: null },
+    { ...pending, id: "part", category_id: "par", weight: null },
+  ];
+  const r = gradeScenario("category_weights", rows, cats, 85, evidence);
+  expect(r.status).toBe("required");
+  // 0.4 × 87.5 + 0.6 × p = 85  →  p ≈ 83.3
+  if (r.status === "required") expect(r.percent).toBeCloseTo(83.33, 1);
+});
+it("still refuses when an unknown-size item shares a category with graded work", () => {
+  const cats = [
+    {
+      id: "c",
+      weight: 100,
+      drop_lowest_count: 0,
+      aggregation: "points" as const,
+    },
+  ];
+  const rows = [
+    { ...known, category_id: "c", weight: null },
+    { ...pending, category_id: "c", weight: null },
+  ];
+  expect(
+    gradeScenario("category_weights", rows, cats, 85, evidence).status,
+  ).toBe("unavailable");
+});
+it("leaves unsized optional items out of a points projection and says so", () => {
+  const rows = [
+    { ...known, weight: null, earned_score: 80, maximum_score: 100 },
+    { ...pending, id: "exam", weight: null, maximum_score: 100 },
+    { ...pending, id: "bonus", weight: null, maximum_score: null },
+  ];
+  const r = gradeScenario("points", rows, [], 85, evidence);
+  expect(r.status).toBe("required");
+  if (r.status === "required") {
+    expect(r.percent).toBeCloseTo(90);
+    expect(r.remaining).toBe(1);
+    expect(r.excluded).toBe(1);
+  }
+});

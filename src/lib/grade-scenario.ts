@@ -33,19 +33,33 @@ export function gradeScenario(
       status: "complete" as const,
       grade: academicGrade(method, rows, categories, evidence).overall_grade,
     };
-  // Point-based weights require the actual possible points; a hypothetical
-  // percentage cannot establish how heavily an unknown-size assessment counts.
-  if (
-    missing.some(
-      (a) =>
-        (!a.maximum_score || a.maximum_score <= 0) &&
-        (method === "points" ||
-          (method === "category_weights" &&
-            categories.find((c) => c.id === a.category_id)?.aggregation ===
-              "points")),
-    )
-  )
-    return { status: "unavailable" as const };
+  // Point-based weights need each item's possible points. An ungraded item
+  // with no listed points (an optional bonus, a practice item) can't be
+  // sized, so it's left out of the projection and counted in `excluded`.
+  // When every item in a category is ungraded, sizes don't matter: the
+  // category's fraction equals the hypothetical percentage.
+  const wholeCategoryMissing = (a: GradeAssessment) =>
+    method === "category_weights" &&
+    active
+      .filter((x) => x.category_id === a.category_id)
+      .every((x) => missing.includes(x));
+  const unsized = missing.filter(
+    (a) =>
+      (!a.maximum_score || a.maximum_score <= 0) &&
+      (method === "points" ||
+        (method === "category_weights" &&
+          categories.find((c) => c.id === a.category_id)?.aggregation ===
+            "points" &&
+          !wholeCategoryMissing(a))),
+  );
+  if (unsized.length) {
+    const skip = new Set(unsized.map((a) => a.id));
+    const kept = active.filter((a) => !skip.has(a.id));
+    const left = missing.filter((a) => !skip.has(a.id));
+    if (!left.length) return { status: "unavailable" as const };
+    active.splice(0, active.length, ...kept);
+    missing.splice(0, missing.length, ...left);
+  }
   const ids = new Set(missing.map((a) => a.id));
   const calculate = (percent: number) =>
     academicGrade(
@@ -86,5 +100,6 @@ export function gradeScenario(
     status: "required" as const,
     percent: target <= minimum ? 0 : high,
     remaining: missing.length,
+    excluded: unsized.length,
   };
 }

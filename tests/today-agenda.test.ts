@@ -432,3 +432,28 @@ it("ignores overlaps between two repeating events but flags a one-off", () => {
   });
   expect(oneOff.clashes).toHaveLength(1);
 });
+
+it("keeps time clear before and after a game", () => {
+  const a = buildAgenda({
+    ...monday,
+    events: [
+      event(
+        "g",
+        "MBB · Game vs BHSU",
+        "2026-11-23T19:00:00",
+        "2026-11-23T21:00:00",
+      ),
+    ],
+    tasks: [],
+    assessments: [],
+  });
+  // 90 min before tip-off and 30 after are protected: 17:30–21:30 busy.
+  expect(
+    a.gaps.some(
+      (g) =>
+        g.start < local("2026-11-23T21:30:00").getTime() &&
+        g.end > local("2026-11-23T17:30:00").getTime(),
+    ),
+  ).toBe(false);
+  expect(a.gaps.some((g) => hm(g.end) === "17:30")).toBe(true);
+});

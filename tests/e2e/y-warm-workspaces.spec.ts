@@ -185,7 +185,14 @@ test("retired sports destination redirects without hiding ordinary projects", as
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goto("/basketball");
-  await expect(page).toHaveURL(/\/planner$/);
+  await expect(
+    page.getByRole("heading", { name: "Basketball", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("link", { name: /Back to Growth/ })
+      .filter({ visible: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Basketball Ops", exact: true }),
   ).toHaveCount(0);
