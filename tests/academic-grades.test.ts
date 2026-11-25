@@ -38,3 +38,75 @@ it("points courses drop the lowest result in a drop-lowest category", async () =
   });
   expect(g.graded_average).toBeCloseTo(((103 + 4) / (125 + 4)) * 100, 5);
 });
+
+it("a 0 on handed-in work that isn't marked yet doesn't count", async () => {
+  const { academicGrade } = await import("@/lib/academic-grades");
+  const cats = [
+    {
+      id: "w",
+      weight: 50,
+      drop_lowest_count: 0,
+      aggregation: "points" as const,
+    },
+    {
+      id: "p",
+      weight: 50,
+      drop_lowest_count: 0,
+      aggregation: "points" as const,
+    },
+  ];
+  const base = {
+    weight: null,
+    dropped: false,
+    verification_status: "user_confirmed",
+  };
+  const g = academicGrade(
+    "category_weights",
+    [
+      {
+        ...base,
+        id: "a",
+        category_id: "w",
+        earned_score: 0,
+        maximum_score: 20,
+        submission_state: "submitted",
+      },
+      {
+        ...base,
+        id: "b",
+        category_id: "p",
+        earned_score: 9,
+        maximum_score: 10,
+        submission_state: "returned",
+      },
+    ],
+    cats,
+    { inventoryComplete: false, rulesVerified: true },
+  );
+  expect(g.graded_average).toBeCloseTo(90, 5);
+  // A real 0 that has been marked still counts.
+  const real = academicGrade(
+    "category_weights",
+    [
+      {
+        ...base,
+        id: "a",
+        category_id: "w",
+        earned_score: 0,
+        maximum_score: 20,
+        submission_state: "returned",
+      },
+      {
+        ...base,
+        id: "b",
+        category_id: "p",
+        earned_score: 9,
+        maximum_score: 10,
+        submission_state: "returned",
+      },
+    ],
+    cats,
+    { inventoryComplete: false, rulesVerified: true },
+  );
+  expect(real.graded_average).toBeCloseTo(45, 5);
+});

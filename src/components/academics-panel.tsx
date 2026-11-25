@@ -27,6 +27,7 @@ import {
 } from "./academic-editor";
 import {
   academicGrade,
+  awaitingMark,
   type GradeAssessment,
   type GradeCategory,
 } from "@/lib/academic-grades";
@@ -124,7 +125,11 @@ export function AcademicsPanel({
     },
   );
   const pctOf = (a: AcademicRow) =>
-    a.dropped
+    a.dropped ||
+    awaitingMark({
+      earned_score: a.earned_score as number | null,
+      submission_state: String(a.submission_state ?? ""),
+    })
       ? null
       : markPercent(
           a.earned_score as number | null,

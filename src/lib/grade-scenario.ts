@@ -1,4 +1,5 @@
 import {
+  withoutPlaceholders,
   academicGrade,
   type GradeAssessment,
   type GradeCategory,
@@ -18,7 +19,7 @@ export function gradeScenario(
     rows.some((a) => a.score_conflict)
   )
     return { status: "unavailable" as const };
-  const active = rows.filter(
+  const active = withoutPlaceholders(rows).filter(
     (a) => !a.dropped && a.submission_state !== "excused",
   );
   if (!active.length) return { status: "unavailable" as const };

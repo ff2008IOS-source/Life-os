@@ -23,6 +23,23 @@ export type GradeSummary = {
   missing_scores: number;
   warnings: string[];
 };
+/**
+ * Canvas reports a 0 on work that's handed in but not marked yet
+ * ("submitted", not "graded"/"returned"). That 0 is a placeholder, not a
+ * result, so it never counts.
+ */
+export function awaitingMark(a: {
+  earned_score: number | null;
+  submission_state?: string;
+}) {
+  return a.submission_state === "submitted" && a.earned_score === 0;
+}
+export function withoutPlaceholders<
+  T extends { earned_score: number | null; submission_state?: string },
+>(rows: T[]): T[] {
+  return rows.map((a) => (awaitingMark(a) ? { ...a, earned_score: null } : a));
+}
+
 export function academicGrade(
   method: string,
   assessments: GradeAssessment[],
@@ -32,7 +49,7 @@ export function academicGrade(
     rulesVerified: false,
   },
 ): GradeSummary {
-  const active = assessments.filter(
+  const active = withoutPlaceholders(assessments).filter(
     (a) => !a.dropped && a.submission_state !== "excused",
   );
   const scored = active.filter(
