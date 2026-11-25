@@ -73,8 +73,25 @@ export function academicGrade(
     return result;
   }
   if (method === "points") {
-    const earned = scored.reduce((n, a) => n + a.earned_score!, 0),
-      maximum = scored.reduce((n, a) => n + a.maximum_score!, 0);
+    // Categories with a drop-lowest rule (e.g. "6 ZAPS, lowest dropped")
+    // drop their lowest graded results, as Canvas does.
+    const dropped = new Set<string>();
+    for (const c of categories)
+      if (c.drop_lowest_count > 0) {
+        const graded = scored
+          .filter((a) => a.category_id === c.id)
+          .toSorted(
+            (a, b) =>
+              a.earned_score! / a.maximum_score! -
+              b.earned_score! / b.maximum_score!,
+          );
+        if (graded.length > c.drop_lowest_count)
+          for (const a of graded.slice(0, c.drop_lowest_count))
+            dropped.add(a.id);
+      }
+    const counted = scored.filter((a) => !dropped.has(a.id));
+    const earned = counted.reduce((n, a) => n + a.earned_score!, 0),
+      maximum = counted.reduce((n, a) => n + a.maximum_score!, 0);
     result.graded_average = maximum ? (earned / maximum) * 100 : null;
     if (finalAllowed && result.missing_scores === 0)
       result.overall_grade = result.graded_average;

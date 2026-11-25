@@ -2,6 +2,15 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-25: follow-up batch
+
+| Change                                                                       | Status              | Notes                                                                                                                                       |
+| ---------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Topics to review appear in course order (week 1, 2, 3…) with no labels shown | Implemented, Tested | `courseOrder()` reads week, lecture, chapter, unit, day and exam hints from each topic's notes and source file; mastered topics go last     |
+| Suggestions no longer show their section label                               | Implemented         | Owner request                                                                                                                               |
+| Drop-lowest in points-graded courses (PSYC 100 ZAPS: "lowest dropped")       | Implemented, Tested | Matches Canvas: the lowest graded result in the category is dropped                                                                         |
+| "Can I fit this week?" on Today                                              | Implemented, Tested | Shovel-inspired; estimated minutes due in 7 days vs free time inside 9–21, capped at 240 min/day; items without estimates listed separately |
+
 ## 2026-11-25: competitive research phase
 
 | Change                                                                                                                                                    | Status              | Notes                                                                                                                                                  |

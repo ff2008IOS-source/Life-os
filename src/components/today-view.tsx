@@ -1,4 +1,5 @@
 "use client";
+import { WeekFitLine } from "./week-fit-line";
 import { wrapUp } from "@/lib/wrap-up";
 import { FollowUpNudge } from "./career-follow-ups";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -803,6 +804,11 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                 {fmt(agenda.week.start, "MMM d")}–{fmt(agenda.week.end, "d")}
               </span>
             </div>
+            <WeekFitLine
+              now={now}
+              policy={b.planning.policy}
+              tasks={data.tasks}
+            />
             <div className="td-stat">
               <div>
                 <span>Focus time logged</span>

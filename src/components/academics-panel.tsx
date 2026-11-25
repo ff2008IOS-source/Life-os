@@ -9,7 +9,11 @@ import { dueLabel, markPercent } from "@/lib/display";
 import { Mark } from "./mark";
 import { GradePlanner } from "./grade-planner";
 import { TopicSuggestions } from "./topic-suggestions";
-import { topicSignal, type TopicState } from "@/lib/topic-finder";
+import {
+  byCourseOrder,
+  topicSignal,
+  type TopicState,
+} from "@/lib/topic-finder";
 import { gradeScenario } from "@/lib/grade-scenario";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, BookOpen } from "lucide-react";
@@ -190,7 +194,6 @@ export function AcademicsPanel({
         }))
       : [];
   const remainingCount = targets.find((t) => t.r.status === "required")?.r;
-  const order = ["needs_review", "practicing", "unstudied", "mastered"];
   // What the evidence says about each topic: a reason line, and a proposed
   // status only when a real result or study session supports it.
   const signals = new Map(
@@ -222,15 +225,14 @@ export function AcademicsPanel({
       }),
     ]),
   );
-  const sortedTopics = topics.toSorted(
-    (x, y) =>
-      Number(!!signals.get(y.id)?.urgent) -
-        Number(!!signals.get(x.id)?.urgent) ||
-      order.indexOf(String(x.mastery ?? "unstudied")) -
-        order.indexOf(String(y.mastery ?? "unstudied")),
-  );
-  const suggestions = (data.topic_suggestions ?? []).filter(
-    (t) => t.course_id === selected,
+  // Course order: week 1, then 2, then 3… (from each topic's notes and
+  // source file). Mastered topics drop to the end.
+  const sortedTopics = [
+    ...byCourseOrder(topics.filter((t) => t.mastery !== "mastered")),
+    ...byCourseOrder(topics.filter((t) => t.mastery === "mastered")),
+  ];
+  const suggestions = byCourseOrder(
+    (data.topic_suggestions ?? []).filter((t) => t.course_id === selected),
   );
   async function setMastery(t: AcademicRow, mastery: TopicState) {
     await calendarRequest(`/api/v1/study_topics/${t.id}`, {

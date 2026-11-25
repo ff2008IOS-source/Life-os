@@ -118,3 +118,42 @@ describe("topic evidence", () => {
     expect(s.reason).toMatch(/Not reviewed in 2\d days/);
   });
 });
+
+describe("course order", () => {
+  it("reads week, unit, chapter, day and exam hints", async () => {
+    const { courseOrder } = await import("@/lib/topic-finder");
+    expect(
+      courseOrder({
+        notes: "Units 8.0-8.5 · From Lecture Week 10_Econ113.pptx",
+      }),
+    ).toBe(10);
+    expect(
+      courseOrder({
+        notes: "Unit 1: Sections 1-1.6 · From Lecture Week 1_Econ 113.pptx",
+      }),
+    ).toBe(1);
+    expect(
+      courseOrder({ notes: "Week 4b · From Lecture Week 4_Econ113.pptx" }),
+    ).toBeCloseTo(4.2);
+    expect(
+      courseOrder({ notes: "Course: ECON 113 | Unit / Week: Day 2" }),
+    ).toBe(2);
+    expect(courseOrder({ notes: "Unit / Week: Exam 1 prep" })).toBe(4.5);
+    expect(
+      courseOrder({ notes: "Short Answers · From Answer Key mt 2 sp19.pdf" }),
+    ).toBe(9);
+    expect(courseOrder({ notes: "Unit / Week: Mock / remaining" })).toBe(50);
+    expect(courseOrder({ notes: "" })).toBe(Infinity);
+  });
+  it("orders week 1, then 2, then 10, unknown last", async () => {
+    const { byCourseOrder } = await import("@/lib/topic-finder");
+    const out = byCourseOrder([
+      { title: "c", notes: "From Lecture Week 10.pptx" },
+      { title: "x", notes: "" },
+      { title: "a", notes: "Week 1" },
+      { title: "b2", notes: "Week 2b" },
+      { title: "b1", notes: "Week 2a" },
+    ]);
+    expect(out.map((t) => t.title)).toEqual(["a", "b1", "b2", "c", "x"]);
+  });
+});

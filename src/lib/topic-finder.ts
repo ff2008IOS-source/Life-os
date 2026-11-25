@@ -215,3 +215,53 @@ export function topicSignal({ topic, assessments, sessions, now }: Evidence): {
     };
   return { suggest: null, reason: null, urgent: false };
 }
+
+// ——— Course order ———
+
+/**
+ * Where a topic falls in the course, from what its notes and source file
+ * say: "Week 4a", "Lecture Week 10_…", "Unit 1", "Chapter 6", "Day 2",
+ * "Midterm 2", "Exam 1 prep". Lower comes first; topics with no clue go last.
+ * Only used for ordering; nothing here is shown.
+ */
+export function courseOrder(topic: Record<string, unknown>) {
+  const text = `${String(topic.notes ?? "")} ${String(topic.title ?? "")}`;
+  const num = (re: RegExp) => {
+    const m = text.match(re);
+    if (!m) return null;
+    const sub = m[2] ? (m[2].toLowerCase().charCodeAt(0) - 96) / 10 : 0;
+    return Number(m[1]) + sub;
+  };
+  // Most specific first: an explicit week beats a unit or chapter number.
+  const week = num(/\bweek\s*[_:]?\s*(\d{1,2})([a-z])?(?![0-9])/i);
+  if (week !== null) return week;
+  for (const re of [
+    /\b(?:lecture|lec)\s*[_:]?\s*(\d{1,2})([a-z])?\b/i,
+    /\b(?:chapter|ch\.?)\s*(\d{1,2})([a-z])?\b/i,
+    /\b(?:units?|module|topic)\s*(\d{1,2})(?:\.\d+)?([a-z])?\b/i,
+    /\bday\s*(\d{1,2})([a-z])?\b/i,
+  ]) {
+    const n = num(re);
+    if (n !== null) return n;
+  }
+  // Exams: material for exam N sits around a third of the way per exam.
+  const exam = text.match(/\b(?:midterm|mt|exam|test)\s*[_ ]?(\d)\b/i);
+  if (exam) return Number(exam[1]) * 4.5;
+  if (/\bfinal\b|\bmock\b|\bremaining\b/i.test(text)) return 50;
+  return Number.POSITIVE_INFINITY;
+}
+
+/** Sort topics into course order; ties keep the order they were added. */
+export function byCourseOrder<T extends Record<string, unknown>>(topics: T[]) {
+  return topics
+    .map((t, i) => ({ t, i, k: courseOrder(t) }))
+    .sort(
+      (a, b) =>
+        a.k - b.k ||
+        String(a.t.created_at ?? "").localeCompare(
+          String(b.t.created_at ?? ""),
+        ) ||
+        a.i - b.i,
+    )
+    .map((x) => x.t);
+}
