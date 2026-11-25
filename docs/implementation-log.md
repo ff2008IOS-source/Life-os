@@ -15,6 +15,14 @@ Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested*
 | Provider-neutral AI layer (`src/lib/ai/structured.ts`)                                                                                                    | Implemented         | Used by the topic finder                                                                                                                               |
 | Research documents (`competitive-research`, `feature-comparison`, `free-integrations`, `product-roadmap`, `architecture`, `cost-audit`, `testing-report`) | Implemented         | Direct page fetches were blocked by the environment, so research is via search results and GitHub                                                      |
 
+### Production verification (2026-11-25, after PR #43)
+
+- `/basketball` redirects to `/planner` on the live site.
+- **Find topics** on ECON 115 (live, the owner's account) read 6 files and suggested 29 topics, from midterm solutions and answer keys.
+  - The Groq free limit was hit during the run; the remaining files used the heading fallback, as designed.
+  - 9 files are left for the next press; 2 can't be read (scanned or too large).
+- Existing ECON 115 topics show evidence lines ("Not reviewed in 18 days") with a one-tap "Mark needs review".
+
 ## Earlier this month (summary)
 
 - Today redesign, "do this next", clashes (repeating-vs-repeating overlaps ignored).
