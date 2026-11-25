@@ -217,7 +217,7 @@ describe("deterministic scheduling constraints", () => {
       }),
     );
     expect(unknown.blocks).toHaveLength(0);
-    expect(unknown.warnings[0].reason).toContain("actual effort");
+    expect(unknown.warnings[0].reason).toContain("how long the last session took");
   });
   it("explains short remaining effort rather than silently dropping it", () => {
     const result = schedule(

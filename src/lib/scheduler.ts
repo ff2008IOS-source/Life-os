@@ -177,30 +177,33 @@ export function schedule(input: ScheduleInput): ScheduleResult {
       });
     if (task.recurrence_rule_id) {
       warn(
-        "Recurring templates require occurrence-specific work blocks; plan their generated occurrences manually in this beta.",
+        "Repeating tasks aren’t scheduled automatically. Plan each occurrence from Recurring.",
         task.estimated_minutes,
       );
       continue;
     }
     if (!["academics", "career", "projects"].includes(task.area ?? "")) {
       warn(
-        "This life area is excluded from automatic scheduling.",
+        "Only school, career and project work is scheduled automatically.",
         task.estimated_minutes,
       );
       continue;
     }
     if (cycles.has(task.id)) {
-      warn("Circular task dependency detected.", task.estimated_minutes);
+      warn(
+        "Two tasks are each waiting on the other. Remove one of the links.",
+        task.estimated_minutes,
+      );
       continue;
     }
     if (!task.estimated_minutes) {
-      warn("Add an estimated duration before scheduling.", null);
+      warn("Add a time estimate so Life OS can find a slot.", null);
       continue;
     }
     const deps = dependencies.get(task.id) ?? [];
     if (deps.some((id) => !finished.has(id))) {
       warn(
-        "A prerequisite is missing, excluded, cancelled, or cannot be completed in this plan.",
+        "It’s waiting on another task that can’t be finished first.",
         task.estimated_minutes,
       );
       continue;
@@ -213,7 +216,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
       completedBlocks.some((b) => b.actual_minutes == null)
     ) {
       warn(
-        "Record actual effort for completed reservations before planning remaining work.",
+        "Log how long the last session took before planning the rest.",
         null,
       );
       continue;
@@ -338,9 +341,11 @@ export function schedule(input: ScheduleInput): ScheduleResult {
             end_at: new Date(end).toISOString(),
             minutes,
             reason:
-              until < deadline
-                ? "Before preferred deadline buffer"
-                : "Earliest feasible time within hard constraints",
+              deadline === Infinity
+                ? "Earliest free time in your schedule"
+                : until < deadline
+                  ? `Earliest free time, a day before it’s due (${formatInTimeZone(deadline, policy.timezone, "EEE MMM d")})`
+                  : `Earliest free time before it’s due (${formatInTimeZone(deadline, policy.timezone, "EEE MMM d")})`,
           });
           daily.set(day, (daily.get(day) ?? 0) + minutes);
           remaining -= minutes;
@@ -355,8 +360,8 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     if (remaining > 0)
       warn(
         remaining < policy.min_session_minutes
-          ? "Remaining effort is shorter than the minimum session. Adjust the estimate or plan manually."
-          : "Insufficient free time before the deadline within work windows, breaks, daily cap, and horizon.",
+          ? "What’s left is shorter than the minimum session. Adjust the estimate or plan it yourself."
+          : `Not enough free time before it’s due, inside ${policy.start_hour % 12 || 12} ${policy.start_hour < 12 ? "AM" : "PM"}–${policy.end_hour % 12 || 12} ${policy.end_hour < 12 ? "AM" : "PM"} and the ${Math.round((policy.max_daily_minutes / 60) * 10) / 10}-hour daily limit.`,
         remaining,
       );
     else finished.set(task.id, latest);
