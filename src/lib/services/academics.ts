@@ -21,7 +21,18 @@ export async function readAcademics(
   const data = Object.fromEntries(
     tables.map((t, i) => [t, results[i]]),
   ) as unknown as AcademicData;
-  return { ...data, assessments: reconcileAssessments(data.assessments) };
+  // Suggestions found in materials wait for approval; dismissed ones (and
+  // the per-file "already read" markers) never appear.
+  const state = (t: Record<string, unknown>) =>
+    String(t.suggestion_state ?? "active");
+  return {
+    ...data,
+    assessments: reconcileAssessments(data.assessments),
+    study_topics: data.study_topics.filter((t) => state(t) === "active"),
+    topic_suggestions: data.study_topics.filter(
+      (t) => state(t) === "suggested",
+    ),
+  };
 }
 
 export async function readAcademicRows(

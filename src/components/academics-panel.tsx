@@ -8,6 +8,8 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { dueLabel, markPercent } from "@/lib/display";
 import { Mark } from "./mark";
 import { GradePlanner } from "./grade-planner";
+import { TopicSuggestions } from "./topic-suggestions";
+import { topicSignal, type TopicState } from "@/lib/topic-finder";
 import { gradeScenario } from "@/lib/grade-scenario";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, BookOpen } from "lucide-react";
@@ -189,11 +191,64 @@ export function AcademicsPanel({
       : [];
   const remainingCount = targets.find((t) => t.r.status === "required")?.r;
   const order = ["needs_review", "practicing", "unstudied", "mastered"];
+  // What the evidence says about each topic: a reason line, and a proposed
+  // status only when a real result or study session supports it.
+  const signals = new Map(
+    topics.map((t) => [
+      t.id,
+      topicSignal({
+        topic: {
+          id: t.id,
+          title: String(t.title),
+          mastery: String(t.mastery ?? "unstudied") as TopicState,
+          updated_at: t.updated_at as string | undefined,
+          notes: String(t.notes ?? ""),
+        },
+        assessments: assessments.map((a) => ({
+          title: String(a.title),
+          earned_score:
+            typeof a.earned_score === "number" ? a.earned_score : null,
+          maximum_score:
+            typeof a.maximum_score === "number" ? a.maximum_score : null,
+          due_at: a.due_at as string | null,
+          due_date: a.due_date as string | null,
+        })),
+        sessions: sessions.map((s) => ({
+          topic_id: (s.topic_id as string | null) ?? null,
+          start_at: (s.start_at as string | null) ?? null,
+          created_at: s.created_at as string | undefined,
+        })),
+        now,
+      }),
+    ]),
+  );
   const sortedTopics = topics.toSorted(
     (x, y) =>
+      Number(!!signals.get(y.id)?.urgent) -
+        Number(!!signals.get(x.id)?.urgent) ||
       order.indexOf(String(x.mastery ?? "unstudied")) -
-      order.indexOf(String(y.mastery ?? "unstudied")),
+        order.indexOf(String(y.mastery ?? "unstudied")),
   );
+  const suggestions = (data.topic_suggestions ?? []).filter(
+    (t) => t.course_id === selected,
+  );
+  async function setMastery(t: AcademicRow, mastery: TopicState) {
+    await calendarRequest(`/api/v1/study_topics/${t.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: t.version,
+        data: {
+          course_id: t.course_id,
+          title: t.title,
+          mastery,
+          notes: t.notes ?? "",
+          suggestion_state: "active",
+        },
+      }),
+    });
+    await refresh();
+  }
   const toReview = topics.filter((t) => t.mastery !== "mastered").length;
   const openGrades = (sub: "assessments" | "categories" = "assessments") => {
     setView("grades");
@@ -503,6 +558,17 @@ export function AcademicsPanel({
                                   }
                                 >
                                   {String(t.title)}
+                                  {signals.get(t.id)?.reason && (
+                                    <small
+                                      className={
+                                        signals.get(t.id)?.urgent
+                                          ? "topic-why urgent"
+                                          : "topic-why"
+                                      }
+                                    >
+                                      {signals.get(t.id)?.reason}
+                                    </small>
+                                  )}
                                 </button>
                                 <span
                                   className="topic-meter"
@@ -526,7 +592,23 @@ export function AcademicsPanel({
                                     }[m]
                                   }
                                 </span>
-                                {m !== "mastered" && (
+                                {signals.get(t.id)?.suggest ? (
+                                  <button
+                                    className="td-link"
+                                    onClick={() =>
+                                      void setMastery(
+                                        t,
+                                        signals.get(t.id)!.suggest!,
+                                      )
+                                    }
+                                  >
+                                    Mark{" "}
+                                    {signals.get(t.id)!.suggest ===
+                                    "needs_review"
+                                      ? "needs review"
+                                      : "practicing"}
+                                  </button>
+                                ) : m !== "mastered" ? (
                                   <button
                                     className="td-link"
                                     onClick={() =>
@@ -535,7 +617,7 @@ export function AcademicsPanel({
                                   >
                                     Continue studying
                                   </button>
-                                )}
+                                ) : null}
                               </li>
                             );
                           })}
@@ -550,6 +632,12 @@ export function AcademicsPanel({
                             : `Show all ${sortedTopics.length}`}
                         </button>
                       )}
+                      <TopicSuggestions
+                        key={selected}
+                        courseId={selected!}
+                        suggestions={suggestions}
+                        onChanged={refresh}
+                      />
                       <Button
                         variant="ghost"
                         size="sm"

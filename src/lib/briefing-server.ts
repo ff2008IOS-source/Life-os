@@ -28,10 +28,10 @@ export async function loadBriefingRows<T>(
 ) {
   const result: T[] = [];
   for (let page = 0; page < 5; page++) {
-    const r = await db
-      .from(table)
-      .select(columns)
-      .eq("user_id", user)
+    let q = db.from(table).select(columns).eq("user_id", user);
+    // Only approved topics count; suggestions wait for the owner.
+    if (table === "study_topics") q = q.eq("suggestion_state", "active");
+    const r = await q
       .order(table === "briefing_settings" ? "user_id" : "id")
       .range(page * 500, page * 500 + 499);
     dbError(r.error);

@@ -76,6 +76,9 @@ export const academicSchemas = {
         .enum(["unstudied", "practicing", "needs_review", "mastered"])
         .default("unstudied"),
       notes: text,
+      suggestion_state: z
+        .enum(["active", "suggested", "dismissed"])
+        .default("active"),
     })
     .strict(),
   study_sessions: z

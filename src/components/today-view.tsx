@@ -1,4 +1,5 @@
 "use client";
+import { wrapUp } from "@/lib/wrap-up";
 import { FollowUpNudge } from "./career-follow-ups";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -91,8 +92,9 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       focusMinutesThisWeek:
         b.weekly.reported_minutes + b.weekly.reported_academic_minutes,
       dailyCap: b.planning.policy.max_daily_minutes,
-      dayStartHour: Math.min(8, b.planning.policy.start_hour),
-      dayEndHour: Math.max(22, b.planning.policy.end_hour),
+      // Suggested work stays inside the saved scheduling window (9 AM–9 PM).
+      dayStartHour: b.planning.policy.start_hour,
+      dayEndHour: b.planning.policy.end_hour,
     });
   }, [
     b,
@@ -196,6 +198,24 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       notify("Done", async () => {
         await mutate("tasks", task.id, taskValues(task), r.data.version);
       });
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Couldn’t save that.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  /** Hands a manual task to the scheduler so it finds the next free slot. */
+  async function scheduleTask(task: Task) {
+    setBusy("task:" + task.id);
+    try {
+      await mutate(
+        "tasks",
+        task.id,
+        { ...taskValues(task), scheduling_mode: "eligible" },
+        task.version,
+      );
+      notify("Life OS will find time for it");
     } catch (e) {
       notify(e instanceof Error ? e.message : "Couldn’t save that.");
     } finally {
@@ -328,6 +348,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       ? `Now until ${fmt(agenda.nextWindow.end)} · ${Math.round(agenda.nextWindow.minutes)} min`
       : `${clock(agenda.nextWindow.start)}–${fmt(agenda.nextWindow.end)} · ${Math.round(agenda.nextWindow.minutes)} min free`
     : null;
+  const wrap = wrapUp(data.tasks, now, zone);
   const clash = agenda.clashes.find(
     (c) => `${c.a.title}|${c.b.title}|${c.at}` !== hiddenClash,
   );
@@ -535,6 +556,69 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
               </>
             )}
           </section>
+
+          {wrap.show && (wrap.done.length > 0 || wrap.open.length > 0) && (
+            <section className="td-card" aria-label="Wrap up today">
+              <div className="td-card-head">
+                <h2 className="td-card-title">Wrap up today</h2>
+                <span className="td-muted">
+                  {wrap.done.length} done · {wrap.open.length} still open
+                </span>
+              </div>
+              {wrap.open.map(({ task, overdue, autoRescheduled }) => (
+                <div key={task.id} className="td-nudge">
+                  <div>
+                    <span
+                      className={`td-nudge-kicker ${overdue ? "td-hot" : ""}`}
+                    >
+                      {overdue
+                        ? "OVERDUE"
+                        : task.status === "in_progress"
+                          ? "IN PROGRESS"
+                          : "DUE TODAY"}
+                    </span>
+                    <strong>{task.title}</strong>
+                    {autoRescheduled && (
+                      <span className="td-muted">
+                        Life OS will reschedule it
+                      </span>
+                    )}
+                  </div>
+                  <div className="td-actions">
+                    <button
+                      className="td-btn td-btn-dark td-btn-sm"
+                      disabled={!!busy}
+                      onClick={() => void completeTask(task)}
+                      aria-label={`Close out ${task.title}`}
+                    >
+                      <Check size={14} aria-hidden /> Done
+                    </button>
+                    {!autoRescheduled && (
+                      <button
+                        className="td-btn td-btn-outline td-btn-sm"
+                        disabled={!!busy}
+                        onClick={() => void scheduleTask(task)}
+                      >
+                        Find time
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {wrap.done.length > 0 && (
+                <p className="td-muted td-wrap-done">
+                  Done today:{" "}
+                  {wrap.done
+                    .slice(0, 4)
+                    .map((t) => t.title)
+                    .join(" · ")}
+                  {wrap.done.length > 4
+                    ? ` · +${wrap.done.length - 4} more`
+                    : ""}
+                </p>
+              )}
+            </section>
+          )}
 
           {clash && (
             <section className="td-card td-card-warn" aria-label="Heads up">
