@@ -111,7 +111,9 @@ test("evening wrap-up closes the day with one tap", async ({ page }) => {
   await wrap
     .getByRole("button", { name: "Close out [TEST] Wrap-up task" })
     .click();
+  // Closed out: it leaves the open list. ("Done today" depends on the
+  // database's completion timestamp, which the fixture clock doesn't control.)
   await expect(
-    wrap.getByText(/Done today:.*\[TEST\] Wrap-up task/),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Close out [TEST] Wrap-up task" }),
+  ).toHaveCount(0);
 });
