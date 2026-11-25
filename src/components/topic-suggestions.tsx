@@ -37,6 +37,8 @@ export function TopicSuggestions({
   const [busy, setBusy] = useState("");
   const [result, setResult] = useState<FindResult | null>(null);
   const [error, setError] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? suggestions : suggestions.slice(0, 5);
 
   async function find() {
     setBusy("find");
@@ -90,7 +92,7 @@ export function TopicSuggestions({
             </button>
           </div>
           <ul className="topic-list">
-            {suggestions.map((s) => (
+            {shown.map((s) => (
               <li key={s.id} className="topic topic-suggested">
                 <span className="topic-title-static">{String(s.title)}</span>
                 <button
@@ -112,6 +114,11 @@ export function TopicSuggestions({
               </li>
             ))}
           </ul>
+          {suggestions.length > 5 && (
+            <button className="td-link" onClick={() => setShowAll((v) => !v)}>
+              {showAll ? "Show fewer" : `Review all ${suggestions.length}`}
+            </button>
+          )}
         </>
       )}
       <div className="topic-find">

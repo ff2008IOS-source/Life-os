@@ -1,9 +1,9 @@
 /* Today screen. Uses the semantic tokens from warm.css plus a few local ones. */
 .td {
-  --td-ink: #101318;
-  --td-ink-text: #ffffff;
-  --td-ink-muted: #c9ced6;
-  --td-ink-line: #3a404a;
+  --td-ink: #1c1714;
+  --td-ink-text: #fffaf5;
+  --td-ink-muted: #d3c7bb;
+  --td-ink-line: #3e352f;
   --td-hot: #b33a0a;
   --td-hot-strong: #b33a0a;
   --td-hot-soft: #fff1e8;
@@ -14,7 +14,7 @@
   --td-green: #2f8a45;
   --td-green-text: #2f6b3a;
   --td-green-soft: #e7f4ea;
-  --td-soft: #f4f5f7;
+  --td-soft: #f3ede5;
   --td-radius: 20px;
   display: flex;
   flex-direction: column;
@@ -24,11 +24,11 @@
   width: 100%;
 }
 .dark .td {
-  --td-ink: #23272e;
-  --td-ink-line: #454b56;
+  --td-ink: #2a2420;
+  --td-ink-line: #4a4038;
   --td-hot: #ff9a62;
   --td-hot-strong: #b33a0a;
-  --td-hot-soft: #3a2116;
+  --td-hot-soft: #2e1d15;
   --td-hot-line: #6b3a22;
   --td-blue: #8fb0ff;
   --td-blue-soft: #18213a;
@@ -36,7 +36,7 @@
   --td-green: #5cc075;
   --td-green-text: #8ad69c;
   --td-green-soft: #16291c;
-  --td-soft: #1d2026;
+  --td-soft: #221d1a;
 }
 .td-header {
   display: flex;
@@ -278,7 +278,7 @@
 .td-btn-light {
   flex: 1;
   background: #fff;
-  color: #101318;
+  color: #1c1714;
 }
 .td-btn-outline {
   background: transparent;
@@ -637,8 +637,8 @@
   color: var(--td-hot);
 }
 .td-nudge-warn {
-  background: var(--td-hot-soft);
-  border: 1px solid var(--td-hot-line);
+  /* A thin accent edge instead of a filled block: calmer, still noticeable. */
+  box-shadow: inset 3px 0 0 var(--td-hot);
 }
 .td-nudge-form {
   flex-direction: column;
@@ -1626,4 +1626,87 @@ html:not([data-diagnostics]) .tech-detail {
 .td-wrap-done {
   margin-top: 10px;
   font-size: 14px;
+}
+
+/* The page title already says where you are; the top bar label is only
+   needed on phones, where the sidebar is hidden. */
+@media (min-width: 901px) {
+  .breadcrumb {
+    visibility: hidden;
+  }
+}
+
+.td-handed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.course-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+}
+.course-more[aria-expanded="true"],
+.course-more:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.course-switcher-actions {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.course-switcher-actions select {
+  max-width: 240px;
+}
+.topic-propose {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* Week: a taller calendar, deadlines beside it on wide screens. */
+.time-grid-scroll {
+  height: clamp(420px, calc(100dvh - 330px), 860px);
+}
+.planner-split {
+  display: grid;
+  gap: 24px;
+}
+@media (min-width: 1280px) {
+  .planner-split {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+  }
+  .planner-aside {
+    position: sticky;
+    top: 76px;
+    max-height: calc(100dvh - 100px);
+    overflow-y: auto;
+  }
+  .planner-aside .academic-toolbar,
+  .planner-aside .deadline-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+.planning-check {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -8px;
+}
+.planning-check button {
+  font-size: 13px;
+  color: var(--secondary);
 }

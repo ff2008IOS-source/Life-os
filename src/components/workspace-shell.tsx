@@ -275,8 +275,6 @@ export function WorkspaceShell({
             <PanelLeftClose size={17} />
           </Button>
           <div className="breadcrumb">
-            <span>My workspace</span>
-            <span className="breadcrumb-slash">/</span>
             <strong>
               {(path.startsWith("/areas/career")
                 ? "Career"

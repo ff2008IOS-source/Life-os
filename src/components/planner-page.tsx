@@ -225,20 +225,26 @@ export function PlannerPage({
                   ))}
                 </div>
               </div>
-              <PlannerCalendar
-                days={days}
-                view={view}
-                anchor={anchor}
-                tasks={data.tasks.filter(
-                  (t) =>
-                    !t.deleted_at &&
-                    !["completed", "cancelled"].includes(t.status),
-                )}
-                onTask={(task) => setEditor({ task })}
-                onDay={setAnchor}
-                onManageSession={() => setTab("schedule")}
-              />
-              <CanvasDeadlines />
+              <div className="planner-split">
+                <div className="planner-main">
+                  <PlannerCalendar
+                    days={days}
+                    view={view}
+                    anchor={anchor}
+                    tasks={data.tasks.filter(
+                      (t) =>
+                        !t.deleted_at &&
+                        !["completed", "cancelled"].includes(t.status),
+                    )}
+                    onTask={(task) => setEditor({ task })}
+                    onDay={setAnchor}
+                    onManageSession={() => setTab("schedule")}
+                  />
+                </div>
+                <aside className="planner-aside">
+                  <CanvasDeadlines />
+                </aside>
+              </div>
             </>
           ) : (
             <section className="panel">
