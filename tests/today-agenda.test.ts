@@ -466,3 +466,17 @@ it("names team events by what they are", async () => {
   expect(teamEventKind("MBB · Off Day")).toBe("off");
   expect(teamEventKind("MBB · Weights")).toBe("weights");
 });
+
+it("keeps suggested work inside the saved 9 AM–9 PM window", () => {
+  const a = buildAgenda({
+    ...monday,
+    events: [],
+    tasks: [],
+    assessments: [],
+    dayStartHour: 9,
+    dayEndHour: 21,
+  });
+  expect(Math.max(...a.gaps.map((g) => g.end))).toBe(
+    local("2026-11-23T21:00:00").getTime(),
+  );
+});

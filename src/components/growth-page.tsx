@@ -7,7 +7,6 @@ import {
   Briefcase,
   ChartNoAxesCombined,
   Layers3,
-  Trophy,
   NotebookPen,
   Target,
 } from "lucide-react";
@@ -58,12 +57,6 @@ export function GrowthPage() {
       icon: NotebookPen,
       title: "Learning",
       text: "Skill paths and study topics",
-    },
-    {
-      href: "/basketball",
-      icon: Trophy,
-      title: "Basketball",
-      text: "Games, practices and manager tasks",
     },
     {
       href: "/areas/projects",

@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { BasketballPage } from "@/components/basketball-page";
 import { LearningPage } from "@/components/domain-workspaces";
 import { loadBriefing } from "@/lib/briefing-server";
 import { authorized } from "@/lib/auth";
@@ -64,6 +63,7 @@ export default async function Page({
     redirect("/#daily-briefing");
   if (page === "notifications") redirect("/#needs-attention");
   if (page === "assistant" && path[1] !== "history") notFound();
+  if (page === "basketball") redirect("/planner");
   if (!isConfigured()) redirect("/login");
   let data;
   try {
@@ -121,8 +121,6 @@ export default async function Page({
             />
           ) : page === "growth" ? (
             <GrowthPage />
-          ) : page === "basketball" ? (
-            <BasketballPage />
           ) : page === "goals" ? (
             <GoalsPage />
           ) : page === "reviews" ? (

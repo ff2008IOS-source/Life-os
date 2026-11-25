@@ -17,6 +17,8 @@ export type AcademicData = {
   assessments: AcademicRow[];
   grading_categories: AcademicRow[];
   study_topics: AcademicRow[];
+  /** Topics found in materials, waiting for approval. */
+  topic_suggestions?: AcademicRow[];
   study_sessions: AcademicRow[];
 };
 export type AcademicKind = keyof typeof academicSchemas;
@@ -293,7 +295,7 @@ export function AcademicEditor({
             (record ?? seed)?.[field.key] ??
             (field.key === "course_id" ? courseId : undefined);
           const options = field.table
-            ? data[field.table]
+            ? (data[field.table] ?? [])
                 .filter(
                   (row) =>
                     !row.course_id || !course || row.course_id === course,

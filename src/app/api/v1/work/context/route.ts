@@ -15,6 +15,7 @@ export async function GET() {
         .from("study_topics")
         .select("id,course_id,title")
         .eq("user_id", user.id)
+        .eq("suggestion_state", "active")
         .order("title")
         .limit(501),
     ]);
