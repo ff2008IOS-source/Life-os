@@ -92,10 +92,7 @@ export function TopicSuggestions({
           <ul className="topic-list">
             {suggestions.map((s) => (
               <li key={s.id} className="topic topic-suggested">
-                <span className="topic-title-static">
-                  {String(s.title)}
-                  {s.notes ? <small>{String(s.notes)}</small> : null}
-                </span>
+                <span className="topic-title-static">{String(s.title)}</span>
                 <button
                   className="td-link"
                   disabled={!!busy}

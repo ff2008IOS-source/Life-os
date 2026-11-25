@@ -23,7 +23,7 @@ Updated 2026-11-25. Priorities come from the scoring in [feature-comparison.md](
 | Topics found in Canvas files; owner approves; no duplicates                                                                                       | NotebookLM, Secretariat-style planners | **Done**                                                                                                   |
 | Evidence-based topic status with a one-line reason; nothing marked Mastered automatically                                                         | Anki, RemNote                          | **Done** (status changes are one-tap proposals)                                                            |
 | Evening wrap-up on Today                                                                                                                          | Sunsama                                | **Done**                                                                                                   |
-| "Enough time?" cushion: estimated study hours vs free hours before each assessment                                                                | Shovel                                 | Next                                                                                                       |
+| "Enough time?" cushion: estimated study hours vs free hours before each assessment                                                                | Shovel                                 | **Done**: Today's This week card compares estimated work due in 7 days with free scheduling time           |
 | Visible reasons when the scheduler moves or declines work                                                                                         | Motion, Reclaim                        | Next                                                                                                       |
 | Ask Life OS: deterministic answers to "What should I focus on?", "What am I neglecting?", "Can I finish this week?", each citing the records used | LifeOS AI-style assistants             | Next. The assistant exists with Groq and source records; add deterministic answer cards with no AI needed. |
 
@@ -34,7 +34,7 @@ Updated 2026-11-25. Priorities come from the scoring in [feature-comparison.md](
 | FSRS review queue per topic (ts-fsrs, MIT)             | Needs real recall ratings from the owner. Never inferred from opening a file.                    |
 | Per-calendar buffers (e.g. 15 minutes after practices) | Generalises game-day buffers                                                                     |
 | GPA forecast from course targets                       | Needs SFU letter-grade cut-offs per course from syllabi (PSYC 100's are already in its syllabus) |
-| Drop-lowest for points-based courses (PSYC ZAPS)       | The grade calculator applies drop-lowest only within category weights                            |
+| Drop-lowest for points-based courses (PSYC ZAPS)       | **Done**: the points calculation drops the lowest graded result in drop-lowest categories        |
 | Beedie transfer requirement tracker                    | Needs SFU Beedie admission requirements entered or linked                                        |
 
 ## P3: experimental

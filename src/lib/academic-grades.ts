@@ -23,6 +23,23 @@ export type GradeSummary = {
   missing_scores: number;
   warnings: string[];
 };
+/**
+ * Canvas reports a 0 on work that's handed in but not marked yet
+ * ("submitted", not "graded"/"returned"). That 0 is a placeholder, not a
+ * result, so it never counts.
+ */
+export function awaitingMark(a: {
+  earned_score: number | null;
+  submission_state?: string;
+}) {
+  return a.submission_state === "submitted" && a.earned_score === 0;
+}
+export function withoutPlaceholders<
+  T extends { earned_score: number | null; submission_state?: string },
+>(rows: T[]): T[] {
+  return rows.map((a) => (awaitingMark(a) ? { ...a, earned_score: null } : a));
+}
+
 export function academicGrade(
   method: string,
   assessments: GradeAssessment[],
@@ -32,7 +49,7 @@ export function academicGrade(
     rulesVerified: false,
   },
 ): GradeSummary {
-  const active = assessments.filter(
+  const active = withoutPlaceholders(assessments).filter(
     (a) => !a.dropped && a.submission_state !== "excused",
   );
   const scored = active.filter(
@@ -73,8 +90,25 @@ export function academicGrade(
     return result;
   }
   if (method === "points") {
-    const earned = scored.reduce((n, a) => n + a.earned_score!, 0),
-      maximum = scored.reduce((n, a) => n + a.maximum_score!, 0);
+    // Categories with a drop-lowest rule (e.g. "6 ZAPS, lowest dropped")
+    // drop their lowest graded results, as Canvas does.
+    const dropped = new Set<string>();
+    for (const c of categories)
+      if (c.drop_lowest_count > 0) {
+        const graded = scored
+          .filter((a) => a.category_id === c.id)
+          .toSorted(
+            (a, b) =>
+              a.earned_score! / a.maximum_score! -
+              b.earned_score! / b.maximum_score!,
+          );
+        if (graded.length > c.drop_lowest_count)
+          for (const a of graded.slice(0, c.drop_lowest_count))
+            dropped.add(a.id);
+      }
+    const counted = scored.filter((a) => !dropped.has(a.id));
+    const earned = counted.reduce((n, a) => n + a.earned_score!, 0),
+      maximum = counted.reduce((n, a) => n + a.maximum_score!, 0);
     result.graded_average = maximum ? (earned / maximum) * 100 : null;
     if (finalAllowed && result.missing_scores === 0)
       result.overall_grade = result.graded_average;
