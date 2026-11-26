@@ -149,7 +149,7 @@ beforeAll(async () => {
       "insert into focus_sessions(user_id,task_id,request_id,status,running_since,actual_minutes,work_block_id,elapsed_seconds) select user_id,task_id,gen_random_uuid(),'finished',null,actual_minutes,work_block_id,actual_minutes*60 from work_completions limit 1",
     );
     const tables = await source.query<{ table_name: string }>(
-      "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts')",
+      "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name not in ('calendar_write_locks','push_subscriptions','notification_delivery_attempts','canvas_connections','canvas_token_attempts','outlook_connections')",
     );
     const records: Export["records"] = {};
     for (const { table_name: table } of tables.rows)
