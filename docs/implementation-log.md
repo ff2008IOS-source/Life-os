@@ -2,6 +2,13 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-26: Gmail bridge every 5 minutes; Outlook panel removed
+
+| Change                                                                                              | Status              | Notes                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| The Gmail script runs every 5 minutes (was hourly) and no longer re-sends recent emails on each run | Implemented, Tested | Owner request. Well inside the free Apps Script trigger quota                                                                              |
+| The SFU Outlook panel is removed from Settings                                                      | Implemented         | SFU blocks students from registering apps in Microsoft Entra. The server routes and table stay, so it can return if SFU IT approves an app |
+
 ## 2026-11-26: direct SFU Outlook connection
 
 | Change                                                                                                            | Status              | Notes                                                                                                                                                                                                    |

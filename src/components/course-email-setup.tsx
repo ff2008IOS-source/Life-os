@@ -124,7 +124,7 @@ export function CourseEmailSetup() {
           <li>
             Choose <strong>setUp</strong> in the function menu and press{" "}
             <strong>Run</strong>. Allow the Gmail and external-request
-            permissions. It then checks every hour.
+            permissions. It then checks every 5 minutes.
           </li>
           <li>
             For <strong>older SFU mail</strong>: in Outlook, select the emails

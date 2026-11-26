@@ -10,7 +10,7 @@ it("produces a valid Apps Script with the endpoint and token filled in", () => {
   expect(() => new Function(s)).not.toThrow();
   expect(s).toContain('"lio_abc123def456ghi789jkl0"');
   expect(s).toContain('"https://lifeos.example/api/internal/intake/email"');
-  expect(s).toContain("everyHours(1)");
+  expect(s).toContain("everyMinutes(5)");
   expect(s).toContain("-in:sent");
   expect(s).toContain("{to:sfu.ca cc:sfu.ca from:sfu.ca}");
 });

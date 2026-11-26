@@ -14,10 +14,10 @@ const LIFE_OS_URL = ${JSON.stringify(endpoint)};
 const LIFE_OS_TOKEN = ${JSON.stringify(token)};
 // SFU mail only. Your Gmail's own mail is never sent.
 const SFU = "{to:sfu.ca cc:sfu.ca from:sfu.ca}";
-// Choose setUp and press Run once: checks every hour from now on.
+// Choose setUp and press Run once: checks every 5 minutes from now on.
 function setUp() {
   ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger("sendCourseEmails").timeBased().everyHours(1).create();
+  ScriptApp.newTrigger("sendCourseEmails").timeBased().everyMinutes(5).create();
   sendCourseEmails();
 }
 
@@ -61,14 +61,15 @@ function sendCourseEmails() {
     batch.push(item);
     size += n;
   }
-  // Up to 250 conversations per run; anything left goes next hour.
+  // Up to 250 conversations per run; anything left goes on the next run.
   for (let start = 0; start < 250; start += 50) {
     const threads = GmailApp.search(query, start, 50);
     threads.forEach(function (t) {
       t.getMessages().forEach(function (m) {
         const when = m.getDate().getTime();
         const from = m.getFrom() || "";
-        if (when < since - 600000 || m.isDraft()) return;
+        // Already handled on an earlier run (the search overlaps by 10 minutes).
+        if (when <= since || m.isDraft()) return;
         if (me && from.toLowerCase().indexOf(me) !== -1) return; // your own replies
         if (when > newest) newest = when;
         const id = m.getHeader("Message-ID") || m.getId();
