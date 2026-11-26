@@ -32,6 +32,8 @@ export default defineConfig({
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "synthetic-test-publishable-key",
         LIFE_OS_ALLOWED_EMAIL: "beta@example.invalid",
         LIFE_OS_APP_ORIGIN: "http://127.0.0.1:3000",
+        // Synthetic, test-only key for short-lived sign-in cookies.
+        CANVAS_ENCRYPTION_KEY: "0".repeat(64),
       },
     },
   ],

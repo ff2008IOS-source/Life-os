@@ -132,7 +132,7 @@ function Item({
                   rel="noreferrer"
                   className="td-link"
                 >
-                  Open in Canvas
+                  {m.source === "email" ? "Open in Outlook" : "Open in Canvas"}
                 </a>
               </>
             )}

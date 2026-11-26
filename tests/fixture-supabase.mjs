@@ -464,6 +464,7 @@ const server = createServer((req, res) => {
           "canvas_grade_history",
           "course_messages",
           "email_intake_tokens",
+          "outlook_connections",
         ];
         if (!tables.includes(table)) throw Error("Unknown table");
         const params = [];
