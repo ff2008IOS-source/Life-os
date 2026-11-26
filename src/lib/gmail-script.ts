@@ -39,18 +39,40 @@ function post_(emails) {
   if (r.getResponseCode() !== 200) throw new Error("Life OS said " + r.getResponseCode() + ": " + r.getContentText());
 }
 
-// Older emails you forward from Outlook arrive as attached .eml files.
-function attachedEmails_(m) {
-  return m.getAttachments({ includeInlineImages: false }).filter(function (a) {
-    return a.getContentType() === "message/rfc822" || /\\.eml$/i.test(a.getName());
-  });
+// Older emails you forward from Outlook arrive attached to one message
+// (message/rfc822 parts). Gmail hides those from getAttachments, so read
+// them from the raw source.
+function attachedEmails_(raw) {
+  const found = [];
+  function walk(part, depth) {
+    const split = part.search(/\\r?\\n\\r?\\n/);
+    if (split < 0 || depth > 4) return;
+    const head = part.slice(0, split).replace(/\\r?\\n[ \\t]+/g, " ");
+    const body = part.slice(split).replace(/^\\r?\\n\\r?\\n/, "");
+    const type = ((head.match(/^content-type:\\s*([^;\\r\\n]+)/im) || [])[1] || "").trim();
+    if (/^message\\/rfc822$/i.test(type)) {
+      const enc = ((head.match(/^content-transfer-encoding:\\s*(\\S+)/im) || [])[1] || "").toLowerCase();
+      found.push(enc === "base64"
+        ? Utilities.newBlob(Utilities.base64Decode(body.replace(/\\s+/g, ""))).getDataAsString()
+        : body);
+      return;
+    }
+    const b = head.match(/boundary="?([^";\\r\\n]+)"?/i);
+    if (!/^multipart\\//i.test(type) || !b) return;
+    body.split("--" + b[1]).slice(1).forEach(function (p) {
+      if (p.indexOf("--") === 0) return; // the closing boundary
+      walk(p.replace(/^\\r?\\n/, ""), depth + 1);
+    });
+  }
+  walk(raw, 0);
+  return found;
 }
 
 function sendCourseEmails() {
   const props = PropertiesService.getUserProperties();
   const me = (Session.getActiveUser().getEmail() || "").toLowerCase();
   // First run looks back 3 days; after that, from the newest email handled.
-  const since = Number(props.getProperty("LIFE_OS_SINCE") || Date.now() - 3 * 86400000);
+  const since = Number(props.getProperty("LIFE_OS_SINCE_V2") || Date.now() - 3 * 86400000);
   const query = SFU + " after:" + Math.floor(since / 1000 - 600) + " -in:sent -in:drafts -in:chats";
   let newest = since;
   let batch = [];
@@ -73,10 +95,10 @@ function sendCourseEmails() {
         if (me && from.toLowerCase().indexOf(me) !== -1) return; // your own replies
         if (when > newest) newest = when;
         const id = m.getHeader("Message-ID") || m.getId();
-        const eml = attachedEmails_(m);
+        const eml = attachedEmails_(m.getRawContent());
         if (eml.length) {
-          eml.forEach(function (a, i) {
-            add({ id: id + "#" + i, raw: a.getDataAsString().slice(0, 400000) });
+          eml.forEach(function (raw, i) {
+            add({ id: id + "#" + i, raw: raw.slice(0, 400000) });
           });
           return;
         }
@@ -96,7 +118,7 @@ function sendCourseEmails() {
     if (threads.length < 50) break;
   }
   if (batch.length) post_(batch);
-  props.setProperty("LIFE_OS_SINCE", String(newest));
+  props.setProperty("LIFE_OS_SINCE_V2", String(newest));
 }
 
 `;

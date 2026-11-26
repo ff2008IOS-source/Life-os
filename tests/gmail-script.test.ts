@@ -58,3 +58,58 @@ it("keeps only SFU mail", () => {
   );
   expect(isSfuMail("Fake <a@notsfu.ca>", "")).toBe(false);
 });
+
+it("finds every email attached to an Outlook forward, including base64 ones", () => {
+  const s = gmailScript("https://x.example/e", "lio_abc123def456ghi789jkl0");
+  const Utilities = {
+    base64Decode: (b: string) => Buffer.from(b, "base64"),
+    newBlob: (bytes: Buffer) => ({
+      getDataAsString: () => bytes.toString("utf8"),
+    }),
+  };
+  const find = new Function("Utilities", `${s}; return attachedEmails_;`)(
+    Utilities,
+  ) as (raw: string) => string[];
+  const first = [
+    "From: Prof <prof@sfu.ca>",
+    "Subject: ECON 115 Exam 3 room",
+    "",
+    "AQ 3150",
+  ].join("\r\n");
+  const second = [
+    "From: Canvas <notifications@instructure.com>",
+    "Subject: PSYC 100 grade posted",
+    "",
+    "Your grade is posted.",
+  ].join("\r\n");
+  const raw = [
+    "From: Fela <ffa37@sfu.ca>",
+    "Subject: Life OS import – Inbox – batch 1",
+    'Content-Type: multipart/mixed; boundary="OUTER"',
+    "",
+    "--OUTER",
+    'Content-Type: multipart/alternative; boundary="ALT"',
+    "",
+    "--ALT",
+    "Content-Type: text/plain",
+    "",
+    "",
+    "--ALT--",
+    "--OUTER",
+    'Content-Type: message/rfc822; name="ECON.eml"',
+    "",
+    first,
+    "--OUTER",
+    "Content-Type: message/rfc822",
+    "Content-Transfer-Encoding: base64",
+    "",
+    Buffer.from(second).toString("base64"),
+    "--OUTER--",
+    "",
+  ].join("\r\n");
+  const found = find(raw);
+  expect(found).toHaveLength(2);
+  expect(found[0]).toContain("Subject: ECON 115 Exam 3 room");
+  expect(found[1]).toContain("Subject: PSYC 100 grade posted");
+  expect(find("From: a@sfu.ca\r\nSubject: hi\r\n\r\nplain")).toEqual([]);
+});
