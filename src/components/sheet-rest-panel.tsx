@@ -938,7 +938,7 @@ export function SheetRestPanel() {
           {d.mode === "life_os_owned" && (
             <p className="small muted">
               Life OS is the source of truth for values it writes: if you type
-              over one in the sheet, the next sync puts Life OS's value back.
+              over one in the sheet, the next sync puts the Life OS value back.
               Columns Life OS has never written are left alone. With automatic
               approval on, changes are written after a fresh check of the sheet;
               the change log below keeps every previous value for undo.
