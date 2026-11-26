@@ -88,6 +88,91 @@ type Metadata = {
   }[];
 };
 const endpoint = "/api/v1/sheets/tables";
+type Phase = "idle" | "running" | "ok" | "bad";
+const GREEN = "#3fb950",
+  RED = "#f85149";
+/** Green spinning ring while syncing, solid green check when done, red when anything did not sync. */
+function SyncBadge({ phase }: { phase: Phase }) {
+  const label = {
+    idle: "Not synced yet",
+    running: "Syncing",
+    ok: "Everything synced",
+    bad: "Some tables did not sync",
+  }[phase];
+  return (
+    <svg
+      width="32"
+      height="32"
+      viewBox="0 0 32 32"
+      role="img"
+      aria-label={label}
+    >
+      {phase === "running" ? (
+        <>
+          <circle
+            cx="16"
+            cy="16"
+            r="12"
+            fill="none"
+            stroke={GREEN}
+            strokeOpacity=".25"
+            strokeWidth="4"
+          />
+          <circle
+            cx="16"
+            cy="16"
+            r="12"
+            fill="none"
+            stroke={GREEN}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray="22 54"
+          >
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from="0 16 16"
+              to="360 16 16"
+              dur="0.9s"
+              repeatCount="indefinite"
+            />
+          </circle>
+        </>
+      ) : phase === "idle" ? (
+        <circle
+          cx="16"
+          cy="16"
+          r="12"
+          fill="none"
+          stroke="#8b8b8b"
+          strokeWidth="3"
+        />
+      ) : (
+        <>
+          <circle cx="16" cy="16" r="14" fill={phase === "ok" ? GREEN : RED} />
+          {phase === "ok" ? (
+            <path
+              d="M9 16.5l5 5 9-10"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ) : (
+            <path
+              d="M16 8v10M16 22.5v.5"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+          )}
+        </>
+      )}
+    </svg>
+  );
+}
 const nextWeekDay = () =>
   new Date(new Date().getTime() + 7 * 86400000).toLocaleDateString("en-CA");
 export function SheetRestPanel() {
@@ -278,55 +363,112 @@ export function SheetRestPanel() {
       confirmed: true,
     });
   }
+  const checked = batch.filter(
+    (r) => !["waiting", "syncing"].includes(r.status),
+  ).length;
+  const problems = batch.filter(
+    (r) => !["synced", "waiting", "syncing"].includes(r.status),
+  );
+  const phase: Phase = batchRunning
+    ? "running"
+    : !batch.length
+      ? "idle"
+      : problems.length
+        ? "bad"
+        : "ok";
+  const reviewTable = state?.datasets.find(
+    (t) =>
+      t.mode === "life_os_owned" &&
+      t.config.columns.some((c) => c.key === "week_of"),
+  );
   return (
     <section
       className="panel settings-panel"
       aria-label="Two-way Google Sheets"
     >
       <h2>Google Sheets</h2>
-      <Button
-        disabled={
-          busy ||
-          !state?.datasets.some((t) => !t.test_only && t.mode !== "paused")
-        }
-        onClick={() => void syncAll()}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
       >
-        {batchRunning ? "Syncing tables…" : "Sync Sheets tables"}
-      </Button>
-
+        <SyncBadge phase={phase} />
+        <Button
+          disabled={
+            busy ||
+            !state?.datasets.some((t) => !t.test_only && t.mode !== "paused")
+          }
+          onClick={() => void syncAll()}
+        >
+          {batchRunning ? "Syncing tables…" : "Sync Sheets tables"}
+        </Button>
+        {reviewTable && (
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => void buildReview(reviewTable.id)}
+          >
+            Build next week&apos;s review
+          </Button>
+        )}
+      </div>
+      <p className="small" role="status" aria-live="polite">
+        {phase === "running"
+          ? `Syncing ${Math.min(checked + 1, batch.length)} of ${batch.length}…`
+          : phase === "ok"
+            ? `All ${batch.length} tables synced.`
+            : phase === "bad"
+              ? `${problems.length} of ${batch.length} did not sync:`
+              : "Press Sync to update every table at once."}
+      </p>
+      {phase === "bad" &&
+        problems.map((r) => (
+          <div
+            key={r.id}
+            style={{ borderLeft: "3px solid #f85149", paddingLeft: 10 }}
+          >
+            <strong>{r.title}</strong>
+            <p className="small">
+              {r.message || "Could not confirm this sync."}
+            </p>
+          </div>
+        ))}
       {batch.length > 0 && (
         <section
           aria-label="Sync all results"
           aria-live="polite"
           aria-atomic="true"
         >
-          {batchRunning && (
-            <p className="small">Keep this page open while your tables sync.</p>
-          )}
-          <p className="small">
-            {
-              batch.filter((r) => !["waiting", "syncing"].includes(r.status))
-                .length
-            }{" "}
-            of {batch.length} checked
-          </p>
-          {batch.map((r) => (
-            <div className="setting-line" key={r.id}>
-              <strong>{r.title}</strong>
-              <span>
-                {
+          <details>
+            <summary>
+              {phase === "running" ? "Progress" : "Show all tables"}
+            </summary>
+            {batchRunning && (
+              <p className="small">
+                Keep this page open while your tables sync.
+              </p>
+            )}
+            {batch.map((r) => (
+              <div className="setting-line" key={r.id}>
+                <strong>{r.title}</strong>
+                <span>
                   {
-                    waiting: "Waiting",
-                    syncing: "Syncing…",
-                    synced: "Synced",
-                    attention: "Needs review",
-                    failed: "Sync not confirmed",
-                  }[r.status]
-                }
-                {r.message ? ` · ${r.message}` : ""}
-              </span>
-            </div>
-          ))}
+                    {
+                      waiting: "Waiting",
+                      syncing: "Syncing…",
+                      synced: "Synced",
+                      attention: "Needs review",
+                      failed: "Sync not confirmed",
+                    }[r.status]
+                  }
+                  {r.message ? ` · ${r.message}` : ""}
+                </span>
+              </div>
+            ))}
+          </details>
         </section>
       )}
       <details>

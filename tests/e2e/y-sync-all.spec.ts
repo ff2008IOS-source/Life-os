@@ -64,7 +64,14 @@ test("Sync all skips paused/test tables, continues on failure and displays hones
     ),
   ).toBeVisible();
   expect(calls).toEqual(["1", "2", "3"]);
+  await expect(
+    panel.getByText("2 of 3 did not sync:", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    panel.getByText("This table is already syncing. Try again shortly."),
+  ).toBeVisible();
   const results = panel.getByRole("region", { name: "Sync all results" });
+  await results.getByText("Show all tables").click();
   await expect(results.getByText("Synced", { exact: true })).toBeVisible();
   await expect(results).toContainText("Sync not confirmed");
   await expect(results).toContainText("Needs review");
