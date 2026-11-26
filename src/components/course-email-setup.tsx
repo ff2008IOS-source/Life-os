@@ -39,10 +39,10 @@ export function CourseEmailSetup() {
         <Mail size={17} aria-hidden /> Email
       </h2>
       <p>
-        Your incoming email reaches Life OS. Course mail (announcements,
-        schedule changes, “results are ready”) shows in School and Today; the
-        rest is under Week → Inbox for 60 days. Password-reset emails are never
-        sent.
+        Your SFU email reaches Life OS. Course mail (announcements, schedule
+        changes, “results are ready”) shows in School and Today; other SFU mail
+        is under Week → Inbox. Your Gmail’s own mail and password-reset emails
+        are never sent.
       </p>
       <p className="connection-summary">
         <span
