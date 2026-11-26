@@ -102,6 +102,8 @@ export function mergeSheetFields(
   local: Values,
   remote: Cells,
   mode = "two_way",
+  /** Rows first seen before the dataset's owner_since date. They are history and are never overwritten. */
+  frozen = false,
 ) {
   const values: Values = { ...local },
     baseline: Cells = { ...base },
@@ -122,6 +124,15 @@ export function mergeSheetFields(
         baseline[key] = r;
       }
     } else if (same(l, r.value)) {
+      values[key] = r.value;
+      baseline[key] = r;
+    } else if (mode === "life_os_owned" && !frozen) {
+      // Life OS is the source of truth from owner_since onward: a hand edit in the sheet is
+      // drift. Keep the Life OS value, record the sheet value as the baseline so the difference
+      // becomes an ordinary pending write that the outbox can verify and log.
+      baseline[key] = r;
+    } else if (mode === "life_os_owned") {
+      // Historical row: the sheet is authoritative and nothing is ever written back.
       values[key] = r.value;
       baseline[key] = r;
     } else if (same(l, b) && mode !== "export_only") {

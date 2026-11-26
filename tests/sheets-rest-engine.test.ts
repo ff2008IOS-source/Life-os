@@ -207,3 +207,25 @@ it("rechecks live dropdown rules even for outbox edits created by a project trig
     }),
   ).toThrow("permitted");
 });
+
+it("life_os_owned keeps Life OS values for new rows and freezes historical rows", () => {
+  const cell = (value: string | number) => ({
+    value,
+    display: String(value),
+    formula: null,
+    source_writable: true,
+    writable: true,
+    allowed: null,
+    error: null,
+  });
+  const base = { value: cell(1) },
+    local = { value: 5 },
+    remote = { value: cell(9) };
+  const fresh = mergeSheetFields(base, local, remote, "life_os_owned", false);
+  expect(fresh.values.value).toBe(5);
+  expect(fresh.baseline.value.value).toBe(9);
+  expect(fresh.conflicts).toEqual({});
+  const old = mergeSheetFields(base, local, remote, "life_os_owned", true);
+  expect(old.values.value).toBe(9);
+  expect(old.conflicts).toEqual({});
+});

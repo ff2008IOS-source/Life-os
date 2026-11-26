@@ -30,12 +30,14 @@ export type Dataset = {
   automatic_outbound: boolean;
   test_only: boolean;
   attempts: number;
+  owner_since?: string | null;
 };
 export type LedgerRow = {
   id: string;
   external_key: string;
   key_values: unknown;
   version: number;
+  created_at?: string;
   baseline: Cells;
   remote_cells: Cells;
   local_values: Values;
@@ -112,6 +114,10 @@ export function ingestionRows(
           local.local_values,
           remote.cells,
           d.mode,
+          d.mode === "life_os_owned" &&
+            (!d.owner_since ||
+              !local.created_at ||
+              new Date(local.created_at) < new Date(d.owner_since)),
         )
       : { values: remote.values, baseline: remote.cells, conflicts: {} };
     const link = links.find((l) => l.row_id === local?.id);
