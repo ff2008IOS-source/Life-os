@@ -139,44 +139,22 @@ it("grading changes point to the rules; personal deadlines become tasks", () => 
   ).toBeNull();
 });
 
-it("search finds emails by subject, sender and opening text, below your own records", async () => {
-  const { buildSearchIndex, searchEntries } =
-    await import("@/lib/search-index");
-  const index = buildSearchIndex({
-    tasks: [{ id: "t", title: "Enrolment plan", status: "planned" }],
-    projects: [],
-    goals: [],
-    academic: {
-      courses: [{ id: "c", code: "ECON 115", title: "Macro" }],
-      assessments: [],
-      study_topics: [],
-    },
-    mail: [
-      {
-        id: "m1",
-        source: "email",
-        course_id: null,
-        title: "Fall 2026 (1267) Enrolment Date",
-        sender: "urecords@sfu.ca",
-        body: "Your enrolment appointment is Dec 3",
-      },
-      {
-        id: "m2",
-        source: "canvas_announcement",
-        course_id: "c",
-        title: "Exam 3 room",
-        sender: null,
-        body: "AQ 3150",
-      },
-    ],
-  });
-  const enrol = searchEntries(index, "enrolment");
-  expect(enrol[0].title).toBe("Enrolment plan");
-  expect(enrol.find((e) => e.kind === "Email")?.href).toBe(
-    "/planner?section=inbox",
+it("Canvas mark notifications need nothing from you; Crowdmark ones do", () => {
+  const canvas = msg(
+    "Submission Posted: Knowledge Application 2, GEOG104 OL01 Climate Change",
+    "https://canvas.sfu.ca/courses/123/assignments/456",
+    ["mark"],
   );
-  expect(searchEntries(index, "AQ 3150")[0]).toMatchObject({
-    kind: "Announcement",
-    subtitle: "ECON 115 · Canvas",
-  });
+  expect(actionFor(canvas, [], "2026-11-26")).toBeNull();
+  expect(
+    actionFor(
+      msg(
+        "Grades available: Lab report",
+        "Sign in to Canvas and click the Crowdmark link",
+        ["mark"],
+      ),
+      [],
+      "2026-11-26",
+    ),
+  ).toEqual({ kind: "open_grades" });
 });

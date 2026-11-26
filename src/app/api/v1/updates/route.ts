@@ -14,61 +14,58 @@ import {
   type ActionAssessment,
 } from "@/lib/update-actions";
 import { readMarkFromImage } from "@/lib/mark-reader";
+import {
+  applyUpdates,
+  undoApplied,
+  type Applied,
+} from "@/lib/update-apply-server";
 import { taskInput } from "@/lib/schemas";
 
 export const maxDuration = 60;
 
 const FIELDS =
-  "id,course_id,source,title,body,sender,url,posted_at,flags,acknowledged_at";
+  "id,course_id,source,title,body,posted_at,flags,acknowledged_at,applied,applied_at,applied_dismissed_at";
 type Message = {
   id: string;
   course_id: string | null;
   source: string;
   title: string;
   body: string;
-  sender: string | null;
-  url: string | null;
   posted_at: string;
   flags: string[];
   acknowledged_at: string | null;
+  applied: Applied | false | null;
+  applied_at: string | null;
+  applied_dismissed_at: string | null;
 };
 
 /**
- * Course updates (Canvas announcements and course emails from the last 60
- * days), each with a suggested action, plus `attention`: unseen updates from
- * the last 7 days that need something, for Today. With `?scope=email`, the
- * owner's other SFU mail instead.
+ * What course updates and SFU mail changed, for Today:
+ * - `changes`: what Life OS applied on its own in the last 7 days (undoable);
+ * - `needs`: what it can't do alone (a Crowdmark mark, a grading change).
+ * The emails themselves aren't listed.
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const { db, user } = await authorized();
-    const email = new URL(request.url).searchParams.get("scope") === "email";
-    const since60 = new Date(Date.now() - 60 * 86400000).toISOString();
-    const week = Date.now() - 7 * 86400000;
-    const base = () =>
-      db.from("course_messages").select(FIELDS).eq("user_id", user.id);
-    const [msgs, personal, assessments, token] = await Promise.all([
-      email
-        ? base()
-            .eq("source", "email")
-            .is("course_id", null)
-            .order("posted_at", { ascending: false })
-            .limit(400)
-        : base()
-            .not("course_id", "is", null)
-            .gte("posted_at", since60)
-            .order("posted_at", { ascending: false })
-            .limit(300),
-      // Recent personal mail can carry a deadline worth a task on Today.
-      email
-        ? Promise.resolve({ data: [] as Message[], error: null })
-        : base()
-            .eq("source", "email")
-            .is("course_id", null)
-            .is("acknowledged_at", null)
-            .gte("posted_at", new Date(week).toISOString())
-            .order("posted_at", { ascending: false })
-            .limit(50),
+    const week = new Date(Date.now() - 7 * 86400000).toISOString();
+    const [recent, changed, assessments, token] = await Promise.all([
+      db
+        .from("course_messages")
+        .select(FIELDS)
+        .eq("user_id", user.id)
+        .is("acknowledged_at", null)
+        .gte("posted_at", week)
+        .order("posted_at", { ascending: false })
+        .limit(100),
+      db
+        .from("course_messages")
+        .select(FIELDS)
+        .eq("user_id", user.id)
+        .is("applied_dismissed_at", null)
+        .gte("applied_at", week)
+        .order("applied_at", { ascending: false })
+        .limit(20),
       db
         .from("assessments")
         .select(
@@ -81,8 +78,8 @@ export async function GET(request: Request) {
         .eq("user_id", user.id)
         .maybeSingle(),
     ]);
-    dbError(msgs.error);
-    dbError(personal.error);
+    dbError(recent.error);
+    dbError(changed.error);
     dbError(assessments.error);
     dbError(token.error);
     const today = localDate();
@@ -91,36 +88,33 @@ export async function GET(request: Request) {
       earned_score: a.earned_score === null ? null : Number(a.earned_score),
       maximum_score: a.maximum_score === null ? null : Number(a.maximum_score),
     })) as ActionAssessment[];
-    const withAction = (rows: Message[]) =>
-      rows.map((m) => ({
-        ...m,
-        // Lists only need the opening; the full text stays in the database.
-        body: m.body.slice(0, 2000),
+    const needs = ((recent.data ?? []) as Message[])
+      .map((m) => ({
+        id: m.id,
+        course_id: m.course_id,
+        title: m.title,
+        posted_at: m.posted_at,
         action: actionFor(m, list, today),
-      }));
-    const messages = withAction((msgs.data ?? []) as Message[]);
-    const attention = [
-      ...messages,
-      ...withAction((personal.data ?? []) as Message[]),
-    ]
+      }))
       .filter(
         (m) =>
-          !m.acknowledged_at &&
-          Date.parse(m.posted_at) >= week &&
-          (m.action ? m.action.kind !== "mark_recorded" : m.flags.length > 0),
+          m.action &&
+          ["enter_mark", "open_grades", "check_rules"].includes(m.action.kind),
       )
       .sort(
-        (a, b) =>
-          (a.action ? ACTION_RANK[a.action.kind] : 9) -
-            (b.action ? ACTION_RANK[b.action.kind] : 9) ||
-          Date.parse(b.posted_at) - Date.parse(a.posted_at),
+        (a, b) => ACTION_RANK[a.action!.kind] - ACTION_RANK[b.action!.kind],
       );
+    const changes = ((changed.data ?? []) as Message[])
+      .filter((m) => m.applied && !m.applied.undone)
+      .map((m) => ({
+        id: m.id,
+        course_id: m.course_id,
+        title: m.title,
+        applied: m.applied as Applied,
+        applied_at: m.applied_at,
+      }));
     return NextResponse.json(
-      {
-        messages,
-        attention: email ? [] : attention,
-        email: token.data ?? null,
-      },
+      { changes, needs, email: token.data ?? null },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (e) {
@@ -138,6 +132,13 @@ const input = z.discriminatedUnion("action", [
     })
     .strict(),
   z.object({ action: z.literal("token") }).strict(),
+  z.object({ action: z.literal("undo"), message_id: z.uuid() }).strict(),
+  z
+    .object({
+      action: z.literal("dismiss"),
+      ids: z.array(z.uuid()).min(1).max(50),
+    })
+    .strict(),
   z
     .object({
       action: z.literal("record_mark"),
@@ -192,8 +193,24 @@ export async function POST(request: Request) {
         .eq("id", id);
       dbError(r.error);
     };
+    if (x.action === "undo")
+      return NextResponse.json({
+        undone: await undoApplied(user.id, x.message_id),
+      });
+    if (x.action === "dismiss") {
+      const r = await db
+        .from("course_messages")
+        .update({ applied_dismissed_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .in("id", x.ids)
+        .select("id");
+      dbError(r.error);
+      return NextResponse.json({ dismissed: r.data?.length ?? 0 });
+    }
     if (x.action === "sync") {
       const canvas = await syncAnnouncements(user.id);
+      // Anything recent that arrived before automatic changes existed.
+      await applyUpdates(user.id, null);
       // New SFU Outlook mail too, briefly; a failure here never blocks Canvas.
       const outlook = await syncOutlook(user.id, 8000).catch(() => null);
       return NextResponse.json({ ...canvas, outlook: Boolean(outlook) });

@@ -2,7 +2,16 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
-## 2026-11-26: email you can act on
+## 2026-11-26: mail changes Life OS on its own
+
+| Change                                                                                                                                       | Status              | Notes                                                                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A moved assessment date in a course update or SFU email updates the assessment automatically                                                 | Implemented, Tested | Owner request: "I just need the website to have that info so when things change the website can make those changes too". Recorded on the message (`applied`), undoable |
+| A dated deadline in personal SFU mail becomes a task automatically (deduped per email)                                                       | Implemented, Tested | Undo removes the task                                                                                                                                                  |
+| Today → **Updated from your mail**: what changed (with Undo and Got it) plus what only the owner can do (a Crowdmark mark, a grading change) | Implemented, Tested | Hidden when there's nothing                                                                                                                                            |
+| Email lists removed: SFU mail in Inbox, course Updates in School, email results in search                                                    | Implemented         | Mail stays as data for automatic changes and Ask Life OS                                                                                                               |
+
+## 2026-11-26: email you can act on (superseded in part)
 
 | Change                                                                                                                                                                                        | Status              | Notes                                                                                                |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |

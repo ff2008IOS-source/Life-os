@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import PostalMime from "postal-mime";
+import { applyUpdates } from "./update-apply-server";
 import { canvasAdmin, decryptToken } from "./canvas/secure";
 import { CanvasClient } from "./canvas/client";
 import { dbError } from "./http";
@@ -38,7 +39,10 @@ async function insert(rows: Row[]) {
     })
     .select("id");
   dbError(r.error);
-  return r.data?.length ?? 0;
+  const ids = (r.data ?? []).map((x) => x.id as string);
+  // Moved dates and dated deadlines are applied as soon as they arrive.
+  if (ids.length) await applyUpdates(rows[0].user_id, ids);
+  return ids.length;
 }
 
 /** Pull the last 60 days of announcements from every linked Canvas course. */

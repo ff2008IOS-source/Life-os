@@ -1,5 +1,5 @@
 "use client";
-import { WhatChangedCard } from "./course-updates";
+import { MailChangesCard } from "./course-updates";
 import { WeekFitLine } from "./week-fit-line";
 import { wrapUp } from "@/lib/wrap-up";
 import { FollowUpNudge } from "./career-follow-ups";
@@ -843,7 +843,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
         </div>
 
         <div className="td-col">
-          <WhatChangedCard
+          <MailChangesCard
             courseCode={(id) =>
               b.assessments.find((a) => a.course_id === id)?.course
             }

@@ -1,40 +1,43 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  CalendarClock,
   Camera,
   Check,
-  ChevronDown,
-  Mail,
-  Megaphone,
-  Search,
+  ListTodo,
+  Undo2,
 } from "lucide-react";
 import { calendarRequest } from "./use-calendar";
-import { dueLabel } from "@/lib/display";
 import { friendlyDate } from "@/lib/dates";
 import type { UpdateAction } from "@/lib/update-actions";
-import { GROUP_ORDER, mailGroup } from "@/lib/mail-groups";
 
-export type CourseMessage = {
+/** Something only the owner can do (a Crowdmark mark, a grading change). */
+export type Need = {
   id: string;
   course_id: string | null;
-  source: "canvas_announcement" | "email";
   title: string;
-  body: string;
-  sender: string | null;
-  url: string | null;
   posted_at: string;
-  flags: string[];
-  acknowledged_at: string | null;
   action: UpdateAction | null;
 };
-
-const FLAG_LABEL: Record<string, string> = {
-  grading: "May change grading",
-  schedule: "Date or time change",
-  mark: "New mark posted",
+/** Something Life OS changed on its own from a course update or email. */
+export type Change = {
+  id: string;
+  course_id: string | null;
+  title: string;
+  applied_at: string;
+  applied:
+    | {
+        kind: "move_date";
+        assessment: string;
+        course_id: string;
+        from_date: string | null;
+        to: string;
+      }
+    | { kind: "add_task"; title: string; due_date: string };
 };
+
 const SYNC_KEY = "lifeos:v1:updates-synced";
 const post = <T,>(body: unknown) =>
   calendarRequest<T>("/api/v1/updates", {
@@ -43,10 +46,10 @@ const post = <T,>(body: unknown) =>
     body: JSON.stringify(body),
   });
 
-type Feed = { messages: CourseMessage[]; attention: CourseMessage[] };
+type Feed = { changes: Change[]; needs: Need[] };
 
-/** Loads updates; pulls new Canvas announcements at most once an hour. */
-export function useCourseUpdates() {
+/** Loads changes; pulls new Canvas announcements at most once an hour. */
+export function useMailChanges() {
   const [feed, setFeed] = useState<Feed | null>(null);
   const load = useCallback(async () => {
     setFeed(await calendarRequest<Feed>("/api/v1/updates"));
@@ -68,26 +71,14 @@ export function useCourseUpdates() {
         const r = await calendarRequest<Feed>("/api/v1/updates");
         if (live) setFeed(r);
       } catch {
-        if (live) setFeed({ messages: [], attention: [] });
+        if (live) setFeed({ changes: [], needs: [] });
       }
     })();
     return () => {
       live = false;
     };
   }, []);
-  const ack = useCallback(
-    async (ids: string[]) => {
-      await post({ action: "ack", ids });
-      await load();
-    },
-    [load],
-  );
-  return {
-    messages: feed?.messages ?? null,
-    attention: feed?.attention ?? null,
-    ack,
-    reload: load,
-  };
+  return { feed, reload: load };
 }
 
 /** Screenshots are shrunk in the browser before they're read. */
@@ -109,7 +100,7 @@ export function UpdateActionControl({
   courseId,
   onDone,
 }: {
-  m: CourseMessage;
+  m: Need;
   courseId?: string | null;
   onDone: () => void;
 }) {
@@ -296,323 +287,123 @@ export function UpdateActionControl({
   );
 }
 
-function Item({
-  m,
-  onAck,
-  onDone,
-  course,
-  action = true,
-}: {
-  m: CourseMessage;
-  onAck: () => void;
-  onDone: () => void;
-  course?: string;
-  action?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <li className={`update ${m.acknowledged_at ? "update-seen" : ""}`}>
-      <span className="update-icon" aria-hidden>
-        {m.source === "email" ? <Mail size={15} /> : <Megaphone size={15} />}
-      </span>
-      <div className="update-main">
-        <button
-          className="update-title"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-        >
-          {m.title}
-        </button>
-        <span className="update-meta">
-          {[
-            course,
-            m.source === "email"
-              ? m.sender?.replace(/\s*<.*>/, "").replace(/"/g, "")
-              : "Canvas",
-            dueLabel(m.posted_at),
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </span>
-        {m.flags.length > 0 && (
-          <span className="update-flags">
-            {m.flags.map((f) => (
-              <span key={f} className={`update-flag update-flag-${f}`}>
-                {FLAG_LABEL[f] ?? f}
-              </span>
-            ))}
-          </span>
-        )}
-        {action && !m.acknowledged_at && (
-          <UpdateActionControl m={m} onDone={onDone} />
-        )}
-        {open && (
-          <p className="update-body">
-            {m.body.slice(0, 1200)}
-            {m.body.length > 1200 ? "…" : ""}
-            {m.url && (
-              <>
-                {" "}
-                <a
-                  href={m.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="td-link"
-                >
-                  {m.source === "email" ? "Open in Outlook" : "Open in Canvas"}
-                </a>
-              </>
-            )}
-          </p>
-        )}
-      </div>
-      {!m.acknowledged_at && (
-        <button
-          className="td-link td-link-muted"
-          onClick={onAck}
-          aria-label={`Mark ${m.title} as seen`}
-        >
-          <Check size={14} aria-hidden /> Seen
-        </button>
-      )}
-    </li>
-  );
-}
-
-const matches = (m: CourseMessage, q: string) =>
-  !q ||
-  `${m.title}\n${m.sender ?? ""}\n${m.body}`
-    .toLowerCase()
-    .includes(q.toLowerCase());
+const cut = (t: string, n = 70) =>
+  t.replace(/^\(\w+ \d{4}\)\s*/, "").length > n
+    ? t
+        .replace(/^\(\w+ \d{4}\)\s*/, "")
+        .slice(0, n - 1)
+        .trimEnd() + "…"
+    : t.replace(/^\(\w+ \d{4}\)\s*/, "");
 
 /**
- * School course Overview: what still needs attention pinned on top, then
- * recent updates, with search once there are more than a handful.
+ * Today: what Life OS changed from your course updates and SFU mail this
+ * week (with Undo), and the few things it can't do alone. Hidden when
+ * there's nothing.
  */
-export function CourseUpdatesSection({ courseId }: { courseId: string }) {
-  const { messages, ack, reload } = useCourseUpdates();
-  const [all, setAll] = useState(false);
-  const [q, setQ] = useState("");
-  const mine = (messages ?? []).filter((m) => m.course_id === courseId);
-  if (!messages || !mine.length) return null;
-  const attention = mine.filter(
-    (m) =>
-      !m.acknowledged_at &&
-      m.action &&
-      m.action.kind !== "mark_recorded" &&
-      matches(m, q),
-  );
-  const rest = mine.filter((m) => !attention.includes(m) && matches(m, q));
-  const shown = all || q ? rest : rest.slice(0, 4);
-  return (
-    <section className="course-section" aria-label="Course updates">
-      <div className="course-section-head">
-        <h3>Updates</h3>
-        {mine.length > 5 && (
-          <label className="update-search">
-            <Search size={14} aria-hidden />
-            <input
-              type="search"
-              placeholder="Search this course's updates"
-              aria-label="Search this course's updates"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </label>
-        )}
-      </div>
-      {attention.length > 0 && (
-        <>
-          <p className="update-group-label">Needs your attention</p>
-          <ul className="update-list update-list-attention">
-            {attention.map((m) => (
-              <Item
-                key={m.id}
-                m={m}
-                onAck={() => void ack([m.id])}
-                onDone={() => void reload()}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-      {shown.length > 0 && (
-        <>
-          {attention.length > 0 && <p className="update-group-label">Recent</p>}
-          <ul className="update-list">
-            {shown.map((m) => (
-              <Item
-                key={m.id}
-                m={m}
-                action={false}
-                onAck={() => void ack([m.id])}
-                onDone={() => void reload()}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-      {!q && !all && rest.length > shown.length && (
-        <button className="td-link" onClick={() => setAll(true)}>
-          Show all {rest.length}
-        </button>
-      )}
-      {q && !attention.length && !shown.length && (
-        <p className="td-muted">Nothing matches “{q}”.</p>
-      )}
-    </section>
-  );
-}
-
-/**
- * Today: what changed this week. Up to 3 unseen updates that need
- * something, each with its one action. Hidden when there's nothing new.
- */
-export function WhatChangedCard({
+export function MailChangesCard({
   courseCode,
 }: {
   courseCode: (id: string | null) => string | undefined;
 }) {
-  const { attention, ack, reload } = useCourseUpdates();
-  if (!attention?.length) return null;
-  const top = attention.slice(0, 3);
-  return (
-    <section className="td-card" aria-label="What changed">
-      <div className="td-card-head">
-        <h2 className="td-card-title">What changed</h2>
-        {attention.length > top.length && (
-          <span className="td-muted small">{attention.length} this week</span>
-        )}
-      </div>
-      <ul className="update-list">
-        {top.map((m) => (
-          <Item
-            key={m.id}
-            m={m}
-            course={courseCode(m.course_id)}
-            onAck={() => void ack([m.id])}
-            onDone={() => void reload()}
-          />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/** Week → Inbox: SFU mail that isn't about a course, people first. */
-export function EmailList() {
-  const [messages, setMessages] = useState<CourseMessage[] | null>(null);
-  const [q, setQ] = useState("");
-  // Groups with new mail start open; a tap overrides that.
-  const [toggled, setToggled] = useState<Record<string, boolean>>({});
-  const load = useCallback(async () => {
+  const { feed, reload } = useMailChanges();
+  const [busy, setBusy] = useState(false);
+  if (!feed || (!feed.changes.length && !feed.needs.length)) return null;
+  const act = async (body: unknown) => {
+    setBusy(true);
     try {
-      const r = await calendarRequest<{ messages: CourseMessage[] }>(
-        "/api/v1/updates?scope=email",
-      );
-      setMessages(r.messages);
-    } catch {
-      setMessages([]);
+      await post(body);
+      await reload();
+    } finally {
+      setBusy(false);
     }
-  }, []);
-  useEffect(() => {
-    let live = true;
-    calendarRequest<{ messages: CourseMessage[] }>(
-      "/api/v1/updates?scope=email",
-    )
-      .then((r) => live && setMessages(r.messages))
-      .catch(() => live && setMessages([]));
-    return () => {
-      live = false;
-    };
-  }, []);
-  const groups = useMemo(() => {
-    const by = new Map<string, CourseMessage[]>();
-    for (const m of messages ?? []) {
-      if (!matches(m, q)) continue;
-      const g = mailGroup(m);
-      by.set(g, [...(by.get(g) ?? []), m]);
-    }
-    return GROUP_ORDER.filter((g) => by.has(g)).map((g) => ({
-      name: g,
-      items: by.get(g)!,
-      unseen: by.get(g)!.filter((m) => !m.acknowledged_at).length,
-    }));
-  }, [messages, q]);
-  if (!messages?.length) return null;
-  const ack = async (ids: string[]) => {
-    await post({ action: "ack", ids });
-    await load();
   };
-  const unseen = messages.filter((m) => !m.acknowledged_at);
   return (
-    <section className="panel" aria-label="SFU mail">
-      <div className="panel-heading">
-        <div className="panel-title">
-          <Mail aria-hidden />
-          <h2>SFU mail</h2>
-          {unseen.length > 0 && (
-            <span className="small muted">{unseen.length} new</span>
-          )}
-        </div>
-        {unseen.length > 1 && (
+    <section className="td-card" aria-label="Updated from your mail">
+      <div className="td-card-head">
+        <h2 className="td-card-title">Updated from your mail</h2>
+        {feed.changes.length > 0 && (
           <button
             className="td-link td-link-muted"
-            onClick={() => void ack(unseen.slice(0, 100).map((m) => m.id))}
+            disabled={busy}
+            onClick={() =>
+              void act({
+                action: "dismiss",
+                ids: feed.changes.map((c) => c.id),
+              })
+            }
           >
-            <Check size={14} aria-hidden /> Mark all seen
+            <Check size={14} aria-hidden /> Got it
           </button>
         )}
       </div>
-      <label className="update-search update-search-wide">
-        <Search size={14} aria-hidden />
-        <input
-          type="search"
-          placeholder="Search SFU mail"
-          aria-label="Search SFU mail"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </label>
-      {groups.map((g) => {
-        const expanded =
-          !!q || (toggled[g.name] ?? (g.name === "People" || g.unseen > 0));
-        return (
-          <div key={g.name} className="mail-group">
-            <button
-              className="mail-group-head"
-              aria-expanded={expanded}
-              onClick={() => setToggled((t) => ({ ...t, [g.name]: !expanded }))}
-            >
-              <ChevronDown
-                size={15}
-                aria-hidden
-                className={expanded ? "" : "mail-group-closed"}
-              />
-              <span>{g.name}</span>
-              <span className="mail-group-count">
-                {g.items.length}
-                {g.unseen ? ` · ${g.unseen} new` : ""}
+      <ul className="change-list">
+        {feed.changes.map((c) => {
+          const a = c.applied;
+          const code = courseCode(a.kind === "move_date" ? a.course_id : null);
+          return (
+            <li key={c.id} className="change">
+              <span className="change-icon" aria-hidden>
+                {a.kind === "move_date" ? (
+                  <CalendarClock size={15} />
+                ) : (
+                  <ListTodo size={15} />
+                )}
               </span>
+              <span className="change-text">
+                {a.kind === "move_date" ? (
+                  <>
+                    {code ? `${code} ` : ""}
+                    <strong>{a.assessment}</strong> moved to{" "}
+                    <strong>{friendlyDate(a.to)}</strong>
+                    {a.from_date ? (
+                      <span className="change-was">
+                        {" "}
+                        (was {friendlyDate(a.from_date)})
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    Task added: <strong>{cut(a.title, 60)}</strong>, due{" "}
+                    {friendlyDate(a.due_date)}
+                  </>
+                )}
+              </span>
+              <button
+                className="td-link td-link-muted"
+                disabled={busy}
+                aria-label={`Undo: ${a.kind === "move_date" ? a.assessment : a.title}`}
+                onClick={() => void act({ action: "undo", message_id: c.id })}
+              >
+                <Undo2 size={14} aria-hidden /> Undo
+              </button>
+            </li>
+          );
+        })}
+        {feed.needs.slice(0, 3).map((n) => (
+          <li key={n.id} className="change change-need">
+            <span className="change-icon" aria-hidden>
+              <ArrowRight size={15} />
+            </span>
+            <div className="change-text">
+              <span className="change-from">
+                {[courseCode(n.course_id), cut(n.title)]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+              <UpdateActionControl m={n} onDone={() => void reload()} />
+            </div>
+            <button
+              className="td-link td-link-muted"
+              disabled={busy}
+              aria-label={`Dismiss ${n.title}`}
+              onClick={() => void act({ action: "ack", ids: [n.id] })}
+            >
+              <Check size={14} aria-hidden /> Done
             </button>
-            {expanded && (
-              <ul className="update-list">
-                {g.items.slice(0, q ? 50 : 20).map((m) => (
-                  <Item
-                    key={m.id}
-                    m={m}
-                    onAck={() => void ack([m.id])}
-                    onDone={() => void load()}
-                  />
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
-      {q && !groups.length && (
-        <p className="td-muted">Nothing matches “{q}”.</p>
-      )}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
