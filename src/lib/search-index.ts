@@ -26,6 +26,8 @@ export type SearchSources = {
     assessments: Row[];
     study_topics: Row[];
   } | null;
+  /** Course updates and SFU mail (title, sender, opening text). */
+  mail?: Row[] | null;
 };
 
 const PAGES: SearchEntry[] = [
@@ -188,6 +190,24 @@ export function buildSearchIndex(src: SearchSources): SearchEntry[] {
     });
   for (const g of src.goals)
     out.push({ kind: "Goal", title: g.title, href: `/goals#goal-${g.id}` });
+  for (const m of src.mail ?? []) {
+    const course = m.course_id ? courseCode.get(str(m.course_id)) : undefined;
+    const sender = str(m.sender)
+      .replace(/\s*<.*>/, "")
+      .replace(/"/g, "");
+    out.push({
+      kind: m.source === "email" ? "Email" : "Announcement",
+      title: str(m.title),
+      subtitle: [course, m.source === "email" ? sender : "Canvas"]
+        .filter(Boolean)
+        .join(" · "),
+      href: m.course_id
+        ? `/areas/academics?course=${str(m.course_id)}`
+        : "/planner?section=inbox",
+      // Matching on the opening text, but mail ranks below your own records.
+      keywords: `${sender} ${str(m.body).slice(0, 400)}`,
+    });
+  }
   return out;
 }
 
@@ -224,6 +244,7 @@ export function searchEntries(index: SearchEntry[], query: string, limit = 24) {
       else if (title.includes(w)) score += 3;
     if (e.kind === "Page" || e.kind === "Settings") score += 3;
     if (e.kind === "Done task") score -= 10;
+    if (e.kind === "Email" || e.kind === "Announcement") score -= 5;
     scored.push({ e, score });
   }
   return scored

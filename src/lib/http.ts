@@ -20,9 +20,9 @@ export function checkMutation(request: Request) {
   const size = Number(request.headers.get("content-length") || 0);
   if (size > 65536) throw new ApiError(413, "Request is too large.");
 }
-export async function readJson(request: Request) {
+export async function readJson(request: Request, maxBytes = 65536) {
   const raw = await request.text();
-  if (new TextEncoder().encode(raw).length > 65536)
+  if (new TextEncoder().encode(raw).length > maxBytes)
     throw new ApiError(413, "Request is too large.");
   try {
     return JSON.parse(raw);

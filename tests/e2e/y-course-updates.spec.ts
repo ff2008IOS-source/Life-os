@@ -68,7 +68,7 @@ test("a forwarded course email that moves an exam shows on School and Today", as
   await expect(updates.getByText("Date or time change")).toBeVisible();
   await page.goto("/");
   const today = page
-    .getByRole("region", { name: "Course updates" })
+    .getByRole("region", { name: "What changed" })
     .filter({ visible: true });
   await expect(
     today.getByText("TEST 330: Exam 3 moved to December 9"),
@@ -121,7 +121,7 @@ test("a forwarded course email that moves an exam shows on School and Today", as
   });
   expect((await other.json()).added).toBe(2);
   await page.goto("/planner?section=inbox");
-  const mail = page.getByRole("region", { name: "Email" });
+  const mail = page.getByRole("region", { name: "SFU mail" });
   await expect(mail.getByText("[TEST] Team dinner Friday")).toBeVisible();
   await expect(mail.getByText("[TEST] Old practice schedule")).toBeVisible();
   await expect(mail.getByText("Reset your password")).toHaveCount(0);

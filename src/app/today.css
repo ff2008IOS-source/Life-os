@@ -1826,3 +1826,116 @@ html:not([data-diagnostics]) .tech-detail {
   align-items: center;
   gap: 12px;
 }
+
+/* Suggested actions on updates */
+.update-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 6px 0 2px;
+  font-size: 14px;
+  color: var(--text);
+}
+.update-action [role="alert"] {
+  color: var(--danger, var(--warning));
+  font-size: 13px;
+  flex-basis: 100%;
+}
+.update-action-done {
+  color: var(--success);
+  font-size: 13px;
+}
+.update-mark-fields {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--secondary);
+}
+.update-mark-fields input {
+  width: 72px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.update-group-label {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+.update-list-attention .update {
+  border-bottom-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.update-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--secondary);
+  max-width: 100%;
+}
+.update-search input {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  min-width: 0;
+  width: 220px;
+  outline: none;
+}
+.update-search-wide {
+  display: flex;
+  margin: 8px 0 12px;
+}
+.update-search-wide input {
+  width: 100%;
+}
+.course-section-head:has(.update-search) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mail-group {
+  border-top: 1px solid var(--border);
+}
+.mail-group-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.mail-group-head svg {
+  color: var(--secondary);
+  transition: transform 0.15s ease;
+}
+.mail-group-closed {
+  transform: rotate(-90deg);
+}
+.mail-group-count {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--secondary);
+}
+.mail-group .update-list {
+  padding-bottom: 8px;
+}

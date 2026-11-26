@@ -292,5 +292,68 @@ export async function assistantAcademicContext(
       }),
     });
   }
+  sources.push(...(await mailSources(db, user, question, previousQuestion)));
   return sources;
+}
+
+const MAIL_STOP = new Set(
+  "what when where which who whom does have from with about this that there their they them then than your mine into onto over under just please tell need know find show give email emails mail sfu".split(
+    " ",
+  ),
+);
+
+/**
+ * The SFU emails and course announcements that best match the question, so
+ * answers like "when is my enrolment date?" can cite the email itself.
+ */
+async function mailSources(
+  db: SupabaseClient,
+  user: string,
+  question: string,
+  previousQuestion: string,
+): Promise<AssistantSource[]> {
+  const words = [
+    ...new Set(
+      `${question} ${previousQuestion}`
+        .toLowerCase()
+        .match(/[a-z0-9]{3,}/g)
+        ?.filter((w) => !MAIL_STOP.has(w)) ?? [],
+    ),
+  ].slice(0, 12);
+  if (!words.length) return [];
+  const r = await db
+    .from("course_messages")
+    .select("id,course_id,source,title,body,sender,posted_at")
+    .eq("user_id", user)
+    .order("posted_at", { ascending: false })
+    .limit(500);
+  if (r.error) return [];
+  return (r.data ?? [])
+    .map((m) => {
+      const title = String(m.title).toLowerCase();
+      const body = String(m.body).toLowerCase();
+      const score = words.reduce(
+        (n, w) => n + (title.includes(w) ? 3 : 0) + (body.includes(w) ? 1 : 0),
+        0,
+      );
+      return { m, score };
+    })
+    .filter((x) => x.score >= 3)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(({ m }) => ({
+      id: `mail:${m.id}`,
+      title: `${m.source === "email" ? "Email" : "Announcement"}: ${m.title}`,
+      text: JSON.stringify({
+        from: String(m.sender ?? "Canvas").replace(/\s*<.*>/, ""),
+        received: m.posted_at,
+        subject: m.title,
+        excerpt: String(m.body).slice(0, 900),
+      }),
+      trust: "untrusted_email_text",
+      retrieved_at: m.posted_at,
+      url: m.course_id
+        ? `/areas/academics?course=${m.course_id}`
+        : "/planner?section=inbox",
+    }));
 }

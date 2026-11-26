@@ -2,6 +2,18 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-26: email you can act on
+
+| Change                                                                                                                                                                                        | Status              | Notes                                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| Today → **What changed**: up to 3 unseen updates from the last 7 days, each with one action and Seen; hidden when there's nothing new                                                         | Implemented, Tested | Replaces the old Course updates card                                                                 |
+| Suggested actions (`update-actions.ts`): enter a mark, move an assessment's date, check grading rules, add a task from a dated personal email                                                 | Implemented, Tested | Plain rules; nothing changes until the owner taps. The syllabus record wins over a blank Canvas copy |
+| Crowdmark workaround: inline mark entry with the exam pre-selected, plus **Read screenshot** (Groq free vision model, reply checked by a schema, owner confirms)                              | Implemented, Tested | Crowdmark has no student API and its emails carry no score                                           |
+| School course **Updates**: "Needs your attention" pinned, then Recent, Show all, and search over 5+ updates                                                                                   | Implemented, Tested |                                                                                                      |
+| Week → Inbox → **SFU mail**: people first, then groups (Registrar & enrolment, Money, Athletics, Housing, Research credits, Library, Canvas, Orders & accounts, Other) with counts and search | Implemented, Tested | Groups with new mail start open                                                                      |
+| ⌘K search and Ask Life OS include emails and announcements                                                                                                                                    | Implemented, Tested | The assistant cites the email (`mail:` source IDs), treated as untrusted text                        |
+| Imported history older than 14 days marked as seen                                                                                                                                            | Done in production  | So only current items ask for attention                                                              |
+
 ## 2026-11-26: Gmail bridge every 5 minutes; Outlook panel removed
 
 | Change                                                                                              | Status              | Notes                                                                                                                                      |
