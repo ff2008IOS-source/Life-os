@@ -27,6 +27,8 @@ Updated 2026-11-25. Priorities come from the scoring in [feature-comparison.md](
 | Visible reasons when the scheduler moves or declines work                                                                                         | Motion, Reclaim                        | Next                                                                                                       |
 | Ask Life OS: deterministic answers to "What should I focus on?", "What am I neglecting?", "Can I finish this week?", each citing the records used | LifeOS AI-style assistants             | Next. The assistant exists with Groq and source records; add deterministic answer cards with no AI needed. |
 
+| Course updates: Canvas announcements and forwarded course emails, flagged when they change grading or dates | owner request | **Done**; email needs the owner's one-time Gmail script setup |
+
 ## P2: useful
 
 | Item                                                   | Notes                                                                                            |

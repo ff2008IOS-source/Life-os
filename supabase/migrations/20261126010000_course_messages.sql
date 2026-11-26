@@ -40,6 +40,8 @@ alter table public.email_intake_tokens enable row level security;
 revoke all on public.email_intake_tokens from public, anon, authenticated;
 grant select on public.email_intake_tokens to authenticated;
 grant all on public.email_intake_tokens to service_role;
+-- The email intake matches messages to courses as the server role.
+grant select on public.courses to service_role;
 create policy own_read on public.email_intake_tokens for select to authenticated
   using (user_id = auth.uid() and public.is_approved_user());
 
