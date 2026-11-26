@@ -668,6 +668,9 @@ export function SheetRestPanel() {
               <option value="import_only">Import only</option>
               <option value="export_only">Export only</option>
               <option value="two_way">Two-way</option>
+              <option value="life_os_owned" disabled>
+                Life OS is the source of truth
+              </option>
               <option value="paused">Paused</option>
             </select>
           </label>
