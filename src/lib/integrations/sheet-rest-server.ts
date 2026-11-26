@@ -98,6 +98,7 @@ export function ingestionRows(
     field_key: string;
     values_map: Record<string, string>;
   }[] = [],
+  authored: Map<string, Set<string>> = new Map(),
 ) {
   const byKey = new Map(existing.map((r) => [r.external_key, r]));
   const seen = new Set<string>();
@@ -116,6 +117,7 @@ export function ingestionRows(
           remote.cells,
           d.mode,
           d.mode === "life_os_owned" && !!local?.frozen,
+          authored.get(local.id),
         )
       : { values: remote.values, baseline: remote.cells, conflicts: {} };
     const link = links.find((l) => l.row_id === local?.id);
@@ -308,11 +310,31 @@ export async function synchronizeDataset(user: string, id: string) {
       .eq("user_id", user)
       .eq("dataset_id", id);
     dbError(links.error);
+    const authored = new Map<string, Set<string>>();
+    if (d.mode === "life_os_owned") {
+      const written = await db
+        .from("sheet_rest_operations")
+        .select("row_id,intended")
+        .eq("user_id", user)
+        .eq("dataset_id", id)
+        .eq("status", "confirmed")
+        .in("operation_type", ["update", "insert"]);
+      dbError(written.error);
+      for (const w of written.data ?? [])
+        authored.set(
+          w.row_id,
+          new Set([
+            ...(authored.get(w.row_id) ?? []),
+            ...Object.keys(w.intended as object),
+          ]),
+        );
+    }
     const records = ingestionRows(
       d,
       snapshot,
       await ledgerRows(d),
       links.data!,
+      authored,
     );
     const ingest = await db.rpc("ingest_sheet_rest", {
       p_user: user,

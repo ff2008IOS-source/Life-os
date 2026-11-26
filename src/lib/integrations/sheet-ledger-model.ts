@@ -104,6 +104,8 @@ export function mergeSheetFields(
   mode = "two_way",
   /** Rows that held content when Life OS ownership began. They are history and are never overwritten. */
   frozen = false,
+  /** Fields Life OS itself has written to this row. Only these are overwritten when the sheet differs. */
+  authored: ReadonlySet<string> = new Set(),
 ) {
   const values: Values = { ...local },
     baseline: Cells = { ...base },
@@ -126,10 +128,11 @@ export function mergeSheetFields(
     } else if (same(l, r.value)) {
       values[key] = r.value;
       baseline[key] = r;
-    } else if (mode === "life_os_owned" && !frozen) {
-      // Life OS is the source of truth from owner_since onward: a hand edit in the sheet is
-      // drift. Keep the Life OS value, record the sheet value as the baseline so the difference
-      // becomes an ordinary pending write that the outbox can verify and log.
+    } else if (mode === "life_os_owned" && !frozen && authored.has(key)) {
+      // Life OS wrote this field, so it is the source of truth: a hand edit in the sheet is drift.
+      // Keep the Life OS value, record the sheet value as the baseline so the difference becomes
+      // an ordinary pending write that the outbox can verify and log. Fields Life OS never wrote
+      // (notes, hand-typed columns) merge normally and are never blanked.
       baseline[key] = r;
     } else if (mode === "life_os_owned") {
       // Historical row: the sheet is authoritative and nothing is ever written back.

@@ -41,7 +41,7 @@ Migrations are additive. Roll code back to the previous Vercel production deploy
 Mode `life_os_owned` makes Life OS the source of truth for a mapped table from `owner_since` onward.
 
 - Activation (`activate_owned`) is atomic and writes nothing to Google. Every row that already holds content in a writable column is marked `frozen`: it is history, the sheet stays authoritative, and a database trigger refuses any outbound operation on it. Empty rows and rows created later are owned.
-- On each sync a hand edit to an owned row is drift: Life OS keeps its value and queues a correction as an ordinary outbox operation. With automatic approval off, that operation is a draft (the preview) and nothing is written until approved.
+- On each sync a hand edit to a field Life OS itself wrote is drift: Life OS keeps its value and queues a correction as an ordinary outbox operation. Fields Life OS never wrote (notes, hand-typed columns) merge normally and are never blanked. With automatic approval off, that operation is a draft (the preview) and nothing is written until approved.
 - Content comes from Life OS records only (`career-sheet-content.ts`). Fields with no evidence are omitted, never blanked, so hand-written columns are untouched.
 - `undo` restores the values a confirmed update replaced, through the same draft/approve path. The change log is the list of confirmed operations; every step is also in `audit_logs`.
 - New rows require `allow_insert`, chosen at activation, and only writable or identity columns can be set.
