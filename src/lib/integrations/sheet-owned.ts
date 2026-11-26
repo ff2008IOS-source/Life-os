@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { addDays, format } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../auth";
 import { dbError } from "../http";
@@ -184,59 +185,125 @@ export async function proposeWeeklyReview(
     throw new ApiError(422, "This is not the Weekly Review table.");
   const start = monday(anyDayInWeek),
     next = format(addDays(new Date(start + "T12:00:00Z"), 7), "yyyy-MM-dd"),
-    nextEnd = format(addDays(new Date(next + "T12:00:00Z"), 7), "yyyy-MM-dd"),
-    today = format(new Date(), "yyyy-MM-dd");
-  const [courses, assessments, done, open] = await Promise.all([
+    nextEnd = format(addDays(new Date(next + "T12:00:00Z"), 7), "yyyy-MM-dd");
+  const zone = "America/Vancouver",
+    at = (day: string) => fromZonedTime(`${day}T00:00:00`, zone).toISOString(),
+    local = (iso: string) =>
+      formatInTimeZone(new Date(iso), zone, "yyyy-MM-dd");
+  const [courses, history, deadlines, done, open] = await Promise.all([
     db.from("courses").select("id,code").eq("user_id", user).limit(100),
+    // Canvas grade changes recorded during the review week (scored submissions only).
     db
-      .from("assessments")
-      .select("course_id,title,earned_score,maximum_score,due_date,dropped")
+      .from("canvas_grade_history")
+      .select("canvas_id,current_state,recorded_at")
       .eq("user_id", user)
+      .gte("recorded_at", at(start))
+      .lt("recorded_at", at(next))
       .limit(500),
+    // Canvas deadlines (a live view over synced assignments) for this and next week.
+    db
+      .from("canvas_deadlines")
+      .select("title,due_at,course_code,submission_state")
+      .eq("user_id", user)
+      .or("published.is.null,published.eq.true")
+      .gte("due_at", at(start))
+      .lt("due_at", at(nextEnd))
+      .order("due_at")
+      .limit(200),
     db
       .from("tasks")
       .select("id")
       .eq("user_id", user)
       .is("deleted_at", null)
-      .gte("completed_at", start + "T00:00:00Z")
-      .lt("completed_at", next + "T00:00:00Z")
+      .gte("completed_at", at(start))
+      .lt("completed_at", at(next))
       .limit(500),
     db
       .from("tasks")
-      .select("title,due_date,priority_order")
+      .select("title,due_date,due_at")
       .eq("user_id", user)
       .is("deleted_at", null)
       .not("status", "in", "(completed,cancelled)")
-      .order("due_date", { nullsFirst: false })
       .limit(200),
   ]);
-  for (const x of [courses, assessments, done, open]) dbError(x.error);
+  for (const x of [courses, history, deadlines, done, open]) dbError(x.error);
   const code = new Map(courses.data!.map((c) => [c.id, c.code as string]));
-  const all: ReviewAssessment[] = assessments
-    .data!.filter((a) => !a.dropped)
+  // submission:<course>:<assignment>:<student> -> assessment source_key canvas:<course>:<assignment>
+  const keys = [
+    ...new Set(
+      history
+        .data!.filter(
+          (h) =>
+            (h.current_state as { score?: number | null })?.score != null &&
+            String(h.canvas_id).split(":").length >= 3,
+        )
+        .map(
+          (h) =>
+            `canvas:${String(h.canvas_id).split(":")[1]}:${String(h.canvas_id).split(":")[2]}`,
+        ),
+    ),
+  ];
+  const graded = keys.length
+    ? await db
+        .from("assessments")
+        .select("course_id,title,earned_score,maximum_score,due_date,dropped")
+        .eq("user_id", user)
+        .in("source_key", keys)
+        .limit(200)
+    : { data: [], error: null };
+  dbError(graded.error);
+  const gradedThisWeek: ReviewAssessment[] = (graded.data ?? [])
+    .filter((a) => !a.dropped && a.earned_score != null)
     .map((a) => ({
       course: code.get(a.course_id) ?? "Course",
       title: a.title,
       earned: a.earned_score,
       max: a.maximum_score,
       due_date: a.due_date,
-      graded: a.earned_score != null,
+      graded: true,
     }));
-  const inWeek = (x: string | null, a: string, b: string) =>
-    !!x && x >= a && x < b;
+  const open_ = (deadlines.data ?? []).filter(
+    (d) =>
+      !["submitted", "graded", "excused"].includes(d.submission_state ?? ""),
+  );
+  const inWeek = (iso: string | null, a: string, b: string) => {
+    const day = iso ? local(iso) : null;
+    return !!day && day >= a && day < b;
+  };
+  const today = format(new Date(), "yyyy-MM-dd");
+  const dueNextWeek: ReviewAssessment[] = open_
+    .filter((d) => inWeek(d.due_at, start, nextEnd))
+    .map((d) => ({
+      course: d.course_code ?? "Course",
+      title: d.title,
+      earned: null,
+      max: null,
+      due_date: local(d.due_at),
+      graded: false,
+    }));
+  const tasks = open.data!.map((t) => ({
+    title: t.title as string,
+    due_date:
+      (t.due_date as string | null) ?? (t.due_at ? local(t.due_at) : null),
+  }));
+  const nextWeekItems: ReviewTask[] = [
+    ...tasks.filter((t) =>
+      inWeek(t.due_date && t.due_date + "T12:00:00Z", next, nextEnd),
+    ),
+    ...open_
+      .filter((d) => inWeek(d.due_at, next, nextEnd))
+      .map((d) => ({
+        title: `${d.course_code ?? ""} ${d.title}`.trim(),
+        due_date: local(d.due_at),
+      })),
+  ].sort((x, y) => String(x.due_date).localeCompare(String(y.due_date)));
   const values = buildWeeklyReview({
     weekStart: start,
-    gradedThisWeek: all.filter(
-      (a) => a.graded && inWeek(a.due_date, start, next),
-    ),
+    gradedThisWeek,
     completedTaskCount: done.data!.length,
-    overdue: open.data!.filter((t) => t.due_date && t.due_date < today),
-    dueNextWeek: all.filter(
-      (a) => !a.graded && inWeek(a.due_date, next, nextEnd),
-    ),
-    topTasksNextWeek: open.data!.filter((t) =>
-      inWeek(t.due_date, next, nextEnd),
-    ) as ReviewTask[],
+    overdue: tasks.filter((t) => t.due_date && t.due_date < today),
+    dueNextWeek,
+    topTasksNextWeek: nextWeekItems,
   });
   const key = [values.week_of];
   const row = (await ledgerRows(d)).find(
