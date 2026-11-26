@@ -32,6 +32,28 @@ export type Dataset = {
   last_write_at: string | null;
   last_error: string | null;
 };
+const OPERATION_STATUS: Record<string, string> = {
+  draft: "Needs your approval",
+  approved: "Waiting to be written to the sheet",
+  writing: "Writing to the sheet…",
+  unknown: "Checking that it was written…",
+  conflict: "Needs your decision",
+  failed: "Could not be written",
+};
+function describeChange(
+  d: Dataset,
+  type: string,
+  intended: Values,
+  limit = 3,
+): string {
+  const names = Object.keys(intended ?? {})
+    .filter((k) => !d.config.columns.find((c) => c.key === k)?.key_part)
+    .map((k) => d.config.columns.find((c) => c.key === k)?.header ?? k);
+  const verb = type === "insert" ? "New row" : "Updated";
+  if (!names.length) return verb;
+  const shown = names.slice(0, limit).join(", ");
+  return `${verb}: ${shown}${names.length > limit ? ` and ${names.length - limit} more` : ""}`;
+}
 export type Row = {
   id: string;
   version: number;
@@ -273,8 +295,13 @@ export function SheetRestPanel() {
       );
       return;
     }
-    await act({ action: "sync", dataset_id: datasetId });
-    setNotice("Next week's review was written to the sheet.");
+    const synced = await act({ action: "sync", dataset_id: datasetId });
+    if (!synced) return;
+    setNotice(
+      synced.held_outbound || synced.conflicts
+        ? "Next week's review is saved in Life OS and will be written to the sheet on the next sync."
+        : "Next week's review was written to the sheet.",
+    );
   }
   async function syncAll() {
     if (batchController.current) return;
@@ -835,11 +862,9 @@ export function SheetRestPanel() {
           )}
           {state?.operations?.map((o) => (
             <div className="stack" key={o.id}>
-              <strong>
-                {o.operation_type} · {o.status}
-              </strong>
-              <p className="small" style={{ overflowWrap: "anywhere" }}>
-                {JSON.stringify(o.intended)}
+              <strong>{describeChange(d, o.operation_type, o.intended)}</strong>
+              <p className="small muted">
+                {OPERATION_STATUS[o.status] ?? "In progress"}
               </p>
               {o.last_error && <p className="error-message">{o.last_error}</p>}
               {o.status === "draft" && (
@@ -874,7 +899,7 @@ export function SheetRestPanel() {
               <div className="stack" key={c.id}>
                 <p className="small" style={{ overflowWrap: "anywhere" }}>
                   {c.verified_at ? stamp(c.verified_at) : ""} ·{" "}
-                  {c.operation_type} · {JSON.stringify(c.intended)}
+                  {describeChange(d, c.operation_type, c.intended)}
                 </p>
                 {c.operation_type === "update" && (
                   <Button
@@ -1187,8 +1212,12 @@ export function SheetRestPanel() {
               <summary>Recent synchronization history</summary>
               {state?.runs?.map((r) => (
                 <p className="small" key={r.id}>
-                  {stamp(r.started_at)} · {r.status} ·{" "}
-                  {JSON.stringify(r.summary)}
+                  {stamp(r.started_at)} ·{" "}
+                  {r.status === "completed"
+                    ? "Synced"
+                    : r.status === "partial"
+                      ? "Synced, some changes waiting"
+                      : "Did not sync"}
                 </p>
               ))}
             </details>
