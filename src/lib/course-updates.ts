@@ -75,3 +75,7 @@ export function isPasswordReset(subject: string, body: string) {
     PASSWORD_RESET.test(subject) || PASSWORD_RESET.test(body.slice(0, 1500))
   );
 }
+
+/** Only SFU mail is kept: from, to or cc an sfu.ca address. */
+export const isSfuMail = (from: string, to: string) =>
+  /@(?:[a-z0-9-]+\.)*sfu\.ca\b/i.test(`${from} ${to}`);

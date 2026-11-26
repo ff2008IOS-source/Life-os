@@ -77,33 +77,55 @@ test("a forwarded course email that moves an exam shows on School and Today", as
     .getByRole("button", { name: /Mark TEST 330: Exam 3 moved/ })
     .click();
   await expect(today).toHaveCount(0);
-  // Everything else lands in Week → Inbox; password resets never do.
+  // Other SFU mail lands in Week → Inbox; non-SFU mail and password resets
+  // never do. Older mail forwarded as an attachment (.eml) is unpacked.
+  const eml = [
+    "From: SFU MBB <coach@sfu.ca>",
+    "To: Player <player@sfu.ca>",
+    "Subject: [TEST] Old practice schedule",
+    "Date: Mon, 2 Nov 2026 09:00:00 -0800",
+    "Message-ID: <old-1@sfu.ca>",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "Practice is at 6pm in the West Gym.",
+  ].join("\r\n");
   const other = await page.request.post("/api/internal/intake/email", {
     data: {
       emails: [
         {
           id: "msg-2",
           subject: "[TEST] Team dinner Friday",
-          from: "Friend <friend@example.invalid>",
+          from: "Teammate <mate@sfu.ca>",
           date: new Date().toISOString(),
           body: "Dinner is moved to 7pm.",
         },
         {
           id: "msg-3",
           subject: "Reset your password",
-          from: "Accounts <no-reply@example.invalid>",
+          from: "Accounts <no-reply@sfu.ca>",
           date: new Date().toISOString(),
           body: "Click to reset your password.",
         },
+        {
+          id: "msg-4",
+          subject: "[TEST] Holiday sale",
+          from: "Shop <news@example.invalid>",
+          to: "someone@example.invalid",
+          date: new Date().toISOString(),
+          body: "40% off.",
+        },
+        { id: "msg-5#0", raw: eml },
       ],
     },
     headers: { Authorization: `Bearer ${token}` },
   });
-  expect((await other.json()).added).toBe(1);
+  expect((await other.json()).added).toBe(2);
   await page.goto("/planner?section=inbox");
   const mail = page.getByRole("region", { name: "Email" });
   await expect(mail.getByText("[TEST] Team dinner Friday")).toBeVisible();
+  await expect(mail.getByText("[TEST] Old practice schedule")).toBeVisible();
   await expect(mail.getByText("Reset your password")).toHaveCount(0);
+  await expect(mail.getByText("[TEST] Holiday sale")).toHaveCount(0);
   await page.goto("/");
   await expect(page.getByText("[TEST] Team dinner Friday")).toHaveCount(0);
 });

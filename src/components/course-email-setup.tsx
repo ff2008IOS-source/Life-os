@@ -126,6 +126,11 @@ export function CourseEmailSetup() {
             <strong>Run</strong>. Allow the Gmail and external-request
             permissions. It then checks every hour.
           </li>
+          <li>
+            For <strong>older SFU mail</strong>: in Outlook, select the emails
+            (up to about 50 at a time), choose <em>Forward</em> and send them to
+            your Gmail. Each one is unpacked with its original sender and date.
+          </li>
           <li className="small muted">
             This link is shown once. It only lets that script add emails,
             nothing else.
