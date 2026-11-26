@@ -1,5 +1,6 @@
 import { calendarCoverage } from "./calendar-availability";
 import { recurringEventIds } from "./recurring-events";
+import { isClash, OVERLAP_PREFIX } from "./overlaps";
 import { aggregateSyncHealth, type SyncSource } from "./sync-health";
 import { realWorkspace } from "./real-workspace";
 import { z } from "zod";
@@ -205,6 +206,14 @@ export function buildBriefing(input: BriefingInput) {
     selected.some((c) => c.id === e.calendar_id),
   );
   const repeating = recurringEventIds(selectedEvents);
+  // Overlaps marked "It's fine" anywhere in Life OS.
+  const acceptedOverlaps = new Set(
+    input.actions
+      .filter(
+        (a) => a.kind === "dismiss" && a.item_key.startsWith(OVERLAP_PREFIX),
+      )
+      .map((a) => a.item_key),
+  );
   const events = groupCalendarEvents(selectedEvents).map((g) => ({
     ...g.event,
     busy_status: g.sources.some((e) => e.busy_status === "busy")
@@ -238,7 +247,22 @@ export function buildBriefing(input: BriefingInput) {
       const a = interval(weekBusy[i]),
         b = interval(weekBusy[j]);
       if (b.start >= a.end) break;
-      if (a.start < b.end)
+      if (
+        a.start < b.end &&
+        isClash(
+          {
+            title: weekBusy[i].title,
+            start: a.start,
+            recurring: repeating.has(weekBusy[i].id),
+          },
+          {
+            title: weekBusy[j].title,
+            start: b.start,
+            recurring: repeating.has(weekBusy[j].id),
+          },
+          acceptedOverlaps,
+        )
+      )
         weekConflicts.push({
           first: weekBusy[i].title,
           second: weekBusy[j].title,
@@ -513,7 +537,15 @@ export function buildBriefing(input: BriefingInput) {
       if (a.busy_status !== "busy" || b.busy_status !== "busy") continue;
       const x = interval(a),
         y = interval(b);
-      if (x.start < y.end && y.start < x.end)
+      if (
+        x.start < y.end &&
+        y.start < x.end &&
+        isClash(
+          { title: a.title, start: x.start, recurring: repeating.has(a.id) },
+          { title: b.title, start: y.start, recurring: repeating.has(b.id) },
+          acceptedOverlaps,
+        )
+      )
         add(
           `overlap:${[a.id, b.id].sort().join(":")}`,
           "possible",

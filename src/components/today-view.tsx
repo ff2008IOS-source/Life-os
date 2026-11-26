@@ -1,5 +1,7 @@
 "use client";
 import { MailChangesCard } from "./course-updates";
+import { useAcceptedOverlaps } from "./use-overlaps";
+import { overlapKey } from "@/lib/overlaps";
 import { WeekFitLine } from "./week-fit-line";
 import { wrapUp } from "@/lib/wrap-up";
 import { FollowUpNudge } from "./career-follow-ups";
@@ -75,7 +77,8 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
   const [busy, setBusy] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState("");
-  const [hiddenClash, setHiddenClash] = useState<string | null>(null);
+  const { accepted: acceptedOverlaps, accept: acceptOverlap } =
+    useAcceptedOverlaps();
 
   const agenda: Agenda | null = useMemo(() => {
     if (!b) return null;
@@ -97,11 +100,13 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       // Suggested work stays inside the saved scheduling window (9 AM–9 PM).
       dayStartHour: b.planning.policy.start_hour,
       dayEndHour: b.planning.policy.end_hour,
+      acceptedOverlaps,
     });
   }, [
     b,
     now,
     zone,
+    acceptedOverlaps,
     data.tasks,
     data.goals,
     data.goalTasks,
@@ -359,9 +364,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
     ? (b?.assessments.find((a) => a.course_id === reviewTopic.course_id)
         ?.course ?? null)
     : null;
-  const clash = agenda.clashes.find(
-    (c) => `${c.a.title}|${c.b.title}|${c.at}` !== hiddenClash,
-  );
+  const clash = agenda.clashes[0];
   const nudgeOverdue = agenda.nudges.find((n) => n.kind === "overdue");
   const nudgeStep = agenda.nudges.find((n) => n.kind === "no-next-step");
   const suggested = new Set(
@@ -680,8 +683,8 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                 <button
                   className="td-btn td-btn-ghost"
                   onClick={() =>
-                    setHiddenClash(
-                      `${clash.a.title}|${clash.b.title}|${clash.at}`,
+                    void acceptOverlap(overlapKey(clash.a, clash.b)).catch(() =>
+                      notify("Couldn’t save that. Try again."),
                     )
                   }
                 >

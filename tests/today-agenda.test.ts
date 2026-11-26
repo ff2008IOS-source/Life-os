@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { buildAgenda, relativeDue, type AgendaInput } from "@/lib/today-agenda";
+import { overlapKey } from "@/lib/overlaps";
 import { goalInput, taskInput, type Goal, type Task } from "@/lib/schemas";
 
 const zone = "America/Vancouver";
@@ -152,6 +153,16 @@ describe("buildAgenda", () => {
     expect(hm(a.clashes[0].nextFree!.start)).toBe("16:30");
     const flagged = a.timeline.filter((e) => e.kind === "event" && e.clash);
     expect(flagged).toHaveLength(2);
+  });
+
+  it("an overlap marked It's fine is no longer a clash, anywhere on the timeline", () => {
+    const first = buildAgenda(monday).clashes[0];
+    const a = buildAgenda({
+      ...monday,
+      acceptedOverlaps: new Set([overlapKey(first.a, first.b)]),
+    });
+    expect(a.clashes).toEqual([]);
+    expect(a.timeline.filter((e) => e.kind === "event" && e.clash)).toEqual([]);
   });
 
   it("puts the soonest deadline into the first window and skips submitted work", () => {

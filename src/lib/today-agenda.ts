@@ -1,4 +1,5 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { isClash } from "./overlaps";
 import type { Goal, Milestone, Task } from "./schemas";
 
 /**
@@ -57,6 +58,8 @@ export type AgendaInput = {
   focusMinutesThisWeek: number;
   /** Work sessions already reserved on the Life OS calendar. */
   blocks?: AgendaBlock[];
+  /** Overlaps the owner marked "It's fine" (see overlaps.ts). */
+  acceptedOverlaps?: ReadonlySet<string>;
   /** Earliest and latest local hour suggestions may use. */
   dayStartHour?: number;
   dayEndHour?: number;
@@ -243,8 +246,8 @@ export function buildAgenda(input: AgendaInput) {
         b = timed[j];
       if (b.start >= a.end) break;
       if (a.title === b.title && a.start === b.start) continue;
-      // Standing weekly overlaps are known; only a one-off event makes a clash.
-      if (a.recurring && b.recurring) continue;
+      // Weekly pairs and pairs marked "It's fine" aren't clashes.
+      if (!isClash(a, b, input.acceptedOverlaps ?? new Set())) continue;
       clashing.add(a.id).add(b.id);
       if (a.end > nowMs)
         clashes.push({

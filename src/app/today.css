@@ -2504,3 +2504,14 @@ label.update-search svg {
     display: none;
   }
 }
+.cal-clash-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  font-size: 14px;
+}
