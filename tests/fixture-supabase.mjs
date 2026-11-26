@@ -368,10 +368,16 @@ const server = createServer((req, res) => {
               "add_beta_examples",
               "configure_recurrence",
               "reorder_priorities",
+              "set_ui_preference",
             ].includes(fn)
           )
             throw Error("Unknown RPC");
-          const entries = Object.entries(body);
+          // PostgREST sends jsonb arguments as JSON; do the same here.
+          const entries = Object.entries(body).map(([key, value]) =>
+            fn === "set_ui_preference" && key === "p_value"
+              ? [key, JSON.stringify(value)]
+              : [key, value],
+          );
           const result = await db.query(
             `select public.${quote(fn)}(${entries.map(([key], i) => quote(key) + " => $" + (i + 1)).join(",")}) as value`,
             entries.map(([, value]) => value),

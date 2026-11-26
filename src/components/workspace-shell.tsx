@@ -1,4 +1,5 @@
 "use client";
+import { usePreference } from "./use-preference";
 import { availableProject } from "@/lib/visible-areas";
 import { OfflineNotice } from "./offline-notice";
 import Link from "next/link";
@@ -106,7 +107,11 @@ export function WorkspaceShell({
     };
   }, []);
   const [editor, setEditor] = useState<{ task: Task | null } | null>(null);
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const [collapsed, saveCollapsed] = usePreference<boolean>(
+    "sidebar_collapsed",
+    initialCollapsed,
+  );
+  const setCollapsed = saveCollapsed;
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [searchAcademic, setSearchAcademic] = useState<AcademicData | null>(

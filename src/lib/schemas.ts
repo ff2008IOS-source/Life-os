@@ -196,6 +196,8 @@ export type Profile = {
   timezone: string;
   theme: "dark" | "light" | "system";
   density: "comfortable" | "compact";
+  /** Display preferences saved to the account (see preferences route). */
+  ui_preferences?: Record<string, unknown>;
   version: number;
 };
 export type Workspace = {

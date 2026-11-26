@@ -76,6 +76,16 @@ test("an overlap marked It’s fine stays fine after a refresh", async ({
   await expect(
     page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
+  // Calendar filters are saved to the account; start from the defaults.
+  for (const [key, value] of [
+    ["calendar_kind", "all"],
+    ["calendar_hidden", []],
+    ["calendar_view", "week"],
+  ] as const)
+    await page.request.patch("/api/v1/preferences", {
+      data: { key, value },
+      headers: { Origin: "http://127.0.0.1:3000" },
+    });
   await page.goto("/planner");
   const calendar = page.locator(".planner-calendar");
   const lecture = calendar

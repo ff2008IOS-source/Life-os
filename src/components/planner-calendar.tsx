@@ -42,6 +42,7 @@ import {
 import { isGame } from "@/lib/basketball";
 import { isClash, overlapKey } from "@/lib/overlaps";
 import { useAcceptedOverlaps } from "./use-overlaps";
+import { usePreference } from "./use-preference";
 import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
 
@@ -131,10 +132,16 @@ export function PlannerCalendar({
   const until = format(addDays(days.at(-1)!, 1), "yyyy-MM-dd");
   const { data, events, error, busy, message, setMessage, sync, reload } =
     useCalendar(from, until);
+  // Saved to the account so they hold on every device.
+  const [hidden, setHiddenPref] = usePreference<string[]>(
+    "calendar_hidden",
+    [],
+  );
+  const [group, setGroup] = usePreference<boolean>("calendar_group", true);
+  const [kind, setKind] = usePreference<string>("calendar_kind", "all");
+  const setHidden = (f: (old: string[]) => string[]) =>
+    setHiddenPref(f(hidden));
   const [menu, setMenu] = useState(false),
-    [hidden, setHidden] = useState<string[]>([]),
-    [group, setGroup] = useState(true),
-    [kind, setKind] = useState("all"),
     [details, setDetails] = useState<EventGroup | null>(null),
     [dayDetail, setDayDetail] = useState<string | null>(null),
     [deadlines, setDeadlines] = useState<Deadline[]>([]),

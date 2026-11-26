@@ -1,32 +1,24 @@
 "use client";
-import { useEffect, useState } from "react";
-
-const KEY = "lifeos.technical-details";
-
-function read() {
-  try {
-    return localStorage.getItem(KEY) === "1";
-  } catch {
-    return false;
-  }
-}
+import { useEffect } from "react";
+import { usePreference } from "./use-preference";
 
 function apply(on: boolean) {
   if (on) document.documentElement.setAttribute("data-diagnostics", "");
   else document.documentElement.removeAttribute("data-diagnostics");
 }
 
-/** Applies the saved preference once the app loads. */
+/** Applies the account's saved preference once the app loads. */
 export function useTechnicalDetails() {
-  useEffect(() => apply(read()), []);
+  const [on] = usePreference<boolean>("technical_details", false);
+  useEffect(() => apply(on), [on]);
 }
 
 /**
  * Sources, verification states and record versions are hidden from ordinary
- * views. This switch shows them again, on this device only.
+ * views. This switch shows them again, on every device.
  */
 export function TechnicalDetailsToggle() {
-  const [on, setOn] = useState(read);
+  const [on, setOn] = usePreference<boolean>("technical_details", false);
   return (
     <label className="inline small">
       <input
@@ -36,9 +28,6 @@ export function TechnicalDetailsToggle() {
           const next = e.currentTarget.checked;
           setOn(next);
           apply(next);
-          try {
-            localStorage.setItem(KEY, next ? "1" : "0");
-          } catch {}
         }}
       />
       Show technical details (sources, verification, record versions)
