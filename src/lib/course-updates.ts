@@ -10,7 +10,7 @@ const RULES: Record<UpdateFlag, RegExp> = {
     /\b(weight(?:ed|ing|s)?|worth|grading (?:scheme|policy|breakdown)|count(?:s|ed)? (?:for|towards?)|drop(?:ped)? (?:the )?lowest|reweigh|curve|bonus (?:marks?|points?)|out of \d+|percent(?:age)? of (?:your|the) (?:final )?grade)\b/i,
   schedule:
     /\b(postpone[sd]?|reschedul\w*|moved? (?:to|from)|new (?:date|time|room|location)|due date|deadline (?:is|has been)?\s*(?:extended|changed|moved)|extension|cancel(?:l?ed|ling)|no (?:class|lecture|tutorial)|room change|location change)\b/i,
-  mark: /\b(grades? (?:are|have been|is) (?:now )?(?:posted|released|available|returned)|marks? (?:are|have been) (?:posted|released|returned)|results? (?:are|is) (?:now )?available|graded|crowdmark)\b/i,
+  mark: /\b(grades? (?:are |have been |is )?(?:now )?(?:posted|released|available|returned)|marks? (?:are|have been) (?:posted|released|returned)|results? (?:are|is) (?:now )?available|(?:feedback and )?scores? (?:for [^.\n]{1,60} )?(?:are|is) (?:now )?ready|graded|crowdmark)\b/i,
 };
 
 export function updateFlags(title: string, body: string): UpdateFlag[] {
