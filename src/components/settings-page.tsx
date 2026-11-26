@@ -18,7 +18,6 @@ import { AccountDeletion } from "./account-deletion";
 import { MfaPanel } from "./mfa-panel";
 import { NewTermSetup } from "./new-term-setup";
 import { CourseEmailSetup } from "./course-email-setup";
-import { OutlookConnect } from "./outlook-connect";
 import { TechnicalDetailsToggle } from "./technical-details";
 import { CareerPanel } from "./career-panel";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
@@ -185,7 +184,6 @@ export function SettingsPage({
             </div>
             <NewTermSetup />
             <div className="settings-grid">
-              <OutlookConnect />
               <CourseEmailSetup />
             </div>
             <h2 className="settings-group">Spreadsheets</h2>
