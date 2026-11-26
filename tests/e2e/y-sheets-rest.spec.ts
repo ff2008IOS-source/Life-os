@@ -113,6 +113,7 @@ test("Sheets table controls preserve formulas, review conflicts and require expl
   await page.goto("/settings?section=integrations");
   const panel = page.getByRole("region", { name: "Two-way Google Sheets" });
   await panel.getByLabel("Connected tables").selectOption(dataset);
+  await panel.getByText("Settings, records and history").click();
   await panel.getByText("test-row · conflict", { exact: true }).click();
   await expect(
     panel.getByText("Calculated · Formula (read-only)", { exact: false }),
