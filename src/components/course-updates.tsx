@@ -216,3 +216,72 @@ export function CourseUpdatesCard({
     </section>
   );
 }
+
+/** Week → Inbox: emails that aren't about a course (kept for 60 days). */
+export function EmailList() {
+  const [messages, setMessages] = useState<CourseMessage[] | null>(null);
+  const [all, setAll] = useState(false);
+  const load = useCallback(async () => {
+    try {
+      const r = await calendarRequest<{ messages: CourseMessage[] }>(
+        "/api/v1/updates?scope=email",
+      );
+      setMessages(r.messages);
+    } catch {
+      setMessages([]);
+    }
+  }, []);
+  useEffect(() => {
+    let live = true;
+    calendarRequest<{ messages: CourseMessage[] }>(
+      "/api/v1/updates?scope=email",
+    )
+      .then((r) => live && setMessages(r.messages))
+      .catch(() => live && setMessages([]));
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!messages?.length) return null;
+  const unseen = messages.filter((m) => !m.acknowledged_at);
+  const shown = all ? messages : messages.slice(0, 8);
+  const ack = async (ids: string[]) => {
+    await calendarRequest("/api/v1/updates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ack", ids }),
+    });
+    await load();
+  };
+  return (
+    <section className="panel" aria-label="Email">
+      <div className="panel-heading">
+        <div className="panel-title">
+          <Mail aria-hidden />
+          <h2>Email</h2>
+          {unseen.length > 0 && (
+            <span className="small muted">{unseen.length} new</span>
+          )}
+        </div>
+        {unseen.length > 1 && (
+          <button
+            className="td-link td-link-muted"
+            onClick={() => void ack(unseen.slice(0, 100).map((m) => m.id))}
+          >
+            <Check size={14} aria-hidden /> Mark all seen
+          </button>
+        )}
+      </div>
+      <ul className="update-list">
+        {shown.map((m) => (
+          <Item key={m.id} m={m} onAck={() => void ack([m.id])} />
+        ))}
+      </ul>
+      {!all && messages.length > shown.length && (
+        <button className="td-link" onClick={() => setAll(true)}>
+          Show all {messages.length}
+        </button>
+      )}
+    </section>
+  );
+}
