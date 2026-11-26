@@ -14,14 +14,21 @@ const LIFE_OS_URL = ${JSON.stringify(endpoint)};
 const LIFE_OS_TOKEN = ${JSON.stringify(token)};
 // SFU mail only. Your Gmail's own mail is never sent.
 const SFU = "{to:sfu.ca cc:sfu.ca from:sfu.ca}";
+// Choose setUp and press Run once: checks every hour from now on.
+function setUp() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger("sendCourseEmails").timeBased().everyHours(1).create();
+  sendCourseEmails();
+}
+
 // Password-reset emails never leave Gmail.
 const PASSWORD_RESET = ${PASSWORD_RESET.toString()};
 
-function isPasswordReset(subject, body) {
-  return PASSWORD_RESET.test(subject) || PASSWORD_RESET.test(body.slice(0, 1500));
+function isPasswordReset_(subject, body) {
+  return PASSWORD_RESET.test(subject || "") || PASSWORD_RESET.test((body || "").slice(0, 1500));
 }
 
-function post(emails) {
+function post_(emails) {
   const r = UrlFetchApp.fetch(LIFE_OS_URL, {
     method: "post",
     contentType: "application/json",
@@ -33,7 +40,7 @@ function post(emails) {
 }
 
 // Older emails you forward from Outlook arrive as attached .eml files.
-function attachedEmails(m) {
+function attachedEmails_(m) {
   return m.getAttachments({ includeInlineImages: false }).filter(function (a) {
     return a.getContentType() === "message/rfc822" || /\\.eml$/i.test(a.getName());
   });
@@ -50,7 +57,7 @@ function sendCourseEmails() {
   let size = 0;
   function add(item) {
     const n = JSON.stringify(item).length;
-    if (batch.length && (batch.length === 25 || size + n > 800000)) { post(batch); batch = []; size = 0; }
+    if (batch.length && (batch.length === 25 || size + n > 800000)) { post_(batch); batch = []; size = 0; }
     batch.push(item);
     size += n;
   }
@@ -65,7 +72,7 @@ function sendCourseEmails() {
         if (me && from.toLowerCase().indexOf(me) !== -1) return; // your own replies
         if (when > newest) newest = when;
         const id = m.getHeader("Message-ID") || m.getId();
-        const eml = attachedEmails(m);
+        const eml = attachedEmails_(m);
         if (eml.length) {
           eml.forEach(function (a, i) {
             add({ id: id + "#" + i, raw: a.getDataAsString().slice(0, 400000) });
@@ -74,7 +81,7 @@ function sendCourseEmails() {
         }
         const subject = m.getSubject() || "";
         const body = (m.getPlainBody() || "").slice(0, 10000);
-        if (isPasswordReset(subject, body)) return;
+        if (isPasswordReset_(subject, body)) return;
         add({
           id: id,
           subject: subject,
@@ -87,15 +94,9 @@ function sendCourseEmails() {
     });
     if (threads.length < 50) break;
   }
-  if (batch.length) post(batch);
+  if (batch.length) post_(batch);
   props.setProperty("LIFE_OS_SINCE", String(newest));
 }
 
-// Run once: checks every hour from now on.
-function setUp() {
-  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger("sendCourseEmails").timeBased().everyHours(1).create();
-  sendCourseEmails();
-}
 `;
 }
