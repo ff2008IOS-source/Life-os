@@ -112,23 +112,6 @@ export function WorkspaceShell({
   const [searchAcademic, setSearchAcademic] = useState<AcademicData | null>(
     null,
   );
-  const [searchMail, setSearchMail] = useState<
-    Record<string, unknown>[] | null
-  >(null);
-  useEffect(() => {
-    if (!search || searchMail) return;
-    let live = true;
-    type Feed = { messages: Record<string, unknown>[] };
-    void Promise.all([
-      calendarRequest<Feed>("/api/v1/updates"),
-      calendarRequest<Feed>("/api/v1/updates?scope=email"),
-    ])
-      .then(([a, b]) => live && setSearchMail([...a.messages, ...b.messages]))
-      .catch(() => live && setSearchMail([]));
-    return () => {
-      live = false;
-    };
-  }, [search, searchMail]);
   const [courseError, setCourseError] = useState(false),
     [courseRetry, setCourseRetry] = useState(0);
   useEffect(() => {
@@ -155,9 +138,8 @@ export function WorkspaceShell({
         projects: data.projects.filter(availableProject),
         goals: data.goals,
         academic: searchAcademic,
-        mail: searchMail,
       }),
-    [data.tasks, data.projects, data.goals, searchAcademic, searchMail],
+    [data.tasks, data.projects, data.goals, searchAcademic],
   );
   const results = useMemo(() => searchEntries(index, query), [index, query]);
   const { setTheme } = useTheme();

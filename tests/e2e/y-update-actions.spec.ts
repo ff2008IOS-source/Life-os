@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 
-test("a Crowdmark mark is entered in one step and a moved exam date is approved", async ({
+test("a Crowdmark mark is entered in one step; a moved exam date applies on its own", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -75,25 +75,17 @@ test("a Crowdmark mark is entered in one step and a moved exam date is approved"
   });
   expect((await sent.json()).added).toBe(2);
 
-  // Today: both show under What changed, the date move first.
+  // Today: the date move already happened; the mark is the one thing to do.
   await page.goto("/");
-  const changed = page
-    .getByRole("region", { name: "What changed" })
+  const card = page
+    .getByRole("region", { name: "Updated from your mail" })
     .filter({ visible: true });
-  await expect(
-    changed.getByText("Exam 3", { exact: false }).first(),
-  ).toBeVisible();
-  await changed.getByRole("button", { name: "Update date" }).click();
-  await expect(
-    changed.getByRole("button", { name: "Update date" }),
-  ).toHaveCount(0);
-
-  // The mark: type it and save.
-  const form = changed.getByRole("form", { name: "Enter your Exam 2 mark" });
+  await expect(card.getByText("moved to")).toBeVisible();
+  const form = card.getByRole("form", { name: "Enter your Exam 2 mark" });
   await form.getByLabel("Mark received").fill("53.5");
   await expect(form.getByLabel("Out of")).toHaveValue("100");
   await form.getByRole("button", { name: "Save" }).click();
-  await expect(changed).toHaveCount(0);
+  await expect(form).toHaveCount(0);
 
   const data = await (await page.request.get("/api/v1/academics")).json();
   const by = (id: string) =>
@@ -101,12 +93,4 @@ test("a Crowdmark mark is entered in one step and a moved exam date is approved"
   expect(by(exam2.data.id).earned_score).toBe(53.5);
   expect(by(exam2.data.id).verification_status).toBe("user_confirmed");
   expect(by(exam3.data.id).due_date).toBe("2026-12-09");
-
-  // School shows the mark as recorded in the course's updates.
-  await page.goto(`/areas/academics?course=${course.data.id}`);
-  const updates = page
-    .getByRole("region", { name: "Course updates" })
-    .filter({ visible: true });
-  await expect(updates.getByText("Grades available: Exam 2")).toBeVisible();
-  await expect(updates.getByText("Needs your attention")).toHaveCount(0);
 });

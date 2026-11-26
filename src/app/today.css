@@ -1954,3 +1954,42 @@ label.update-search svg {
 .mail-group-more {
   margin: 0 0 12px 25px;
 }
+
+/* Today: what Life OS changed from your mail */
+.change-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.change {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.change:last-child {
+  border-bottom: 0;
+}
+.change-icon {
+  color: var(--accent);
+  padding-top: 2px;
+}
+.change-need .change-icon {
+  color: var(--secondary);
+}
+.change-text {
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.change-was,
+.change-from {
+  color: var(--secondary);
+}
+.change-from {
+  display: block;
+  font-size: 13px;
+}
