@@ -25,6 +25,7 @@ import { OccurrencesPanel } from "./occurrences-panel";
 import { SchedulingPanel } from "./scheduling-panel";
 import { CanvasDeadlines } from "./canvas-deadlines";
 import { PlannerCalendar } from "./planner-calendar";
+import { EmailList } from "./course-updates";
 export function PlannerPage({
   initialSection,
 }: { initialSection?: string } = {}) {
@@ -273,6 +274,7 @@ export function PlannerPage({
               <QuickCapture />
             </section>
           )}
+          {tab === "inbox" && <EmailList />}
         </>
       )}
       {editor && (

@@ -7,20 +7,26 @@ import {
   syncAnnouncements,
 } from "@/lib/course-updates-server";
 
-/** Recent course updates (announcements and forwarded emails). */
-export async function GET() {
+/**
+ * Recent course updates (Canvas announcements and course emails), or with
+ * `?scope=email`, the other emails that reached Life OS.
+ */
+export async function GET(request: Request) {
   try {
     const { db, user } = await authorized();
+    const email = new URL(request.url).searchParams.get("scope") === "email";
+    let q = db
+      .from("course_messages")
+      .select(
+        "id,course_id,source,title,body,sender,url,posted_at,flags,acknowledged_at",
+      )
+      .eq("user_id", user.id)
+      .gte("posted_at", new Date(Date.now() - 60 * 86400000).toISOString());
+    q = email
+      ? q.eq("source", "email").is("course_id", null)
+      : q.not("course_id", "is", null);
     const [msgs, token] = await Promise.all([
-      db
-        .from("course_messages")
-        .select(
-          "id,course_id,source,title,body,sender,url,posted_at,flags,acknowledged_at",
-        )
-        .eq("user_id", user.id)
-        .gte("posted_at", new Date(Date.now() - 60 * 86400000).toISOString())
-        .order("posted_at", { ascending: false })
-        .limit(200),
+      q.order("posted_at", { ascending: false }).limit(email ? 100 : 200),
       db
         .from("email_intake_tokens")
         .select("created_at,last_used_at")

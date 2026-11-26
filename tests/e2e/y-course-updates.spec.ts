@@ -77,4 +77,33 @@ test("a forwarded course email that moves an exam shows on School and Today", as
     .getByRole("button", { name: /Mark TEST 330: Exam 3 moved/ })
     .click();
   await expect(today).toHaveCount(0);
+  // Everything else lands in Week → Inbox; password resets never do.
+  const other = await page.request.post("/api/internal/intake/email", {
+    data: {
+      emails: [
+        {
+          id: "msg-2",
+          subject: "[TEST] Team dinner Friday",
+          from: "Friend <friend@example.invalid>",
+          date: new Date().toISOString(),
+          body: "Dinner is moved to 7pm.",
+        },
+        {
+          id: "msg-3",
+          subject: "Reset your password",
+          from: "Accounts <no-reply@example.invalid>",
+          date: new Date().toISOString(),
+          body: "Click to reset your password.",
+        },
+      ],
+    },
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect((await other.json()).added).toBe(1);
+  await page.goto("/planner?section=inbox");
+  const mail = page.getByRole("region", { name: "Email" });
+  await expect(mail.getByText("[TEST] Team dinner Friday")).toBeVisible();
+  await expect(mail.getByText("Reset your password")).toHaveCount(0);
+  await page.goto("/");
+  await expect(page.getByText("[TEST] Team dinner Friday")).toHaveCount(0);
 });

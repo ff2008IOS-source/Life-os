@@ -61,3 +61,17 @@ export function plainText(html: string, max = 8000) {
     .trim()
     .slice(0, max);
 }
+
+/**
+ * Password-reset emails never reach Life OS (owner rule). Sign-in codes are
+ * fine. The Gmail script applies the same test before sending; this is the
+ * server-side backstop.
+ */
+export const PASSWORD_RESET =
+  /\b(?:reset|recover|forgot(?:ten)?|change)\b[^\n.]{0,40}\bpassword\b|\bpassword\b[^\n.]{0,20}\b(?:reset|recovery|change request)\b/i;
+
+export function isPasswordReset(subject: string, body: string) {
+  return (
+    PASSWORD_RESET.test(subject) || PASSWORD_RESET.test(body.slice(0, 1500))
+  );
+}

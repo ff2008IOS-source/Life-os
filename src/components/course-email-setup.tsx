@@ -34,13 +34,15 @@ export function CourseEmailSetup() {
       : `${window.location.origin}/api/internal/intake/email`;
   const script = token ? gmailScript(endpoint, token) : "";
   return (
-    <section className="panel settings-panel" aria-label="Course email">
+    <section className="panel settings-panel" aria-label="Email">
       <h2 className="inline">
-        <Mail size={17} aria-hidden /> Course email
+        <Mail size={17} aria-hidden /> Email
       </h2>
       <p>
-        Announcements, schedule changes and “results are ready” emails from SFU,
-        Canvas and Crowdmark show up in School and Today.
+        Your incoming email reaches Life OS. Course mail (announcements,
+        schedule changes, “results are ready”) shows in School and Today; the
+        rest is under Week → Inbox for 60 days. Password-reset emails are never
+        sent.
       </p>
       <p className="connection-summary">
         <span
@@ -86,15 +88,14 @@ export function CourseEmailSetup() {
         >
           {state?.email
             ? "Make a new link (replaces the old one)"
-            : "Set up course email"}
+            : "Set up email"}
         </button>
       ) : (
         <ol className="email-steps">
           <li>
             In <strong>SFU Outlook</strong> (outlook.office.com) → Settings →
-            Mail → Rules, add a rule: messages from <code>sfu.ca</code>,{" "}
-            <code>instructure.com</code> or <code>crowdmark.com</code> →{" "}
-            <em>Forward to</em> your Gmail address.
+            Mail → Rules, add a rule: <em>Apply to all messages</em> →{" "}
+            <em>Redirect to</em> your Gmail address.
           </li>
           <li>
             Open <strong>script.google.com</strong> with that Gmail account →

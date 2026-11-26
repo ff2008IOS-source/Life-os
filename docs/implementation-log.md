@@ -2,6 +2,14 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-26: all incoming email
+
+| Change                                                             | Status              | Notes                                                                                                                    |
+| ------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| The Gmail script sends all new incoming mail, not just course mail | Implemented, Tested | Owner request. It remembers the newest email it sent; the server ignores repeats. Up to 250 conversations per hourly run |
+| Password-reset emails are never sent or stored                     | Implemented, Tested | Checked in the script before sending, and again on the server. Sign-in codes are allowed (owner rule)                    |
+| Non-course email goes to Week → Inbox → Email, kept 60 days        | Implemented, Tested | School and Today show only course-matched messages                                                                       |
+
 ## 2026-11-26: course updates
 
 | Change                                                                                  | Status              | Notes                                                                                                                                                                           |

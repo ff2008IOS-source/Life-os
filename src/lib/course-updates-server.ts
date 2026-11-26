@@ -3,7 +3,12 @@ import { createHash, randomBytes } from "node:crypto";
 import { canvasAdmin, decryptToken } from "./canvas/secure";
 import { CanvasClient } from "./canvas/client";
 import { dbError } from "./http";
-import { matchCourse, plainText, updateFlags } from "./course-updates";
+import {
+  isPasswordReset,
+  matchCourse,
+  plainText,
+  updateFlags,
+} from "./course-updates";
 
 export const hashToken = (t: string) =>
   createHash("sha256").update(t).digest("hex");
@@ -121,7 +126,11 @@ export type IncomingEmail = {
   body: string;
 };
 
-/** Course emails posted by the owner's Gmail script. */
+/**
+ * Emails posted by the owner's Gmail script. Course mail is matched to a
+ * course and flagged; other mail is kept for 60 days in the Email list.
+ * Password resets are dropped.
+ */
 export async function ingestEmails(token: string, emails: IncomingEmail[]) {
   const db = canvasAdmin();
   const t = await db
@@ -137,15 +146,17 @@ export async function ingestEmails(token: string, emails: IncomingEmail[]) {
     .select("id,code")
     .eq("user_id", user);
   dbError(courses.error);
-  const rows: Row[] = emails.map((e) => {
+  const rows: Row[] = emails.flatMap((e) => {
     const body = plainText(e.body);
     const title = e.subject.slice(0, 500) || "(no subject)";
+    if (isPasswordReset(title, body)) return [];
+    const course_id = matchCourse(
+      `${title}\n${body.slice(0, 2000)}`,
+      courses.data ?? [],
+    );
     return {
       user_id: user,
-      course_id: matchCourse(
-        `${title}\n${body.slice(0, 2000)}`,
-        courses.data ?? [],
-      ),
+      course_id,
       source: "email",
       external_id: e.id.slice(0, 300),
       title,
@@ -155,10 +166,17 @@ export async function ingestEmails(token: string, emails: IncomingEmail[]) {
       posted_at: Number.isFinite(Date.parse(e.date))
         ? new Date(e.date).toISOString()
         : new Date().toISOString(),
-      flags: updateFlags(title, body),
+      flags: course_id ? updateFlags(title, body) : [],
     };
   });
   const added = await insert(rows);
+  await db
+    .from("course_messages")
+    .delete()
+    .eq("user_id", user)
+    .eq("source", "email")
+    .is("course_id", null)
+    .lt("posted_at", new Date(Date.now() - 60 * 86400000).toISOString());
   await db
     .from("email_intake_tokens")
     .update({ last_used_at: new Date().toISOString() })
