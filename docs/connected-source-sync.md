@@ -35,3 +35,13 @@ The current reduced capability safely imports project statuses from an explicitl
 ## Recovery
 
 Migrations are additive. Roll code back to the previous Vercel production deployment if needed; retain document, review, mapping and outbox tables. Pause a configured source to stop incoming changes. Never clear a pending Calendar operation by deleting its Google event or by blindly creating a replacement. An unknown move must be confirmed using its saved operation and original calendar identity. If completed-work history or a later distinct local move has changed, confirmation requires review instead of overwriting that history. No production data restoration or paid infrastructure is part of this increment.
+
+## Life OS-owned tables — November 26, 2026
+
+Mode `life_os_owned` makes Life OS the source of truth for a mapped table from `owner_since` onward.
+
+- Activation (`activate_owned`) is atomic and writes nothing to Google. Every row that already holds content in a writable column is marked `frozen`: it is history, the sheet stays authoritative, and a database trigger refuses any outbound operation on it. Empty rows and rows created later are owned.
+- On each sync a hand edit to an owned row is drift: Life OS keeps its value and queues a correction as an ordinary outbox operation. With automatic approval off, that operation is a draft (the preview) and nothing is written until approved.
+- Content comes from Life OS records only (`career-sheet-content.ts`). Fields with no evidence are omitted, never blanked, so hand-written columns are untouched.
+- `undo` restores the values a confirmed update replaced, through the same draft/approve path. The change log is the list of confirmed operations; every step is also in `audit_logs`.
+- New rows require `allow_insert`, chosen at activation, and only writable or identity columns can be set.

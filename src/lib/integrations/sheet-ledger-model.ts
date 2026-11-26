@@ -102,7 +102,7 @@ export function mergeSheetFields(
   local: Values,
   remote: Cells,
   mode = "two_way",
-  /** Rows first seen before the dataset's owner_since date. They are history and are never overwritten. */
+  /** Rows that held content when Life OS ownership began. They are history and are never overwritten. */
   frozen = false,
 ) {
   const values: Values = { ...local },

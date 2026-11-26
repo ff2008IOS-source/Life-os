@@ -19,6 +19,7 @@ import {
   type Values,
 } from "./sheet-ledger-model";
 import { planRestWrite } from "./sheet-rest-plan";
+import { syncAndCorrect } from "./sheet-owned";
 export type Dataset = {
   id: string;
   user_id: string;
@@ -37,7 +38,7 @@ export type LedgerRow = {
   external_key: string;
   key_values: unknown;
   version: number;
-  created_at?: string;
+  frozen?: boolean;
   baseline: Cells;
   remote_cells: Cells;
   local_values: Values;
@@ -114,10 +115,7 @@ export function ingestionRows(
           local.local_values,
           remote.cells,
           d.mode,
-          d.mode === "life_os_owned" &&
-            (!d.owner_since ||
-              !local.created_at ||
-              new Date(local.created_at) < new Date(d.owner_since)),
+          d.mode === "life_os_owned" && !!local?.frozen,
         )
       : { values: remote.values, baseline: remote.cells, conflicts: {} };
     const link = links.find((l) => l.row_id === local?.id);
@@ -426,7 +424,7 @@ export async function restSheetsWorker() {
   const results = [];
   for (const d of r.data ?? [])
     try {
-      results.push(await synchronizeDataset(d.user_id, d.id));
+      results.push(await syncAndCorrect(d.user_id, d.id));
     } catch {
       results.push({ failed: true });
     }
