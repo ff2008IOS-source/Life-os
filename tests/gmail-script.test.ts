@@ -18,7 +18,7 @@ it("produces a valid Apps Script with the endpoint and token filled in", () => {
 it("the script's own reset test matches the server's", () => {
   const s = gmailScript("https://x.example/e", "lio_abc123def456ghi789jkl0");
   const check = new Function(
-    `${s}; return isPasswordReset;`,
+    `${s}; return isPasswordReset_;`,
   )() as typeof isPasswordReset;
   for (const [subject, body] of [
     ["Reset your password", ""],
