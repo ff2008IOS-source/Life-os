@@ -937,10 +937,11 @@ export function SheetRestPanel() {
           )}
           {d.mode === "life_os_owned" && (
             <p className="small muted">
-              Life OS values win over hand edits made after ownership began.
-              Rows that already had content then are history and are never
-              changed. Pending changes below are the preview: nothing is written
-              until approved (unless automatic approval is on).
+              Life OS is the source of truth for values it writes: if you type
+              over one in the sheet, the next sync puts Life OS's value back.
+              Columns Life OS has never written are left alone. With automatic
+              approval on, changes are written after a fresh check of the sheet;
+              the change log below keeps every previous value for undo.
             </p>
           )}
           {d.mode === "life_os_owned" &&
@@ -950,7 +951,7 @@ export function SheetRestPanel() {
                 onClick={() => {
                   if (
                     window.confirm(
-                      "Build next week's review row from your Life OS grades and tasks? It is queued as a change to review before anything is written. This week's existing row is history and is not changed.",
+                      "Build next week's review row from your Life OS grades and tasks? It is written to the sheet after the next sync, and you can undo it from the change log.",
                     )
                   )
                     void act({
