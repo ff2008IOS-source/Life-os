@@ -2,6 +2,20 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-26: every choice saved to the account
+
+Audit of everything the owner can do. All data actions (tasks, marks, topics, Seen, Got it, Undo, It's fine, settings, check-ins, reviews) already saved to the account. These didn't, and now do:
+
+| Was                                                                                   | Now                                                            |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Calendars hidden on Week, the Show filter and grouping (page memory, lost on refresh) | Saved to the account                                           |
+| Calendar view (this browser only)                                                     | Saved to the account; first visit still picks Day on a phone   |
+| Show technical details (this browser only)                                            | Saved to the account                                           |
+| Sidebar collapsed (this browser's cookie)                                             | Saved to the account; the cookie only keeps first paint right  |
+| Today's "Other" (forgotten on refresh)                                                | Skips that suggestion for the rest of the day, on every device |
+
+How: `profiles.ui_preferences` (jsonb, ≤ 16 KB) and `set_ui_preference()`, which merges one key in place so quick changes can't overwrite each other, and creates the profile row for a new account. `PATCH /api/v1/preferences` validates each key's shape. The e2e `y-saved-preferences` clears browser storage and cookies before reloading, to prove the account is the source.
+
 ## 2026-11-26: "It's fine" overlaps are remembered everywhere
 
 | Change                                                                                                                                       | Status              | Notes                                                                                  |

@@ -22,6 +22,7 @@ import { TaskEditor, taskValues } from "./task-editor";
 import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
 import { PlannerCalendar } from "./planner-calendar";
+import { usePreference } from "./use-preference";
 export function PlannerPage({
   initialSection,
 }: { initialSection?: string } = {}) {
@@ -39,31 +40,21 @@ export function PlannerPage({
       ? initialSection!
       : "calendar",
   );
-  const [view, setCalendarView] = useState("week");
+  // Saved to the account; first visit picks Day on a phone, Week otherwise.
+  const [savedView, saveView] = usePreference<string | null>(
+    "calendar_view",
+    null,
+  );
+  const [phone, setPhone] = useState(false);
   useEffect(() => {
-    void Promise.resolve().then(() => {
-      try {
-        const saved = localStorage.getItem("lifeos:v1:calendar-view");
-        setCalendarView(
-          ["day", "week", "month", "agenda"].includes(saved ?? "")
-            ? saved!
-            : window.matchMedia("(max-width: 700px)").matches
-              ? "day"
-              : "week",
-        );
-      } catch {
-        /* Optional preference. */
-      }
-    });
+    const q = window.matchMedia("(max-width: 700px)");
+    const update = () => setPhone(q.matches);
+    queueMicrotask(update);
+    q.addEventListener("change", update);
+    return () => q.removeEventListener("change", update);
   }, []);
-  const setView = useCallback((next: string) => {
-    setCalendarView(next);
-    try {
-      localStorage.setItem("lifeos:v1:calendar-view", next);
-    } catch {
-      /* Optional preference. */
-    }
-  }, []);
+  const view = savedView ?? (phone ? "day" : "week");
+  const setView = useCallback((next: string) => saveView(next), [saveView]);
   const [anchor, setAnchor] = useState(
     () => new Date(localDate() + "T12:00:00"),
   );

@@ -1,6 +1,7 @@
 "use client";
 import { MailChangesCard } from "./course-updates";
 import { useAcceptedOverlaps } from "./use-overlaps";
+import { usePreference } from "./use-preference";
 import { overlapKey } from "@/lib/overlaps";
 import { WeekFitLine } from "./week-fit-line";
 import { wrapUp } from "@/lib/wrap-up";
@@ -73,7 +74,11 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
   const now = useCurrentTime();
   const zone = data.profile.timezone || "America/Vancouver";
   const b = briefing.data;
-  const [pick, setPick] = useState(0);
+  // "Other" skips a suggestion for the rest of today, on every device.
+  const [skips, saveSkips] = usePreference<{ date: string; keys: string[] }>(
+    "today_skips",
+    { date: "", keys: [] },
+  );
   const [busy, setBusy] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState("");
@@ -343,9 +348,10 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
           )
         : 0)
     : 0;
-  const choice = agenda.next.length
-    ? agenda.next[pick % agenda.next.length]
-    : null;
+  const skipped = skips.date === agenda.today ? skips.keys : [];
+  const open = agenda.next.filter((n) => !skipped.includes(n.item.key));
+  // Once every suggestion is skipped, start over rather than show nothing.
+  const choice = (open.length ? open : agenda.next)[0] ?? null;
   const choiceTask =
     choice?.item.kind === "task"
       ? (data.tasks.find((t) => t.id === choice.item.id) ?? null)
@@ -549,7 +555,15 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                   {agenda.next.length > 1 && (
                     <button
                       className="td-btn td-btn-outline"
-                      onClick={() => setPick((n) => n + 1)}
+                      onClick={() =>
+                        saveSkips({
+                          date: agenda.today,
+                          keys:
+                            open.length > 1
+                              ? [...skipped, choice.item.key].slice(-50)
+                              : [],
+                        })
+                      }
                       aria-label="Suggest something else"
                     >
                       <Shuffle size={15} aria-hidden /> Other
