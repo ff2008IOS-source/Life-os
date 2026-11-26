@@ -216,7 +216,10 @@ export async function synchronizeDataset(user: string, id: string) {
     dbError(operations.error);
     let snapshot = await readDataset(d);
     for (const op of operations.data ?? []) {
-      if (!d.outbound_enabled || !["two_way", "export_only"].includes(d.mode))
+      if (
+        !d.outbound_enabled ||
+        !["two_way", "export_only", "life_os_owned"].includes(d.mode)
+      )
         continue;
       const row = (await ledgerRows(d)).find((r) => r.id === op.row_id);
       if (!row) throw Error("The approved local record is unavailable.");
