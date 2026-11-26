@@ -207,3 +207,40 @@ it("rechecks live dropdown rules even for outbox edits created by a project trig
     }),
   ).toThrow("permitted");
 });
+
+it("life_os_owned overwrites only fields Life OS wrote and freezes history", () => {
+  const cell = (value: string | number | null) => ({
+    value,
+    display: String(value),
+    formula: null,
+    source_writable: true,
+    writable: true,
+    allowed: null,
+    error: null,
+  });
+  const base = { win: cell(1), notes: cell(null) },
+    local = { win: 5, notes: null },
+    remote = { win: cell(9), notes: cell("typed by hand") };
+  const fresh = mergeSheetFields(
+    base,
+    local,
+    remote,
+    "life_os_owned",
+    false,
+    new Set(["win"]),
+  );
+  expect(fresh.values.win).toBe(5);
+  expect(fresh.baseline.win.value).toBe(9);
+  expect(fresh.values.notes).toBe("typed by hand");
+  expect(fresh.conflicts).toEqual({});
+  const old = mergeSheetFields(
+    base,
+    local,
+    remote,
+    "life_os_owned",
+    true,
+    new Set(["win"]),
+  );
+  expect(old.values.win).toBe(9);
+  expect(old.conflicts).toEqual({});
+});

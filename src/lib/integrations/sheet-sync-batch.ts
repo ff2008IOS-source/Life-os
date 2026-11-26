@@ -36,7 +36,9 @@ export async function syncAllTables(
       result.status =
         value.conflicts || value.held_outbound ? "attention" : "synced";
       if (result.status === "attention")
-        result.message = "Updated; some changes are pending or need review.";
+        result.message = value.conflicts
+          ? `${value.conflicts} record${value.conflicts === 1 ? "" : "s"} differ between the sheet and Life OS and need your decision.`
+          : "Synced, but some changes are waiting to be written or were held for review.";
     } catch (e) {
       result.status = "failed";
       result.message =
