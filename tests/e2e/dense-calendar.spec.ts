@@ -90,8 +90,9 @@ test("dense schedules stay bounded on iPad and iPhone and calendar source contro
   await page.goto("/planner");
   await expect(page.locator(".time-event:visible").first()).toBeVisible();
   const grid = await page.locator(".planner-calendar:visible").boundingBox();
+  // The whole calendar fits the screen: one scroll, inside the grid.
   expect(grid!.y).toBeLessThan(350);
-  expect(grid!.height).toBeLessThan(700);
+  expect(grid!.y + grid!.height).toBeLessThanOrEqual(905);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -106,9 +107,7 @@ test("dense schedules stay bounded on iPad and iPhone and calendar source contro
   await page.locator(".time-event:visible").first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
-    page.getByText(
-      "2 matching source entries are grouped for display. Original records are preserved.",
-    ),
+    page.getByText("2 matching entries are grouped. Originals are kept."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.getByRole("button", { name: "Month", exact: true }).click();

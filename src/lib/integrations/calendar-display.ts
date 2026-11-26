@@ -8,6 +8,7 @@ export type DisplayBlock = {
   provider_event_id: string | null;
   status: string;
   flexibility: string;
+  version?: number;
 };
 export function linkCalendarSessions(
   events: CalendarEvent[],
@@ -30,6 +31,7 @@ export function linkCalendarSessions(
             task_id: b.task_id,
             status: b.status,
             flexibility: b.flexibility,
+            version: b.version,
           }
         : null,
     };

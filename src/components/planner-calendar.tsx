@@ -1,18 +1,22 @@
 "use client";
 import { ReconnectGoogle, needsReconnect } from "./reconnect-google";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { addDays, format } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import {
-  RefreshCw,
-  SlidersHorizontal,
   CalendarDays,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  RefreshCw,
+  Trophy,
 } from "lucide-react";
-import { useCalendar } from "./use-calendar";
+import { calendarRequest, useCalendar } from "./use-calendar";
 import { Button } from "./ui/button";
 import { Modal } from "./dialog";
+import { PlanningDecisions } from "./planning-decisions";
 import { eventOnDate, eventTimeLabel } from "@/lib/integrations/calendar-view";
 import {
   groupCalendarEvents,
@@ -20,10 +24,31 @@ import {
   readableDay,
   type EventGroup,
 } from "@/lib/integrations/calendar-layout";
+import {
+  calendarKind,
+  calendarKindLabel,
+  sessionOverlaps,
+} from "@/lib/integrations/calendar-display";
+import {
+  dayLoad,
+  eventStyle,
+  freeWindows,
+  GAME_AFTER,
+  GAME_BEFORE,
+  minutesLabel,
+  TONES,
+  type Tone,
+} from "@/lib/calendar-style";
+import { isGame } from "@/lib/basketball";
+import { localDate } from "@/lib/dates";
+import type { Task } from "@/lib/schemas";
 
 /** Pixels per hour and per minute in the week and day grids. */
-const HOUR = 48;
+const HOUR = 52;
 const MINUTE = HOUR / 60;
+const ZONE = "America/Vancouver";
+const VIEWS = ["day", "week", "month", "agenda"] as const;
+
 /** Timed events this long ("Off Day", camps) read better in the all-day row. */
 function isLong(g: EventGroup) {
   const { start_at, end_at } = g.event;
@@ -33,13 +58,41 @@ function isLong(g: EventGroup) {
     Date.parse(end_at) - Date.parse(start_at) >= 10 * 3600000
   );
 }
-import {
-  calendarKind,
-  calendarKindLabel,
-  sessionOverlaps,
-} from "@/lib/integrations/calendar-display";
-import { localDate } from "@/lib/dates";
-import type { Task } from "@/lib/schemas";
+
+type Deadline = {
+  canvas_id: string;
+  title: string;
+  due_at: string;
+  course_code: string | null;
+  submission_state: string;
+};
+
+const minuteOf = (iso: string) => {
+  const [h, m] = formatInTimeZone(iso, ZONE, "H:m").split(":").map(Number);
+  return h * 60 + m;
+};
+
+function rangeTitle(view: string, days: Date[], anchor: Date) {
+  if (view === "month") return format(anchor, "MMMM yyyy");
+  if (view === "week") {
+    const a = days[0],
+      b = days.at(-1)!;
+    return a.getMonth() === b.getMonth()
+      ? `${format(a, "MMM d")} – ${format(b, "d, yyyy")}`
+      : `${format(a, "MMM d")} – ${format(b, "MMM d, yyyy")}`;
+  }
+  return format(anchor, "EEE, MMM d");
+}
+
+function dueWhen(iso: string, today: string) {
+  const day = localDate(iso);
+  const time = formatInTimeZone(iso, ZONE, "h:mm a");
+  if (day === today) return `Due today ${time}`;
+  if (day === localDate(addDays(new Date(today + "T12:00:00"), 1)))
+    return `Due tomorrow ${time}`;
+  return `Due ${time}`;
+}
+
 export function PlannerCalendar({
   days,
   view,
@@ -47,7 +100,11 @@ export function PlannerCalendar({
   tasks,
   onTask,
   onDay,
-  onManageSession,
+  onNavigate,
+  onToday,
+  onView,
+  onNewTask,
+  onMoveTask,
 }: {
   days: Date[];
   view: string;
@@ -55,20 +112,119 @@ export function PlannerCalendar({
   tasks: Task[];
   onTask: (task: Task) => void;
   onDay: (day: Date) => void;
-  onManageSession: () => void;
+  onNavigate: (direction: number) => void;
+  onToday: () => void;
+  onView: (view: string) => void;
+  onNewTask: (dueAt: string) => void;
+  onMoveTask: (task: Task, day: string) => Promise<void>;
 }) {
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, []);
+  const today = localDate(new Date(now));
+  const nowMinute = minuteOf(new Date(now).toISOString());
   const from = format(days[0], "yyyy-MM-dd");
   const until = format(addDays(days.at(-1)!, 1), "yyyy-MM-dd");
-  const { data, events, error, busy, message, sync } = useCalendar(from, until);
-  const [filters, setFilters] = useState(false),
+  const { data, events, error, busy, message, setMessage, sync, reload } =
+    useCalendar(from, until);
+  const [menu, setMenu] = useState(false),
     [hidden, setHidden] = useState<string[]>([]),
     [group, setGroup] = useState(true),
     [kind, setKind] = useState("all"),
     [details, setDetails] = useState<EventGroup | null>(null),
-    [dayDetail, setDayDetail] = useState<string | null>(null);
+    [dayDetail, setDayDetail] = useState<string | null>(null),
+    [deadlines, setDeadlines] = useState<Deadline[]>([]),
+    [window_, setWindow] = useState({ start: 9, end: 21 }),
+    [drag, setDrag] = useState<{
+      id: string;
+      delta: number;
+      day: string;
+    } | null>(null),
+    [moving, setMoving] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: Event) => {
+      if (
+        e instanceof KeyboardEvent
+          ? e.key === "Escape"
+          : !menuRef.current?.contains(e.target as Node)
+      )
+        setMenu(false);
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("pointerdown", close);
+    return () => {
+      document.removeEventListener("keydown", close);
+      document.removeEventListener("pointerdown", close);
+    };
+  }, [menu]);
   const restored = useRef("");
+  // The planning window (free time is only counted inside it).
+  useEffect(() => {
+    let live = true;
+    void calendarRequest<{
+      policy?: { start_hour?: number; end_hour?: number };
+    }>("/api/v1/schedule/automation")
+      .then((s) => {
+        if (live && s.policy?.start_hour !== undefined)
+          setWindow({
+            start: s.policy.start_hour,
+            end: s.policy.end_hour ?? 21,
+          });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  // Canvas deadlines for the visible days sit on the grid itself.
+  useEffect(() => {
+    let live = true;
+    void fetch(`/api/canvas/deadlines?from=${from}&until=${until}`, {
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : { records: [] }))
+      .then((d: { records?: Deadline[] }) => {
+        if (live) setDeadlines(d.records ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [from, until]);
+  // T today · ←/→ move · D/W/M/A views.
+  useEffect(() => {
+    function key(e: KeyboardEvent) {
+      const t = e.target as HTMLElement | null;
+      if (
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        (t &&
+          (t.isContentEditable ||
+            ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName))) ||
+        document.querySelector("[role=dialog]")
+      )
+        return;
+      const k = e.key.toLowerCase();
+      if (k === "t") onToday();
+      else if (e.key === "ArrowLeft") onNavigate(-1);
+      else if (e.key === "ArrowRight") onNavigate(1);
+      else if (k === "d") onView("day");
+      else if (k === "w") onView("week");
+      else if (k === "m") onView("month");
+      else if (k === "a") onView("agenda");
+      else return;
+      e.preventDefault();
+    }
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [onToday, onNavigate, onView]);
+
   const calendars = data?.calendars.filter((c) => c.sync_enabled) ?? [];
   const allGroups = groupCalendarEvents(events, group);
   const groups = groupCalendarEvents(
@@ -79,7 +235,51 @@ export function PlannerCalendar({
     ),
     group,
   );
-  // Open on the first commitment of the visible days, half an hour early.
+  const name = useCallback(
+    (id: string) =>
+      data?.calendars.find((c) => c.id === id)?.name ?? "Calendar",
+    [data],
+  );
+  const styleOf = (g: EventGroup) =>
+    g.event.work_session
+      ? { tone: "study" as Tone, label: g.event.title || "Work session" }
+      : eventStyle(g.event.title, name(g.event.calendar_id));
+  const showDue = kind === "all" || kind === "deadlines";
+  const due = (day: string) =>
+    showDue
+      ? tasks.filter(
+          (t) =>
+            (t.due_date ?? (t.due_at ? localDate(t.due_at) : null)) === day,
+        )
+      : [];
+  const canvasDue = (day: string) =>
+    showDue
+      ? deadlines.filter(
+          (d) =>
+            localDate(d.due_at) === day &&
+            !["submitted", "graded", "excused"].includes(d.submission_state),
+        )
+      : [];
+  const on = (day: string) => groups.filter((g) => eventOnDate(g.event, day));
+  const timed = (day: string) =>
+    on(day).filter((g) => !g.event.all_day_start && !isLong(g));
+  const games = (day: string) =>
+    timed(day).filter((g) => isGame(g.event.title, name(g.event.calendar_id)));
+  const freeOf = (day: string) =>
+    day < today
+      ? []
+      : freeWindows(
+          layoutDay(
+            allGroups.filter(
+              (g) => !isLong(g) && g.event.busy_status !== "free",
+            ),
+            day,
+          ).map((i) => ({ start: i.start, end: i.end })),
+          window_.start,
+          window_.end,
+          day === today ? nowMinute : null,
+        );
+  // Open at the current time when today is visible, else the first event.
   const firstStart = days
     .flatMap((d) =>
       layoutDay(
@@ -88,31 +288,26 @@ export function PlannerCalendar({
       ).map((i) => i.start),
     )
     .reduce((a, b) => Math.min(a, b), 8 * 60);
+  const showsToday = days.some((d) => format(d, "yyyy-MM-dd") === today);
   useEffect(() => {
-    if (!data || !scroller.current || restored.current === view) return;
-    restored.current = view;
-    scroller.current.scrollTop = Math.max(0, (firstStart - 30) * MINUTE);
-  }, [view, data, firstStart]);
-  const name = (id: string) =>
-    data?.calendars.find((c) => c.id === id)?.name ?? "Calendar";
-  const color = (g: EventGroup) =>
-    // Each calendar keeps its own colour so the week is easy to scan.
-    data?.calendars.find((c) => c.id === g.event.calendar_id)?.color ??
-    "var(--accent)";
-  const due = (day: string) =>
-    tasks.filter(
-      (t) =>
-        (kind === "all" || kind === "deadlines") &&
-        (t.due_date ?? (t.due_at ? localDate(t.due_at) : null)) === day,
+    if (!data || !scroller.current || restored.current === view + from) return;
+    restored.current = view + from;
+    scroller.current.scrollTop = Math.max(
+      0,
+      ((showsToday ? nowMinute - 90 : firstStart - 30) as number) * MINUTE,
     );
-  const on = (day: string) => groups.filter((g) => eventOnDate(g.event, day));
+  }, [view, from, data, firstStart, showsToday, nowMinute]);
+
   const stamps = calendars
     .map((c) => c.last_synced_at)
     .filter((s): s is string => !!s)
     .sort();
   const last = stamps.length === calendars.length ? stamps[0] : null;
   const failed = calendars.filter((c) => c.sync_error).length;
-  const stale = !last || now - Date.parse(last) > 26 * 3600000;
+  const stale =
+    !!data &&
+    calendars.length > 0 &&
+    (!last || now - Date.parse(last) > 26 * 3600000);
   const selectedDay = format(anchor, "yyyy-MM-dd");
   const coverageMissing = calendars.some(
     (c) =>
@@ -121,185 +316,394 @@ export function PlannerCalendar({
       localDate(c.coverage_start) > from ||
       localDate(c.coverage_end) < until,
   );
-  const eventButton = (g: EventGroup, short = false) => (
-    <button
-      key={g.id}
-      className={`calendar-event-chip ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
-      onClick={() => {
-        setDayDetail(null);
-        setDetails(g);
-      }}
-      title={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((s) => name(s.calendar_id)).join(", ")}`}
-      style={{ borderLeftColor: color(g) }}
-    >
-      <span>
-        {g.event.all_day_start
-          ? ""
-          : formatInTimeZone(
-              g.event.start_at!,
-              "America/Vancouver",
-              "h:mm",
-            )}{" "}
-        {g.event.title || "Untitled event"}
-      </span>
-      {!short && g.sources.length > 1 && <small>+{g.sources.length - 1}</small>}
-    </button>
-  );
-  const dayRows = (day: string) =>
-    on(day).map((g) => (
+  const tonesShown = [
+    ...new Set(
+      days.flatMap((d) =>
+        timed(format(d, "yyyy-MM-dd")).map((g) => styleOf(g).tone),
+      ),
+    ),
+  ];
+
+  async function moveBlock(g: EventGroup, deltaMinutes: number, toDay: string) {
+    const ws = g.event.work_session;
+    if (!ws?.version || !g.event.start_at || !g.event.end_at) return;
+    const fromDay = localDate(g.event.start_at);
+    const shift =
+      deltaMinutes * 60000 +
+      (Date.parse(fromZonedTime(`${toDay}T12:00:00`, ZONE).toISOString()) -
+        Date.parse(fromZonedTime(`${fromDay}T12:00:00`, ZONE).toISOString()));
+    if (!shift) return;
+    setMoving(true);
+    try {
+      await calendarRequest("/api/v1/calendar/managed/move", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "move",
+          request_id: crypto.randomUUID(),
+          block_id: ws.block_id,
+          version: ws.version,
+          start_at: new Date(
+            Date.parse(g.event.start_at) + shift,
+          ).toISOString(),
+          end_at: new Date(Date.parse(g.event.end_at) + shift).toISOString(),
+          confirmed: true,
+        }),
+      });
+      setMessage("Work session moved.");
+      await reload();
+    } catch (e) {
+      setMessage(
+        e instanceof Error ? e.message : "That session couldn't move.",
+      );
+    } finally {
+      setMoving(false);
+    }
+  }
+
+  /** Drag a Life OS work session up/down (and across days in week view). */
+  function startDrag(e: React.PointerEvent, g: EventGroup, day: string) {
+    if (!g.event.work_session?.version || e.button !== 0) return;
+    const startY = e.clientY;
+    let moved = false;
+    let state = { id: g.id, delta: 0, day };
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const delta = Math.round((ev.clientY - startY) / MINUTE / 15) * 15;
+      const col = document
+        .elementsFromPoint(ev.clientX, ev.clientY)
+        .find((el) => el instanceof HTMLElement && el.dataset.day) as
+        HTMLElement | undefined;
+      const nextDay = col?.dataset.day ?? day;
+      if (Math.abs(ev.clientY - startY) > 4 || nextDay !== day) moved = true;
+      state = { id: g.id, delta, day: nextDay };
+      if (moved) setDrag(state);
+    };
+    const up = () => {
+      target.removeEventListener("pointermove", move);
+      target.removeEventListener("pointerup", up);
+      target.removeEventListener("pointercancel", up);
+      setDrag(null);
+      if (moved) {
+        target.dataset.dragged = "1";
+        void moveBlock(g, state.delta, state.day);
+      }
+    };
+    target.addEventListener("pointermove", move);
+    target.addEventListener("pointerup", up);
+    target.addEventListener("pointercancel", up);
+  }
+
+  /** A click on empty grid time starts a task there (rounded to 15 min). */
+  function addAt(e: React.MouseEvent<HTMLDivElement>, day: string) {
+    if (e.target !== e.currentTarget && !(e.target as HTMLElement).dataset.free)
+      return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const minute = Math.max(
+      0,
+      Math.min(
+        23 * 60 + 45,
+        Math.round((e.clientY - rect.top) / MINUTE / 15) * 15,
+      ),
+    );
+    const hh = String(Math.floor(minute / 60)).padStart(2, "0");
+    const mm = String(minute % 60).padStart(2, "0");
+    onNewTask(fromZonedTime(`${day}T${hh}:${mm}:00`, ZONE).toISOString());
+  }
+
+  const dueChips = (day: string, max: number) => {
+    const list = [
+      ...canvasDue(day).map((d) => (
+        <span
+          key={"c" + d.canvas_id}
+          className="cal-due"
+          title={`${d.course_code ?? ""} ${d.title} · ${dueWhen(d.due_at, today)}`}
+        >
+          {d.course_code ? <b>{d.course_code}</b> : null} {d.title}
+        </span>
+      )),
+      ...due(day).map((t) => (
+        <button
+          key={t.id}
+          className="cal-due cal-due-task"
+          draggable
+          onDragStart={(e) => e.dataTransfer.setData("text/task", t.id)}
+          onClick={() => onTask(t)}
+          title={`${t.title}${t.due_at ? " · " + dueWhen(t.due_at, today) : ""}. Drag to another day to move it.`}
+        >
+          {t.title}
+        </button>
+      )),
+    ];
+    return { shown: list.slice(0, max), more: Math.max(0, list.length - max) };
+  };
+  const dropTask = (day: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (e.dataTransfer.types.includes("text/task")) e.preventDefault();
+    },
+    onDrop: (e: React.DragEvent) => {
+      const id = e.dataTransfer.getData("text/task");
+      const t = tasks.find((x) => x.id === id);
+      if (t) {
+        e.preventDefault();
+        void onMoveTask(t, day);
+      }
+    },
+  });
+
+  const eventChip = (g: EventGroup) => {
+    const s = styleOf(g);
+    return (
       <button
-        className="agenda-compact-row"
         key={g.id}
+        className={`calendar-event-chip tone-${s.tone}`}
         onClick={() => {
           setDayDetail(null);
           setDetails(g);
         }}
+        title={`${g.event.title} · ${eventTimeLabel(g.event)} · ${g.sources.map((x) => name(x.calendar_id)).join(", ")}`}
       >
-        <time>
-          {g.event.all_day_start
-            ? "All day"
-            : formatInTimeZone(
-                g.event.start_at!,
-                "America/Vancouver",
-                "h:mm a",
-              )}
-        </time>
-        <span className="agenda-row-content">
-          <strong>{g.event.title || "Untitled event"}</strong>
-          <small>
-            {calendarKindLabel(g.event)} · {eventTimeLabel(g.event)} ·{" "}
-            {g.sources.map((s) => name(s.calendar_id)).join(", ")}
-          </small>
-        </span>
-        <span
-          className="calendar-source-dot"
-          style={{ background: color(g) }}
-        />
+        {g.event.all_day_start || isLong(g)
+          ? ""
+          : formatInTimeZone(g.event.start_at!, ZONE, "h:mm") + " "}
+        {s.label}
       </button>
-    ));
+    );
+  };
+  const dayRows = (day: string) =>
+    on(day).map((g) => {
+      const s = styleOf(g);
+      return (
+        <button
+          className="agenda-compact-row"
+          key={g.id}
+          onClick={() => {
+            setDayDetail(null);
+            setDetails(g);
+          }}
+        >
+          <time>
+            {g.event.all_day_start
+              ? "All day"
+              : formatInTimeZone(g.event.start_at!, ZONE, "h:mm a")}
+          </time>
+          <span className="agenda-row-content">
+            <strong>{s.label}</strong>
+            <small>
+              {eventTimeLabel(g.event)} ·{" "}
+              {g.sources.map((x) => name(x.calendar_id)).join(", ")}
+            </small>
+          </span>
+          <span className={`calendar-source-dot tone-dot tone-${s.tone}`} />
+        </button>
+      );
+    });
+  const dueRows = (day: string) => [
+    ...canvasDue(day).map((d) => (
+      <div className="agenda-compact-row agenda-due" key={"c" + d.canvas_id}>
+        <time>{formatInTimeZone(d.due_at, ZONE, "h:mm a")}</time>
+        <span className="agenda-row-content">
+          <strong>
+            {d.course_code ? `${d.course_code} · ` : ""}
+            {d.title}
+          </strong>
+          <small>{dueWhen(d.due_at, today)}</small>
+        </span>
+      </div>
+    )),
+    ...due(day).map((t) => (
+      <button
+        className="agenda-compact-row agenda-due"
+        key={t.id}
+        onClick={() => onTask(t)}
+      >
+        <time>Due</time>
+        <strong>{t.title}</strong>
+      </button>
+    )),
+  ];
+
+  const problem =
+    error ||
+    needsReconnect(calendars.map((c) => c.sync_error)) ||
+    failed > 0 ||
+    stale;
+
   return (
-    <div className="planner-calendar">
-      <div className="calendar-status-bar">
-        <div className="calendar-status-text">
-          <span
-            className={`status-dot ${last && !stale && !failed ? "ready" : ""}`}
-          />
-          <span>
-            {data
-              ? calendars.length
-                ? `${calendars.length} calendars · ${last ? "Checked " + formatInTimeZone(last, "America/Vancouver", "MMM d, h:mm a") + (stale ? " · stale" : "") : "Sync needed"}`
-                : "No calendars selected"
-              : "Loading calendars…"}
-          </span>
-        </div>
-        <div className="inline">
+    <div className="planner-calendar cal">
+      <div className="cal-toolbar">
+        <div className="cal-nav">
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setFilters(!filters)}
-            aria-expanded={filters}
-          >
-            <SlidersHorizontal size={14} />
-            Calendars
-          </Button>
-          <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            aria-label="Refresh calendar events"
-            disabled={!!busy || !calendars.length}
-            onClick={() => void sync()}
+            aria-label="Previous period"
+            onClick={() => onNavigate(-1)}
           >
-            <RefreshCw size={14} className={busy ? "spin" : ""} />
+            <ChevronLeft size={15} />
           </Button>
-        </div>
-      </div>
-      {filters && !!calendars.length && (
-        <div className="calendar-source-legend" aria-label="Calendar sources">
-          {calendars.map((c) => (
-            <button
-              key={c.id}
-              aria-pressed={!hidden.includes(c.id)}
-              className={
-                hidden.includes(c.id) ? "source-filter muted" : "source-filter"
-              }
-              onClick={() =>
-                setHidden((old) =>
-                  old.includes(c.id)
-                    ? old.filter((x) => x !== c.id)
-                    : [...old, c.id],
-                )
-              }
-            >
-              <span
-                className="calendar-source-dot"
-                style={{
-                  background: `color-mix(in srgb, ${c.color ?? "var(--accent)"} 50%,var(--secondary))`,
-                }}
-              />
-              {c.name}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="calendar-kind-legend" aria-label="Event types">
-        {[
-          ["all", "All"],
-          ["commitments", "Commitments"],
-          ["sessions", "Work sessions"],
-          ["deadlines", "Deadlines"],
-        ].map(([value, label]) => (
-          <button
-            key={value}
-            title={
-              value === "deadlines"
-                ? "Task deadlines. Canvas deadlines are listed below the calendar."
-                : undefined
-            }
-            aria-pressed={kind === value}
-            onClick={() => setKind(value)}
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Next period"
+            onClick={() => onNavigate(1)}
           >
-            <span
-              aria-hidden="true"
-              className={`calendar-kind-marker kind-${value}`}
-            />
-            {label}
-          </button>
-        ))}
+            <ChevronRight size={15} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onToday}>
+            Today
+          </Button>
+          <h2 className="cal-range">{rangeTitle(view, days, anchor)}</h2>
+        </div>
+        <div className="cal-actions">
+          <div className="segmented" aria-label="Calendar view">
+            {VIEWS.map((v) => (
+              <button
+                key={v}
+                className={view === v ? "active" : ""}
+                aria-pressed={view === v}
+                onClick={() => onView(v)}
+                title={`${v[0].toUpperCase() + v.slice(1)} (${v[0].toUpperCase()})`}
+              >
+                {v[0].toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="cal-menu-wrap" ref={menuRef}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Calendar options"
+              aria-expanded={menu}
+              onClick={() => setMenu(!menu)}
+            >
+              <MoreHorizontal size={16} />
+            </Button>
+            {menu && (
+              <div
+                className="cal-menu"
+                role="dialog"
+                aria-label="Calendar options"
+              >
+                <p className="cal-menu-label">Show</p>
+                <div className="cal-menu-kinds" aria-label="Event types">
+                  {[
+                    ["all", "Everything"],
+                    ["commitments", "Commitments"],
+                    ["sessions", "Work sessions"],
+                    ["deadlines", "Deadlines"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      aria-pressed={kind === value}
+                      onClick={() => setKind(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {!!calendars.length && (
+                  <>
+                    <p className="cal-menu-label">Calendars</p>
+                    <div
+                      className="cal-menu-sources"
+                      aria-label="Calendar sources"
+                    >
+                      {calendars.map((c) => (
+                        <button
+                          key={c.id}
+                          aria-pressed={!hidden.includes(c.id)}
+                          className={
+                            hidden.includes(c.id)
+                              ? "source-filter muted"
+                              : "source-filter"
+                          }
+                          onClick={() =>
+                            setHidden((old) =>
+                              old.includes(c.id)
+                                ? old.filter((x) => x !== c.id)
+                                : [...old, c.id],
+                            )
+                          }
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="small muted">
+                      Hidden calendars still protect your time.
+                    </p>
+                  </>
+                )}
+                <label className="inline-check">
+                  <input
+                    type="checkbox"
+                    checked={group}
+                    onChange={(e) => setGroup(e.currentTarget.checked)}
+                  />
+                  Group matching entries across calendars
+                </label>
+                <div className="cal-menu-sync">
+                  <span className="small muted">
+                    {last
+                      ? `Synced ${formatInTimeZone(last, ZONE, "MMM d, h:mm a")}`
+                      : calendars.length
+                        ? "Not synced yet"
+                        : "No calendars selected"}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Refresh calendar events"
+                    disabled={!!busy || !calendars.length}
+                    onClick={() => void sync()}
+                  >
+                    <RefreshCw size={14} className={busy ? "spin" : ""} />{" "}
+                    Refresh
+                  </Button>
+                </div>
+                <PlanningDecisions />
+                <div className="cal-menu-links">
+                  <Link
+                    className="text-link"
+                    href="/settings?section=integrations"
+                  >
+                    Sync settings
+                  </Link>
+                  <Link className="text-link" href="/settings?section=planning">
+                    Work hours &amp; sessions
+                  </Link>
+                </div>
+                <p className="small muted cal-keys">
+                  Keys: T today · ← → move · D W M A views
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      {filters && (
-        <div className="calendar-filter-panel">
-          <p className="small muted">
-            Choose the calendars you want to see. Hidden events still protect
-            your time.
-          </p>
-          <label className="inline-check">
-            <input
-              type="checkbox"
-              checked={group}
-              onChange={(e) => setGroup(e.currentTarget.checked)}
-            />
-            Group matching entries across calendars
-          </label>
-          <Link className="text-link" href="/settings?section=integrations">
-            Manage connections
-          </Link>
-        </div>
-      )}
-      {error && (
-        <div className="calendar-inline-alert error-message" role="alert">
-          <span>{error}</span>
-          {needsReconnect([error, ...calendars.map((c) => c.sync_error)]) && (
-            <ReconnectGoogle />
-          )}
-        </div>
-      )}
-      {!error && needsReconnect(calendars.map((c) => c.sync_error)) && (
+
+      {problem && (
         <div className="calendar-inline-alert error-message" role="alert">
           <span>
-            Google needs you to sign in again. Events changed in Google since
-            the last sync aren’t shown yet.
+            {error ||
+              (needsReconnect(calendars.map((c) => c.sync_error))
+                ? "Google needs you to sign in again. Events changed in Google since the last sync aren’t shown yet."
+                : failed
+                  ? `${failed} calendar${failed === 1 ? "" : "s"} couldn't sync. Saved entries may be out of date.`
+                  : `Google Calendar hasn't synced since ${last ? formatInTimeZone(last, ZONE, "MMM d, h:mm a") : "it was connected"}.`)}
           </span>
-          <ReconnectGoogle />
+          {needsReconnect([error, ...calendars.map((c) => c.sync_error)]) ? (
+            <ReconnectGoogle />
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!!busy || !calendars.length}
+              onClick={() => void sync()}
+            >
+              Retry
+            </Button>
+          )}
         </div>
       )}
       {message && (
@@ -307,27 +711,32 @@ export function PlannerCalendar({
           {message}
         </p>
       )}
-      {!!failed && (
-        <p className="calendar-inline-alert error-message" role="status">
-          {failed} calendar connection check{failed === 1 ? "" : "s"} failed.
-          Saved entries may be out of date. Check sync settings.
-        </p>
-      )}
-      {coverageMissing && (
+      {coverageMissing && !problem && (
         <p className="calendar-inline-alert muted">
-          Some dates are outside the synced range. Missing events do not mean
+          Some dates are outside the synced range. Missing events don’t mean
           free time.
         </p>
       )}
       {!calendars.length && data && (
         <p className="calendar-inline-alert muted">
-          Select calendars in{" "}
+          Choose calendars in{" "}
           <Link className="text-link" href="/settings?section=integrations">
             Settings
           </Link>{" "}
           to see your schedule.
         </p>
       )}
+
+      {(view === "week" || view === "day") && tonesShown.length > 1 && (
+        <div className="cal-legend" aria-label="Colours">
+          {TONES.filter((t) => tonesShown.includes(t.tone)).map((t) => (
+            <span key={t.tone}>
+              <i className={`tone-dot tone-${t.tone}`} aria-hidden /> {t.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {view === "month" ? (
         <div className="month-calendar">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
@@ -338,11 +747,13 @@ export function PlannerCalendar({
           {days.map((d) => {
             const key = format(d, "yyyy-MM-dd");
             const list = on(key);
-            const deadlines = due(key);
+            const chips = dueChips(key, 1);
+            const extra = Math.max(0, list.length - 2) + chips.more;
             return (
               <div
                 key={key}
-                className={`month-cell ${d.getMonth() !== anchor.getMonth() ? "outside" : ""} ${key === localDate() ? "is-today" : ""}`}
+                {...dropTask(key)}
+                className={`month-cell ${d.getMonth() !== anchor.getMonth() ? "outside" : ""} ${key === today ? "is-today" : ""}`}
               >
                 <button
                   className="month-date"
@@ -353,28 +764,22 @@ export function PlannerCalendar({
                   aria-label={format(d, "EEEE, MMMM d")}
                 >
                   {d.getDate()}
+                  {games(key).length > 0 && (
+                    <Trophy
+                      size={11}
+                      aria-label="Game day"
+                      className="cal-game-icon"
+                    />
+                  )}
                 </button>
-                {list.slice(0, 2).map((g) => eventButton(g, true))}
-                {deadlines.slice(0, 1).map((t) => (
-                  <button
-                    className="deadline-chip"
-                    key={t.id}
-                    onClick={() => onTask(t)}
-                  >
-                    Due · {t.title}
-                  </button>
-                ))}
-                {(list.length > 2 || deadlines.length > 1) && (
+                {list.slice(0, 2).map((g) => eventChip(g))}
+                {chips.shown}
+                {extra > 0 && (
                   <button
                     className="calendar-more"
                     onClick={() => setDayDetail(key)}
                   >
-                    +
-                    {list.length +
-                      deadlines.length -
-                      Math.min(list.length, 2) -
-                      Math.min(deadlines.length, 1)}{" "}
-                    more
+                    +{extra} more
                   </button>
                 )}
               </div>
@@ -386,46 +791,51 @@ export function PlannerCalendar({
           <div className="agenda-date-heading">
             <h3>{format(anchor, "EEEE, MMMM d")}</h3>
             <span className="muted small">
-              {on(selectedDay).length} entries
+              {dayLoad(
+                timed(selectedDay).length,
+                freeOf(selectedDay).reduce((n, f) => n + f.end - f.start, 0),
+                selectedDay < today,
+              )}
             </span>
           </div>
+          {dueRows(selectedDay)}
           {dayRows(selectedDay)}
-          {due(selectedDay).map((t) => (
-            <button
-              className="agenda-compact-row"
-              key={t.id}
-              onClick={() => onTask(t)}
-            >
-              <time>Deadline</time>
-              <strong>{t.title}</strong>
-            </button>
-          ))}
-          {!on(selectedDay).length && !due(selectedDay).length && (
+          {!on(selectedDay).length && !dueRows(selectedDay).length && (
             <p className="calendar-empty">
               <CalendarDays size={24} />
               {kind !== "all" || hidden.length
-                ? "No entries match these display filters."
-                : "No commitments to show for this day."}
+                ? "Nothing matches what you chose to show."
+                : "Nothing on this day."}
             </p>
           )}
         </div>
       ) : (
         <>
-          {view === "week" && (
-            <div className="mobile-week-picker">
-              {days.map((d) => (
-                <button
-                  className={
-                    format(d, "yyyy-MM-dd") === selectedDay ? "active" : ""
-                  }
-                  key={d.toISOString()}
-                  onClick={() => onDay(d)}
-                  aria-pressed={format(d, "yyyy-MM-dd") === selectedDay}
-                >
-                  <span>{format(d, "EEEEE")}</span>
-                  <strong>{format(d, "d")}</strong>
-                </button>
-              ))}
+          {(view === "day" || view === "week") && (
+            <div
+              className={`cal-strip ${view === "week" ? "mobile-week-picker" : ""}`}
+              aria-label="Choose a day"
+            >
+              {Array.from({ length: 7 }, (_, i) =>
+                addDays(addDays(anchor, -((anchor.getDay() + 6) % 7)), i),
+              ).map((d) => {
+                const key = format(d, "yyyy-MM-dd");
+                return (
+                  <button
+                    key={key}
+                    className={`${key === selectedDay ? "active" : ""} ${key === today ? "is-today" : ""}`}
+                    aria-pressed={key === selectedDay}
+                    aria-label={format(d, "EEEE, MMMM d")}
+                    onClick={() => onDay(d)}
+                  >
+                    <span>{format(d, "EEEEE")}</span>
+                    <strong>{format(d, "d")}</strong>
+                    {games(key).length > 0 && (
+                      <i className="cal-strip-game" aria-hidden />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
           <div
@@ -434,53 +844,64 @@ export function PlannerCalendar({
           >
             <div className="time-grid-header">
               <div className="time-axis-label" aria-hidden />
-              {days.map((d) => (
-                <button
-                  key={d.toISOString()}
-                  className={`time-day-heading ${format(d, "yyyy-MM-dd") === selectedDay ? "selected-mobile" : ""} ${format(d, "yyyy-MM-dd") === localDate() ? "is-today" : ""}`}
-                  onClick={() => {
-                    onDay(d);
-                    setDayDetail(format(d, "yyyy-MM-dd"));
-                  }}
-                  aria-label={`Open schedule for ${format(d, "EEEE, MMMM d")}`}
-                >
-                  <span>{format(d, "EEE")}</span>
-                  <strong>{format(d, "d")}</strong>
-                </button>
-              ))}
+              {days.map((d) => {
+                const key = format(d, "yyyy-MM-dd");
+                const free = freeOf(key).reduce(
+                  (n, f) => n + f.end - f.start,
+                  0,
+                );
+                const game = games(key)[0];
+                return (
+                  <button
+                    key={key}
+                    className={`time-day-heading ${key === today ? "is-today" : ""} ${key === selectedDay ? "selected-mobile" : ""}`}
+                    onClick={() => {
+                      onDay(d);
+                      setDayDetail(key);
+                    }}
+                    aria-label={`Open schedule for ${format(d, "EEEE, MMMM d")}`}
+                  >
+                    <span className="cal-day-name">
+                      {format(d, "EEE")} <strong>{format(d, "d")}</strong>
+                    </span>
+                    <span
+                      className={`cal-day-load ${free < 60 && key >= today && timed(key).length ? "busy" : ""}`}
+                    >
+                      {game ? (
+                        <span className="cal-game">
+                          <Trophy size={11} aria-hidden /> Game
+                        </span>
+                      ) : (
+                        dayLoad(timed(key).length, free, key < today)
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <div className="all-day-grid">
-              <span className="time-axis-label">
-                All day
-                <br />/ Due
-              </span>
+              <span className="time-axis-label">All day</span>
               {days.map((d) => {
                 const key = format(d, "yyyy-MM-dd");
                 const all = on(key).filter(
                   (g) => g.event.all_day_start || isLong(g),
                 );
-                const deadlines = due(key);
+                const chips = dueChips(key, view === "day" ? 6 : 2);
+                const extra = Math.max(0, all.length - 2) + chips.more;
                 return (
                   <div
                     key={key}
+                    {...dropTask(key)}
                     className={key === selectedDay ? "selected-mobile" : ""}
                   >
-                    {all.slice(0, 2).map((g) => eventButton(g, true))}
-                    {deadlines.slice(0, 1).map((t) => (
-                      <button
-                        className="deadline-chip"
-                        key={t.id}
-                        onClick={() => onTask(t)}
-                      >
-                        Due · {t.title}
-                      </button>
-                    ))}
-                    {all.length > 2 || deadlines.length > 1 ? (
+                    {all.slice(0, 2).map((g) => eventChip(g))}
+                    {chips.shown}
+                    {extra > 0 ? (
                       <button
                         className="calendar-more"
                         onClick={() => setDayDetail(key)}
                       >
-                        View all
+                        +{extra} more
                       </button>
                     ) : null}
                   </div>
@@ -490,16 +911,6 @@ export function PlannerCalendar({
             <div
               className="time-grid-scroll"
               ref={scroller}
-              onScroll={(e) => {
-                try {
-                  localStorage.setItem(
-                    `lifeos:v1:calendar-scroll:${view}`,
-                    String(e.currentTarget.scrollTop),
-                  );
-                } catch {
-                  /* Optional display preference. */
-                }
-              }}
               tabIndex={0}
               aria-label="Calendar time grid"
             >
@@ -508,7 +919,7 @@ export function PlannerCalendar({
                   {Array.from({ length: 24 }, (_, h) => (
                     <span key={h} style={{ top: h * HOUR }}>
                       {h === 0
-                        ? "12 AM"
+                        ? ""
                         : h < 12
                           ? `${h} AM`
                           : h === 12
@@ -523,8 +934,60 @@ export function PlannerCalendar({
                   return (
                     <div
                       key={day}
-                      className={`time-day-column ${day === selectedDay ? "selected-mobile" : ""} ${day === localDate() ? "is-today" : ""}`}
+                      data-day={day}
+                      className={`time-day-column ${day === today ? "is-today" : ""} ${day === selectedDay ? "selected-mobile" : ""}`}
+                      onClick={(e) => addAt(e, day)}
+                      title="Click empty time to add a task"
                     >
+                      {freeOf(day).map((f) => (
+                        <div
+                          key={f.start}
+                          data-free="1"
+                          className="cal-free"
+                          style={{
+                            top: f.start * MINUTE,
+                            height: (f.end - f.start) * MINUTE,
+                          }}
+                        >
+                          {f.end - f.start >= 60 && (
+                            <span data-free="1">
+                              {minutesLabel(f.end - f.start)} free
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {games(day).map((g) => {
+                        const s = minuteOf(g.event.start_at!),
+                          e = minuteOf(g.event.end_at!);
+                        return [
+                          <div
+                            key={g.id + "b"}
+                            className="cal-buffer"
+                            aria-hidden
+                            style={{
+                              top: Math.max(0, s - GAME_BEFORE) * MINUTE,
+                              height: Math.min(GAME_BEFORE, s) * MINUTE,
+                            }}
+                          />,
+                          <div
+                            key={g.id + "a"}
+                            className="cal-buffer"
+                            aria-hidden
+                            style={{
+                              top: e * MINUTE,
+                              height: GAME_AFTER * MINUTE,
+                            }}
+                          />,
+                        ];
+                      })}
+                      {day === today && (
+                        <div
+                          className="cal-now"
+                          style={{ top: nowMinute * MINUTE }}
+                          aria-hidden
+                          title={`Now, ${formatInTimeZone(new Date(now), ZONE, "h:mm a")}`}
+                        />
+                      )}
                       {readableDay(
                         groups.filter((g) => !isLong(g)),
                         day,
@@ -532,13 +995,11 @@ export function PlannerCalendar({
                         const columns = Math.max(
                           ...cluster.items.map((i) => i.columns),
                         );
-                        // Up to three overlapping events sit side by side; only
-                        // a denser slot collapses into one "+N" entry.
-                        if (columns <= 3)
+                        // Two side by side at most; a denser slot becomes "+N".
+                        if (columns <= 2)
                           return cluster.items.map((item) => {
                             const g = item;
-                            // Two weekly events overlapping is a standing
-                            // arrangement; only a one-off event makes a clash.
+                            const s = styleOf(g);
                             const clashesWith = cluster.items.some(
                               (other) =>
                                 other.id !== item.id &&
@@ -550,26 +1011,37 @@ export function PlannerCalendar({
                             );
                             const clash = clashesWith || overlaps.has(g.id);
                             const width = `calc((100% - 4px) / ${item.columns})`;
+                            const height = Math.max(
+                              22,
+                              (item.end - item.start) * MINUTE - 2,
+                            );
+                            const dragging = drag?.id === g.id;
+                            const movable = !!g.event.work_session?.version;
                             return (
                               <button
                                 key={item.id}
-                                className={`time-event ${clash ? "time-event-clash" : ""} ${g.event.work_session?.flexibility === "flexible" ? "flexible-work-session" : ""}`}
-                                aria-label={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((src) => name(src.calendar_id)).join(", ")}${clashesWith ? " · Overlaps another event" : overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}`}
-                                onClick={() => {
+                                className={`time-event tone-${s.tone} ${clash ? "time-event-clash" : ""} ${g.event.work_session ? "cal-session" : ""} ${dragging ? "cal-dragging" : ""} ${height < 34 ? "cal-short" : ""}`}
+                                aria-label={`${g.event.title} · ${calendarKindLabel(g.event)} · ${eventTimeLabel(g.event)} · ${g.sources.map((src) => name(src.calendar_id)).join(", ")}${clashesWith ? " · Overlaps another event" : overlaps.has(g.id) ? " · Overlaps a busy entry" : ""}${movable ? " · Drag to move" : ""}`}
+                                disabled={moving && movable}
+                                onPointerDown={(e) => startDrag(e, g, day)}
+                                onClick={(e) => {
+                                  const el = e.currentTarget;
+                                  if (el.dataset.dragged) {
+                                    delete el.dataset.dragged;
+                                    return;
+                                  }
                                   setDayDetail(null);
                                   setDetails(g);
                                 }}
-                                title={`${g.event.title} · ${eventTimeLabel(g.event)}`}
+                                title={`${g.event.title} · ${eventTimeLabel(g.event)}${movable ? " · drag to move" : ""}`}
                                 style={{
                                   top: item.start * MINUTE,
-                                  height: Math.max(
-                                    26,
-                                    (item.end - item.start) * MINUTE - 2,
-                                  ),
+                                  height,
                                   left: `calc(2px + ${width} * ${item.column})`,
                                   width: `calc(${width} - 2px)`,
-                                  borderLeftColor: color(g),
-                                  background: `color-mix(in srgb, ${color(g)} 18%, var(--surface))`,
+                                  transform: dragging
+                                    ? `translateY(${drag!.delta * MINUTE}px)`
+                                    : undefined,
                                 }}
                               >
                                 {clash && (
@@ -579,18 +1051,23 @@ export function PlannerCalendar({
                                     aria-hidden
                                   />
                                 )}
-                                <strong>
-                                  {g.event.title || "Untitled event"}
-                                </strong>
-                                <small>{eventTimeLabel(g.event)}</small>
+                                <strong>{s.label}</strong>
+                                {height >= 34 && (
+                                  <small>
+                                    {dragging && drag!.delta
+                                      ? `${drag!.delta > 0 ? "+" : ""}${minutesLabel(Math.abs(drag!.delta))}${drag!.delta < 0 ? " earlier" : " later"}${drag!.day !== day ? ` · ${format(new Date(drag!.day + "T12:00:00"), "EEE")}` : ""}`
+                                      : eventTimeLabel(g.event)}
+                                  </small>
+                                )}
                               </button>
                             );
                           });
                         const g = cluster.items[0];
+                        const s = styleOf(g);
                         return [
                           <button
                             key={cluster.id}
-                            className="time-event calendar-overlap-group"
+                            className={`time-event calendar-overlap-group tone-${s.tone}`}
                             aria-label={`${cluster.items.length} events at once on ${day}. Open full schedule`}
                             onClick={() => {
                               setDetails(null);
@@ -598,23 +1075,21 @@ export function PlannerCalendar({
                             }}
                             title={cluster.items
                               .map(
-                                (item) =>
-                                  `${item.event.title} · ${eventTimeLabel(item.event)}`,
+                                (i) =>
+                                  `${i.event.title} · ${eventTimeLabel(i.event)}`,
                               )
                               .join("\n")}
                             style={{
                               top: cluster.start * MINUTE,
                               height: Math.max(
-                                26,
+                                22,
                                 (cluster.end - cluster.start) * MINUTE - 2,
                               ),
                               left: 2,
                               width: "calc(100% - 4px)",
-                              borderLeftColor: color(g),
-                              background: `color-mix(in srgb, ${color(g)} 18%, var(--surface))`,
                             }}
                           >
-                            <strong>{g.event.title}</strong>
+                            <strong>{s.label}</strong>
                             <small>
                               +{cluster.items.length - 1} more at the same time
                             </small>
@@ -629,12 +1104,9 @@ export function PlannerCalendar({
           </div>
         </>
       )}
-      <div className="calendar-footnote">
-        <Link href="/settings?section=integrations">Sync settings</Link>
-      </div>
       {details && (
         <Modal
-          title={details.event.title || "Calendar event"}
+          title={styleOf(details).label}
           open
           onOpenChange={(open) => {
             if (!open) setDetails(null);
@@ -654,32 +1126,27 @@ export function PlannerCalendar({
             {details.event.work_session && (
               <>
                 <p className="small muted">
-                  Life OS reservation · {details.event.work_session.status}
+                  Life OS reservation · {details.event.work_session.status}.
+                  Drag it on the calendar to move it.
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setDetails(null);
-                    onManageSession();
-                  }}
-                >
+                <Link className="text-link" href="/settings?section=planning">
                   Manage work session
-                </Button>
+                </Link>
               </>
             )}
             <p>
               {details.event.all_day_start ??
                 formatInTimeZone(
                   details.event.start_at!,
-                  "America/Vancouver",
+                  ZONE,
                   "EEEE, MMMM d, yyyy",
                 )}
             </p>
             <strong>{eventTimeLabel(details.event)}</strong>
             {details.sources.length > 1 && (
               <p className="muted small">
-                {details.sources.length} matching source entries are grouped for
-                display. Original records are preserved.
+                {details.sources.length} matching entries are grouped. Originals
+                are kept.
               </p>
             )}
             {details.sources.map((s) => (
@@ -698,27 +1165,17 @@ export function PlannerCalendar({
           onOpenChange={(open) => {
             if (!open) setDayDetail(null);
           }}
-          description="Calendar entries and task deadlines for this day."
+          description={dayLoad(
+            timed(dayDetail).length,
+            freeOf(dayDetail).reduce((n, f) => n + f.end - f.start, 0),
+            dayDetail < today,
+          )}
         >
           <div className="day-detail-list">
+            {dueRows(dayDetail)}
             {dayRows(dayDetail)}
-            {due(dayDetail).map((t) => (
-              <button
-                className="agenda-compact-row"
-                key={t.id}
-                onClick={() => {
-                  setDayDetail(null);
-                  onTask(t);
-                }}
-              >
-                <time>Deadline</time>
-                <strong>{t.title}</strong>
-              </button>
-            ))}
-            {!on(dayDetail).length && !due(dayDetail).length && (
-              <p className="muted">
-                No entries match this day and these display filters.
-              </p>
+            {!on(dayDetail).length && !dueRows(dayDetail).length && (
+              <p className="muted">Nothing on this day.</p>
             )}
           </div>
         </Modal>

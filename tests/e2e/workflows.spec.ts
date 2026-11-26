@@ -80,8 +80,7 @@ test("private beta: capture, persist, complete, restore, link, review and previe
   await expect(
     page.getByRole("heading", { name: "[TEST] Explore a complete workflow" }),
   ).toBeVisible();
-  await page.goto("/planner");
-  await page.getByRole("tab", { name: "Work hours & sessions" }).click();
+  await page.goto("/settings?section=planning");
   await page.getByRole("button", { name: "Generate preview" }).click();
   await expect(
     page.locator(".error-message[role=alert]").filter({ visible: true }),
@@ -158,7 +157,7 @@ test("mobile setup and private routes fit an iPhone viewport", async ({
     .getByRole("navigation", { name: "Mobile navigation" })
     .getByRole("link", { name: "Week", exact: true })
     .click();
-  await expect(page.getByRole("heading", { name: "Planner" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Calendar" })).toBeVisible();
   for (const name of ["Today", "School", "Growth"])
     await expect(
       page
@@ -221,7 +220,7 @@ test("edit projects/goals, preserve completion history, recurring instances and 
   await expect(
     page.getByText("Progress through reflection", { exact: true }),
   ).toBeVisible();
-  await page.goto("/planner");
+  await page.goto("/planner?section=tasks");
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Title", exact: true })

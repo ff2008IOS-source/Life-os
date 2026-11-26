@@ -72,7 +72,7 @@ test("Canvas deadlines default to upcoming and separate unknown past-due work fr
   } finally {
     await page.request.delete(seed);
   }
-  await page.goto("/planner");
+  await page.goto("/planner?section=tasks");
   const panel = page.locator("section").filter({
     has: page.getByRole("heading", { name: "Canvas deadlines", exact: true }),
   });

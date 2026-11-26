@@ -46,12 +46,12 @@ const PAGES: SearchEntry[] = [
   {
     kind: "Page",
     title: "Recurring tasks",
-    href: "/planner?section=recurring",
+    href: "/settings?section=planning",
   },
   {
     kind: "Page",
     title: "Scheduling preview",
-    href: "/planner?section=scheduling",
+    href: "/settings?section=planning",
     keywords: "work blocks auto schedule",
   },
   {
