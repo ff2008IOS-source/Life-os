@@ -943,6 +943,28 @@ export function SheetRestPanel() {
               until approved (unless automatic approval is on).
             </p>
           )}
+          {d.mode === "life_os_owned" &&
+            d.config.columns.some((c) => c.key === "week_of") && (
+              <Button
+                disabled={busy}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Build next week's review row from your Life OS grades and tasks? It is queued as a change to review before anything is written. This week's existing row is history and is not changed.",
+                    )
+                  )
+                    void act({
+                      action: "weekly_review",
+                      dataset_id: d.id,
+                      day: new Date(
+                        Date.now() + 7 * 86400000,
+                      ).toLocaleDateString("en-CA"),
+                    });
+                }}
+              >
+                Build next week&apos;s review
+              </Button>
+            )}
           <h3>Outgoing changes</h3>
           {!state?.operations?.length && (
             <p className="small muted">No pending changes.</p>
