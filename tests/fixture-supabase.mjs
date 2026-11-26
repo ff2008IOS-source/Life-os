@@ -462,6 +462,8 @@ const server = createServer((req, res) => {
           "canvas_connections",
           "canvas_mappings",
           "canvas_grade_history",
+          "course_messages",
+          "email_intake_tokens",
         ];
         if (!tables.includes(table)) throw Error("Unknown table");
         const params = [];
@@ -472,7 +474,14 @@ const server = createServer((req, res) => {
         let where = [];
         for (const [key, val] of url.searchParams) {
           if (
-            ["select", "order", "offset", "limit", "on_conflict"].includes(key)
+            [
+              "select",
+              "order",
+              "offset",
+              "limit",
+              "on_conflict",
+              "columns",
+            ].includes(key)
           )
             continue;
           // Deliberately bounded PostgREST subset used by the deadline API.
@@ -562,6 +571,20 @@ const server = createServer((req, res) => {
           const offset = Number(url.searchParams.get("offset") || 0);
           const limit = Number(url.searchParams.get("limit") || 1000);
           sql = `select * from public.${quote(table)}${condition}${order} limit ${Math.min(limit, 1001)} offset ${offset}`;
+        } else if (
+          req.method === "POST" &&
+          (table === "course_messages" || table === "email_intake_tokens")
+        ) {
+          // Bulk upserts used by course updates.
+          const rows = Array.isArray(body) ? body : [body];
+          const keys = Object.keys(rows[0] ?? {});
+          const conflict =
+            table === "course_messages"
+              ? " on conflict(user_id,source,external_id) do nothing"
+              : " on conflict(user_id) do update set token_hash=excluded.token_hash,created_at=excluded.created_at,last_used_at=excluded.last_used_at";
+          sql = `insert into public.${quote(table)}(${keys.map(quote)}) values ${rows
+            .map((r) => `(${keys.map((k) => param(r[k])).join(",")})`)
+            .join(",")}${conflict} returning *`;
         } else if (req.method === "POST") {
           const keys = Object.keys(body);
           let conflict = "";

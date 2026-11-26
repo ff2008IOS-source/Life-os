@@ -17,6 +17,7 @@ import { PasswordForm } from "./password-forms";
 import { AccountDeletion } from "./account-deletion";
 import { MfaPanel } from "./mfa-panel";
 import { NewTermSetup } from "./new-term-setup";
+import { CourseEmailSetup } from "./course-email-setup";
 import { TechnicalDetailsToggle } from "./technical-details";
 import { CareerPanel } from "./career-panel";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
@@ -182,6 +183,9 @@ export function SettingsPage({
               <CanvasConnectionSettings initialOpen={initialCanvasOpen} />
             </div>
             <NewTermSetup />
+            <div className="settings-grid">
+              <CourseEmailSetup />
+            </div>
             <h2 className="settings-group">Spreadsheets</h2>
             <div className="settings-grid">
               <SheetRestPanel />

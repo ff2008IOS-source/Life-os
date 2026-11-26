@@ -9,6 +9,7 @@ import { dueLabel, markPercent } from "@/lib/display";
 import { Mark } from "./mark";
 import { GradePlanner } from "./grade-planner";
 import { TopicSuggestions } from "./topic-suggestions";
+import { CourseUpdatesSection } from "./course-updates";
 import {
   byCourseOrder,
   topicSignal,
@@ -476,6 +477,8 @@ export function AcademicsPanel({
                     )}
                   </div>
                 </div>
+
+                <CourseUpdatesSection key={selected} courseId={selected!} />
 
                 {remainingCount && remainingCount.status === "required" && (
                   <section
