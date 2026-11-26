@@ -78,12 +78,20 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
   ).toBeVisible();
   await page.goto("/planner");
   const calendar = page.locator(".planner-calendar");
-  await calendar
-    .getByRole("button", { name: "Calendars", exact: true })
-    .click();
+  // Filters live in the ⋯ menu; Escape closes it.
+  const options = async (button: string) => {
+    await calendar.getByRole("button", { name: "Calendar options" }).click();
+    await calendar.getByRole("button", { name: button, exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(
+      calendar.getByRole("dialog", { name: "Calendar options" }),
+    ).toHaveCount(0);
+  };
+  await calendar.getByRole("button", { name: "Calendar options" }).click();
   await expect(
     calendar.getByRole("button", { name: "[TEST] SFU", exact: true }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
   const work = calendar
     .locator(".time-event")
     .filter({ hasText: "[TEST] Linked work" });
@@ -98,16 +106,12 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
   await lecture.click();
   await expect(page.getByRole("dialog")).toContainText("[TEST] Fixed lecture");
   await page.getByRole("button", { name: "Close dialog" }).click();
-  await calendar
-    .getByRole("button", { name: "[TEST] SFU", exact: true })
-    .click();
+  await options("[TEST] SFU");
   await expect(
     calendar.locator(".time-event").filter({ hasText: "[TEST] Fixed lecture" }),
   ).toHaveCount(0);
   await expect(work).toHaveAttribute("aria-label", /Overlaps a busy entry/);
-  await calendar
-    .getByRole("button", { name: "Work sessions", exact: true })
-    .click();
+  await options("Work sessions");
   await expect(calendar.locator(".time-event")).toHaveCount(1);
   await work.click();
   await expect(
@@ -116,12 +120,8 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
       .getByText("Flexible work session", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Close dialog" }).click();
-  await calendar
-    .getByRole("button", { name: "[TEST] SFU", exact: true })
-    .click();
-  await calendar
-    .getByRole("button", { name: "Commitments", exact: true })
-    .click();
+  await options("[TEST] SFU");
+  await options("Commitments");
   await expect(calendar.locator(".time-event")).toHaveCount(2);
   await calendar
     .locator(".time-event")
@@ -131,7 +131,7 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
     page.getByText("Calendar commitment", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Manage work session" }),
+    page.getByRole("link", { name: "Manage work session" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Close dialog" }).click();
   for (const width of [1280, 1024, 390]) {
@@ -143,14 +143,12 @@ test("calendar distinguishes confirmed work sessions, keeps hidden commitments p
     ).toBe(true);
   }
   await page.setViewportSize({ width: 1280, height: 900 });
-  await calendar
-    .getByRole("button", { name: "Work sessions", exact: true })
-    .click();
+  await options("Work sessions");
   await work.click();
   await page
-    .getByRole("button", { name: "Manage work session", exact: true })
+    .getByRole("link", { name: "Manage work session", exact: true })
     .click();
   await expect(
-    page.getByRole("tab", { name: "Work hours & sessions", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.getByRole("button", { name: "Planning", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 });

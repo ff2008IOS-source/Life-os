@@ -24,6 +24,7 @@ export function TaskEditor({
   defaultArea,
   defaultTitle = "",
   defaultDescription = "",
+  defaultDueAt,
   onCreated,
 }: {
   task: Task | null;
@@ -31,6 +32,8 @@ export function TaskEditor({
   defaultArea?: string;
   defaultTitle?: string;
   defaultDescription?: string;
+  /** A new task starting at this time (from a click on the calendar). */
+  defaultDueAt?: string;
   onCreated?: (task: Task) => void;
 }) {
   const { data, mutate, notify, request, refresh, isPending } = useWorkspace();
@@ -63,7 +66,9 @@ export function TaskEditor({
     };
   }, []);
   const [error, setError] = useState("");
-  const [dueType, setDueType] = useState(task?.due_at ? "timed" : "date");
+  const [dueType, setDueType] = useState(
+    task?.due_at || (!task && defaultDueAt) ? "timed" : "date",
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -291,9 +296,9 @@ export function TaskEditor({
                 name="due_at"
                 type="datetime-local"
                 defaultValue={
-                  task?.due_at
+                  (task?.due_at ?? (!task ? defaultDueAt : undefined))
                     ? formatInTimeZone(
-                        task.due_at,
+                        (task?.due_at ?? defaultDueAt)!,
                         "America/Vancouver",
                         "yyyy-MM-dd'T'HH:mm",
                       )

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fromZonedTime } from "date-fns-tz";
 import { NextResponse } from "next/server";
 import { authorized } from "@/lib/auth";
 import { dbError, failure } from "@/lib/http";
@@ -21,6 +22,35 @@ export async function GET(request: Request) {
         .filter(Boolean)
         .sort();
       return NextResponse.json({ courses });
+    }
+    // The calendar asks for the deadlines in the days it shows.
+    const params = new URL(request.url).searchParams;
+    if (params.has("from") && params.has("until")) {
+      const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+      const from = day.parse(params.get("from"));
+      const until = day.parse(params.get("until"));
+      const r = await db
+        .from("canvas_deadlines")
+        .select(
+          "canvas_id,course_canvas_id,title,due_at,course_code,submission_state",
+        )
+        .eq("user_id", user.id)
+        .or("published.is.null,published.eq.true")
+        .gte(
+          "due_at",
+          fromZonedTime(`${from}T00:00:00`, "America/Vancouver").toISOString(),
+        )
+        .lt(
+          "due_at",
+          fromZonedTime(`${until}T00:00:00`, "America/Vancouver").toISOString(),
+        )
+        .order("due_at", { ascending: true })
+        .limit(200);
+      dbError(r.error);
+      return NextResponse.json(
+        { records: r.data ?? [] },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
     }
     const search = z
       .string()

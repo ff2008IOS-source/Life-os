@@ -18,6 +18,7 @@ export type CalendarEvent = {
     task_id: string;
     status: string;
     flexibility: string;
+    version?: number;
   } | null;
   id: string;
   calendar_id: string;

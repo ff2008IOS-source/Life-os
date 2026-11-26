@@ -427,7 +427,7 @@ export function DashboardWidgets({
       </Card>
     ),
     sessions: (
-      <Card title="Work sessions" href="/planner?section=schedule">
+      <Card title="Work sessions" href="/settings?section=planning">
         <label>
           Choose a task to focus on
           <select value={choice} onChange={(e) => setChoice(e.target.value)}>

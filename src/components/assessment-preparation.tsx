@@ -168,7 +168,7 @@ export function AssessmentPreparation({
               >
                 Plan preparation
               </Button>
-              <Link className="text-link" href="/planner?section=schedule">
+              <Link className="text-link" href="/settings?section=planning">
                 Preview study time
               </Link>
             </>

@@ -18,6 +18,9 @@ import { AccountDeletion } from "./account-deletion";
 import { MfaPanel } from "./mfa-panel";
 import { NewTermSetup } from "./new-term-setup";
 import { CourseEmailSetup } from "./course-email-setup";
+import { SchedulingPanel } from "./scheduling-panel";
+import { WorkSessionsPanel } from "./work-sessions-panel";
+import { OccurrencesPanel } from "./occurrences-panel";
 import { TechnicalDetailsToggle } from "./technical-details";
 import { CareerPanel } from "./career-panel";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
@@ -28,7 +31,7 @@ export function SettingsPage({
   initialSection?: string;
   initialCanvasOpen?: boolean;
 }) {
-  // Account · Connections · Notifications · Privacy & security · Data.
+  // Account · Connections · Planning · Notifications · Privacy & security · Data.
   // Older links (?section=advanced) open the tab that now holds that content.
   const [section, setSection] = useState(
     initialSection === "advanced"
@@ -36,6 +39,7 @@ export function SettingsPage({
       : [
             "profile",
             "integrations",
+            "planning",
             "notifications",
             "privacy",
             "data",
@@ -43,6 +47,22 @@ export function SettingsPage({
         ? initialSection
         : "profile",
   );
+  // A link to another section while Settings is open switches the tab.
+  const [linked, setLinked] = useState(initialSection);
+  if (initialSection !== linked) {
+    setLinked(initialSection);
+    if (
+      [
+        "profile",
+        "integrations",
+        "planning",
+        "notifications",
+        "privacy",
+        "data",
+      ].includes(initialSection ?? "")
+    )
+      setSection(initialSection!);
+  }
   const router = useRouter();
   const { data, request, refresh, notify } = useWorkspace();
   const { setTheme } = useTheme();
@@ -85,6 +105,7 @@ export function SettingsPage({
         {[
           { id: "profile", label: "Account" },
           { id: "integrations", label: "Connections" },
+          { id: "planning", label: "Planning" },
           { id: "notifications", label: "Notifications" },
           { id: "privacy", label: "Privacy & security" },
           { id: "data", label: "Data" },
@@ -173,7 +194,7 @@ export function SettingsPage({
               <section className="panel settings-panel">
                 <h2>Planning preferences</h2>
                 <p>Work hours, session lengths and calendar reservations.</p>
-                <Link className="text-link" href="/planner?section=schedule">
+                <Link className="text-link" href="/settings?section=planning">
                   Open planning controls
                 </Link>
               </section>
@@ -200,6 +221,13 @@ export function SettingsPage({
               </details>
             </div>
           </div>
+        )}
+        {section === "planning" && (
+          <>
+            <SchedulingPanel />
+            <WorkSessionsPanel />
+            <OccurrencesPanel />
+          </>
         )}
         {section === "notifications" && (
           <div className="settings-grid">

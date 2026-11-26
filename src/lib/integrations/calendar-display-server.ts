@@ -14,7 +14,7 @@ export async function calendarDisplayEvents(
     const rows = await db
       .from("work_blocks")
       .select(
-        "id,task_id,calendar_event_id,provider_event_id,status,flexibility",
+        "id,task_id,calendar_event_id,provider_event_id,status,flexibility,version",
       )
       .eq("user_id", user)
       .in(

@@ -184,8 +184,7 @@ test("synthetic reservation → actual completion → academic history and revie
     },
   );
   expect(reservation.ok()).toBe(true);
-  await page.goto("/planner");
-  await page.getByRole("tab", { name: "Work hours & sessions" }).click();
+  await page.goto("/settings?section=planning");
   // Other specs can leave their own reservations; record this task's session.
   await page
     .locator(".setting-line")

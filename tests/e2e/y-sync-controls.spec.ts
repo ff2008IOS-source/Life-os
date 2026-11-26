@@ -74,8 +74,7 @@ test("controlled calendar moves show confirmation and spreadsheet settings keep 
     }
     await route.fulfill({ json: { confirmed: true } });
   });
-  await page.goto("/planner");
-  await page.getByRole("tab", { name: "Work hours & sessions" }).click();
+  await page.goto("/settings?section=planning");
   await expect(
     page.getByText("Deleted in Google Calendar. Planning is held."),
   ).toBeVisible();

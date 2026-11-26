@@ -52,8 +52,8 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     .getByRole("link", { name: "Open planning controls", exact: true })
     .click();
   await expect(
-    page.getByRole("tab", { name: "Work hours & sessions" }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.getByRole("button", { name: "Planning", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await content
     .getByText("Adjust planning boundaries", { exact: true })
     .filter({ visible: true })
