@@ -182,12 +182,12 @@ export function CareerFollowUps() {
             <div>
               <strong>{f.name}</strong>
               <span>
-                {[f.role, f.organization].filter(Boolean).join(" · ")}
+                {[f.role, f.organization.split(/[;,]/)[0].trim()]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             </div>
-            <span className={`person-since ${f.due ? "due" : ""}`}>
-              {since(f)}
-            </span>
+            <span className="person-since">{since(f)}</span>
             <button
               className="td-link"
               disabled={!!busy || f.days_since === 0}

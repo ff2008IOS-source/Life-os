@@ -350,6 +350,14 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       : `${clock(agenda.nextWindow.start)}–${fmt(agenda.nextWindow.end)} · ${Math.round(agenda.nextWindow.minutes)} min free`
     : null;
   const wrap = wrapUp(data.tasks, now, zone);
+  const openDue = agenda ? agenda.due.filter((d) => d.status !== "done") : [];
+  const handedIn = agenda ? agenda.due.length - openDue.length : 0;
+  // With nothing urgent, suggest the most useful review instead of "nothing".
+  const reviewTopic = b?.weekly.needs_review[0] ?? null;
+  const reviewCourse = reviewTopic
+    ? (b?.assessments.find((a) => a.course_id === reviewTopic.course_id)
+        ?.course ?? null)
+    : null;
   const clash = agenda.clashes.find(
     (c) => `${c.a.title}|${c.b.title}|${c.at}` !== hiddenClash,
   );
@@ -548,12 +556,31 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             ) : (
               <>
                 <div className="td-now-top">
-                  <span className="td-kicker">All done</span>
+                  <span className="td-kicker">
+                    {reviewTopic
+                      ? "Nothing urgent · worth reviewing"
+                      : "All done"}
+                  </span>
                   {windowText && (
                     <span className="td-now-window">{windowText}</span>
                   )}
                 </div>
-                <h2 className="td-now-title">Nothing needs doing right now.</h2>
+                <h2 className="td-now-title">
+                  {reviewTopic
+                    ? `Review ${reviewTopic.title}`
+                    : "Nothing needs doing right now."}
+                </h2>
+                {reviewTopic && (
+                  <div className="td-actions">
+                    <Link
+                      href={`/areas/academics?course=${reviewTopic.course_id}`}
+                      className="td-btn td-btn-light"
+                    >
+                      Open {reviewCourse ?? "course"}{" "}
+                      <ArrowRight size={15} aria-hidden />
+                    </Link>
+                  </div>
+                )}
               </>
             )}
           </section>
@@ -747,55 +774,6 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
               </p>
             )}
           </section>
-        </div>
-
-        <div className="td-col">
-          <section className="td-card" aria-label="Due this week">
-            <div className="td-card-head">
-              <h2 className="td-card-title">Due this week</h2>
-              <Link href="/areas/academics" className="td-link">
-                School <ArrowRight size={14} aria-hidden />
-              </Link>
-            </div>
-            {b.source_errors.includes("academics") ? (
-              <p className="td-muted">
-                Deadlines couldn’t load. Pull to refresh in a moment.
-              </p>
-            ) : agenda.due.length === 0 ? (
-              <p className="td-muted">Nothing due in the next seven days.</p>
-            ) : (
-              <ul className="td-due">
-                {agenda.due.map((d) => (
-                  <li key={d.key}>
-                    <Link
-                      href={d.href}
-                      className={d.status === "done" ? "td-done" : undefined}
-                    >
-                      <span
-                        className={`td-badge ${d.urgent ? "td-badge-hot" : ""}`}
-                      >
-                        <b>{dayBadge(d.due, now)}</b>
-                        <small>
-                          {fmt(d.due, "h:mma").replace(":00", "").toLowerCase()}
-                        </small>
-                      </span>
-                      <span className="td-due-text">
-                        <strong>{d.title}</strong>
-                        <span>
-                          {d.label} ·{" "}
-                          {d.status === "done"
-                            ? "handed in"
-                            : d.status === "planned"
-                              ? `planned ${fmt(d.plannedAt!)} today`
-                              : "not planned yet"}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
 
           <section className="td-card" aria-label="This week">
             <div className="td-card-head">
@@ -859,6 +837,70 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                   )
                   .join(" · ")}
               </p>
+            )}
+          </section>
+        </div>
+
+        <div className="td-col">
+          <section className="td-card" aria-label="Due this week">
+            <div className="td-card-head">
+              <h2 className="td-card-title">Due this week</h2>
+              <Link href="/areas/academics" className="td-link">
+                School <ArrowRight size={14} aria-hidden />
+              </Link>
+            </div>
+            {b.source_errors.includes("academics") ? (
+              <p className="td-muted">
+                Deadlines couldn’t load. Pull to refresh in a moment.
+              </p>
+            ) : agenda.due.length === 0 ? (
+              <p className="td-muted">Nothing due in the next seven days.</p>
+            ) : (
+              <>
+                {openDue.length === 0 && (
+                  <p className="td-muted">
+                    Everything due this week is handed in.
+                  </p>
+                )}
+                <ul className="td-due">
+                  {openDue.map((d) => (
+                    <li key={d.key}>
+                      <Link
+                        href={d.href}
+                        className={d.status === "done" ? "td-done" : undefined}
+                      >
+                        <span
+                          className={`td-badge ${d.urgent ? "td-badge-hot" : ""}`}
+                        >
+                          <b>{dayBadge(d.due, now)}</b>
+                          <small>
+                            {fmt(d.due, "h:mma")
+                              .replace(":00", "")
+                              .toLowerCase()}
+                          </small>
+                        </span>
+                        <span className="td-due-text">
+                          <strong>{d.title}</strong>
+                          <span>
+                            {d.label} ·{" "}
+                            {d.status === "done"
+                              ? "handed in"
+                              : d.status === "planned"
+                                ? `planned ${fmt(d.plannedAt!)} today`
+                                : "not planned yet"}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {handedIn > 0 && (
+                  <p className="td-muted td-handed">
+                    <Check size={14} aria-hidden /> {handedIn} handed in this
+                    week
+                  </p>
+                )}
+              </>
             )}
           </section>
 

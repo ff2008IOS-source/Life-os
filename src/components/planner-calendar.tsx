@@ -96,7 +96,9 @@ export function PlannerCalendar({
   const name = (id: string) =>
     data?.calendars.find((c) => c.id === id)?.name ?? "Calendar";
   const color = (g: EventGroup) =>
-    `color-mix(in srgb, ${data?.calendars.find((c) => c.id === g.event.calendar_id)?.color ?? "var(--accent)"} 50%, var(--secondary))`;
+    // Each calendar keeps its own colour so the week is easy to scan.
+    data?.calendars.find((c) => c.id === g.event.calendar_id)?.color ??
+    "var(--accent)";
   const due = (day: string) =>
     tasks.filter(
       (t) =>
@@ -431,9 +433,7 @@ export function PlannerCalendar({
             style={{ "--days": days.length } as React.CSSProperties}
           >
             <div className="time-grid-header">
-              <div className="time-axis-label">
-                {formatInTimeZone(anchor, "America/Vancouver", "O")}
-              </div>
+              <div className="time-axis-label" aria-hidden />
               {days.map((d) => (
                 <button
                   key={d.toISOString()}

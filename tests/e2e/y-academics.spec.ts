@@ -17,10 +17,17 @@ test("academic forms save unknown term dates, course rules and scores without in
     await expect(initialize).toHaveCount(0);
   }
   await page.goto("/areas/academics");
+  // Term and course actions sit behind "Course options" once courses exist.
+  const options = page.getByRole("button", { name: "Course options" });
+  if (await options.count()) await options.click();
   await page.getByRole("button", { name: "Term", exact: true }).click();
   await page.getByLabel("Term name").fill("[TEST] Unknown dates term");
   await page.getByRole("button", { name: "Save record", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  if (
+    !(await page.getByRole("button", { name: "Course", exact: true }).count())
+  )
+    await page.getByRole("button", { name: "Course options" }).click();
   await page.getByRole("button", { name: "Course", exact: true }).click();
   await page
     .getByRole("dialog")

@@ -195,7 +195,7 @@ export function PlanningDecisions({
   );
   if (!visible.length && !error)
     return (
-      <div>
+      <div className="planning-check">
         {historyControl}
         <Button
           variant="ghost"
@@ -218,7 +218,7 @@ export function PlanningDecisions({
             }
           }}
         >
-          Check changed or missed work blocks
+          Check for missed work blocks
         </Button>
       </div>
     );

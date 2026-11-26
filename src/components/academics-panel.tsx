@@ -16,7 +16,7 @@ import {
 } from "@/lib/topic-finder";
 import { gradeScenario } from "@/lib/grade-scenario";
 import { useState, useEffect, useCallback } from "react";
-import { Plus, BookOpen } from "lucide-react";
+import { Plus, BookOpen, MoreHorizontal } from "lucide-react";
 import { Button } from "./ui/button";
 import { calendarRequest } from "./use-calendar";
 import {
@@ -62,6 +62,7 @@ export function AcademicsPanel({
   });
   const [library, setLibrary] = useState(false);
   const [allTopics, setAllTopics] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [studyTab, setStudyTab] = useState<"topics" | "sessions">("topics");
   const [data, setData] = useState<AcademicData>(empty),
     [error, setError] = useState(""),
@@ -317,48 +318,61 @@ export function AcademicsPanel({
             );
           })}
         </div>
-        <div className="course-switcher-actions">
-          {data.academic_terms.length > 1 && (
-            <select
-              aria-label="Academic term"
-              value={term}
-              onChange={(e) => setTerm(e.currentTarget.value)}
-            >
-              <option value="">All terms</option>
-              {orderTerms(data.academic_terms).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {String(t.name)}
-                </option>
-              ))}
-            </select>
-          )}
-          {current && (
+        {courses.length > 0 && (
+          <button
+            type="button"
+            className="course-more"
+            aria-expanded={moreOpen}
+            aria-label="Course options"
+            onClick={() => setMoreOpen((v) => !v)}
+          >
+            <MoreHorizontal size={18} aria-hidden />
+          </button>
+        )}
+        {(moreOpen || !courses.length) && (
+          <div className="course-switcher-actions">
+            {data.academic_terms.length > 1 && (
+              <select
+                aria-label="Academic term"
+                value={term}
+                onChange={(e) => setTerm(e.currentTarget.value)}
+              >
+                <option value="">All terms</option>
+                {orderTerms(data.academic_terms).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {String(t.name)}
+                  </option>
+                ))}
+              </select>
+            )}
+            {current && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEdit({ kind: "courses", record: current })}
+              >
+                Edit course
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setEdit({ kind: "courses", record: current })}
+              onClick={() => setEdit({ kind: "academic_terms" })}
             >
-              Edit course
+              <Plus size={12} />
+              Term
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setEdit({ kind: "academic_terms" })}
-          >
-            <Plus size={12} />
-            Term
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEdit({ kind: "courses" })}
-            disabled={!data.academic_terms.length}
-          >
-            <Plus size={12} />
-            Course
-          </Button>
-        </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEdit({ kind: "courses" })}
+              disabled={!data.academic_terms.length}
+            >
+              <Plus size={12} />
+              Course
+            </Button>
+          </div>
+        )}
       </div>
       {!current && !loading && !error ? (
         <div className="empty-state compact">
@@ -601,7 +615,7 @@ export function AcademicsPanel({
                                 </span>
                                 {signals.get(t.id)?.suggest ? (
                                   <button
-                                    className="td-link"
+                                    className="td-link td-link-muted topic-propose"
                                     onClick={() =>
                                       void setMastery(
                                         t,
