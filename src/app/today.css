@@ -1939,3 +1939,18 @@ html:not([data-diagnostics]) .tech-detail {
 .mail-group .update-list {
   padding-bottom: 8px;
 }
+label.update-search {
+  display: inline-flex;
+  flex-direction: row;
+  grid-template-columns: none;
+  align-items: center;
+}
+label.update-search-wide {
+  display: flex;
+}
+label.update-search svg {
+  flex: none;
+}
+.mail-group-more {
+  margin: 0 0 12px 25px;
+}

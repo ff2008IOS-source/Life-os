@@ -107,7 +107,9 @@ export async function GET(request: Request) {
         (m) =>
           !m.acknowledged_at &&
           Date.parse(m.posted_at) >= week &&
-          (m.action ? m.action.kind !== "mark_recorded" : m.flags.length > 0),
+          ((m.action && m.action.kind !== "mark_recorded") ||
+            m.flags.includes("schedule") ||
+            m.flags.includes("grading")),
       )
       .sort(
         (a, b) =>

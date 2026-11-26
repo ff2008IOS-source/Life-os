@@ -180,3 +180,23 @@ it("search finds emails by subject, sender and opening text, below your own reco
     subtitle: "ECON 115 · Canvas",
   });
 });
+
+it("Canvas mark notifications need nothing from you; Crowdmark ones do", () => {
+  const canvas = msg(
+    "Submission Posted: Knowledge Application 2, GEOG104 OL01 Climate Change",
+    "https://canvas.sfu.ca/courses/123/assignments/456",
+    ["mark"],
+  );
+  expect(actionFor(canvas, [], "2026-11-26")).toBeNull();
+  expect(
+    actionFor(
+      msg(
+        "Grades available: Lab report",
+        "Sign in to Canvas and click the Crowdmark link",
+        ["mark"],
+      ),
+      [],
+      "2026-11-26",
+    ),
+  ).toEqual({ kind: "open_grades" });
+});

@@ -296,6 +296,35 @@ export function UpdateActionControl({
   );
 }
 
+/** "Submission Posted: X, GEOG104 OL01 Climate…" → "Submission Posted: X". */
+function tidyTitle(m: CourseMessage) {
+  const sender = m.sender
+    ?.replace(/\s*<.*>/, "")
+    .replace(/"/g, "")
+    .trim();
+  let t = m.title.replace(/^\(\w+ \d{4}\)\s*/, "");
+  if (sender && sender.length > 6 && t.endsWith(sender))
+    t = t.slice(0, -sender.length).replace(/[,:–-]\s*$/, "");
+  return t.trim() || m.title;
+}
+
+function senderLabel(m: CourseMessage, course?: string) {
+  if (m.source !== "email") return "Canvas";
+  const s =
+    m.sender
+      ?.replace(/\s*<.*>/, "")
+      .replace(/"/g, "")
+      .trim() ?? "";
+  // A course's own Canvas mail is signed with the course name; the code says it.
+  const code = course?.replace(/\s+/g, "").toUpperCase();
+  if (code && s.replace(/\s+/g, "").toUpperCase().startsWith(code))
+    return "Canvas";
+  // "GEOG104 OL01 Climate…", "ECON115 D100 Introduction…": a course section.
+  if (/^[A-Z]{2,5}\s?\d{3}[A-Z]?\s+[A-Z]{1,2}\d{2,3}\b/.test(s))
+    return "Canvas";
+  return s;
+}
+
 function Item({
   m,
   onAck,
@@ -321,16 +350,10 @@ function Item({
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
-          {m.title}
+          {tidyTitle(m)}
         </button>
         <span className="update-meta">
-          {[
-            course,
-            m.source === "email"
-              ? m.sender?.replace(/\s*<.*>/, "").replace(/"/g, "")
-              : "Canvas",
-            dueLabel(m.posted_at),
-          ]
+          {[course, senderLabel(m, course), dueLabel(m.posted_at)]
             .filter(Boolean)
             .join(" · ")}
         </span>
@@ -505,6 +528,7 @@ export function EmailList() {
   const [q, setQ] = useState("");
   // Groups with new mail start open; a tap overrides that.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const [full, setFull] = useState<string[]>([]);
   const load = useCallback(async () => {
     try {
       const r = await calendarRequest<{ messages: CourseMessage[] }>(
@@ -597,15 +621,25 @@ export function EmailList() {
             </button>
             {expanded && (
               <ul className="update-list">
-                {g.items.slice(0, q ? 50 : 20).map((m) => (
-                  <Item
-                    key={m.id}
-                    m={m}
-                    onAck={() => void ack([m.id])}
-                    onDone={() => void load()}
-                  />
-                ))}
+                {g.items
+                  .slice(0, q ? 50 : full.includes(g.name) ? 100 : 5)
+                  .map((m) => (
+                    <Item
+                      key={m.id}
+                      m={m}
+                      onAck={() => void ack([m.id])}
+                      onDone={() => void load()}
+                    />
+                  ))}
               </ul>
+            )}
+            {expanded && !q && !full.includes(g.name) && g.items.length > 5 && (
+              <button
+                className="td-link mail-group-more"
+                onClick={() => setFull((f) => [...f, g.name])}
+              >
+                Show all {g.items.length}
+              </button>
             )}
           </div>
         );

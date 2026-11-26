@@ -153,6 +153,12 @@ const dayOf = (a: ActionAssessment) =>
       }).format(new Date(a.due_at))
     : null);
 
+/** A Canvas notification email (its marks arrive through the Canvas sync). */
+export const fromCanvas = (m: Pick<ActionMessage, "title" | "body">) =>
+  /^(submission posted|assignment graded|submission comment|grade posted)\b/i.test(
+    m.title,
+  ) || /canvas\.sfu\.ca\/courses\/\d+\/(assignments|grades)/i.test(m.body);
+
 export function actionFor(
   m: ActionMessage,
   assessments: ActionAssessment[],
@@ -173,7 +179,8 @@ export function actionFor(
         };
     }
     if (m.flags.includes("mark")) {
-      if (!a) return { kind: "open_grades" };
+      // Canvas marks reach Life OS through the Canvas sync on their own.
+      if (!a) return fromCanvas(m) ? null : { kind: "open_grades" };
       if (a.earned_score !== null && a.maximum_score)
         return {
           kind: "mark_recorded",
