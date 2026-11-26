@@ -1684,7 +1684,7 @@ html:not([data-diagnostics]) .tech-detail {
   display: grid;
   gap: 24px;
 }
-@media (min-width: 1280px) {
+@media (min-width: 1600px) {
   .planner-split {
     grid-template-columns: minmax(0, 1fr) 340px;
     align-items: start;
