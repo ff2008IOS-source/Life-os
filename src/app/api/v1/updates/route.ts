@@ -20,11 +20,13 @@ export async function GET(request: Request) {
       .select(
         "id,course_id,source,title,body,sender,url,posted_at,flags,acknowledged_at",
       )
-      .eq("user_id", user.id)
-      .gte("posted_at", new Date(Date.now() - 60 * 86400000).toISOString());
+      .eq("user_id", user.id);
+    // Course updates cover the last 60 days; the Email list is the newest 100.
     q = email
       ? q.eq("source", "email").is("course_id", null)
-      : q.not("course_id", "is", null);
+      : q
+          .not("course_id", "is", null)
+          .gte("posted_at", new Date(Date.now() - 60 * 86400000).toISOString());
     const [msgs, token] = await Promise.all([
       q.order("posted_at", { ascending: false }).limit(email ? 100 : 200),
       db

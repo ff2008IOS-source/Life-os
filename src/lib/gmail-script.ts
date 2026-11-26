@@ -2,15 +2,18 @@ import { PASSWORD_RESET } from "./course-updates";
 
 /**
  * The Google Apps Script the owner pastes into script.google.com. It runs in
- * their own Google account and posts new incoming mail (redirected from SFU
- * Outlook, plus Gmail's own) to Life OS with their private token.
- * Password-reset emails are skipped before anything is sent. It remembers
- * the newest email it sent; Life OS ignores repeats.
+ * their own Google account and posts SFU mail only: mail redirected from
+ * SFU Outlook (to, cc or from an sfu.ca address), and older SFU mail
+ * forwarded as attachments. Password-reset emails are skipped before
+ * anything is sent. It remembers the newest email it handled; Life OS
+ * ignores repeats.
  */
 export function gmailScript(endpoint: string, token: string) {
-  return `// Life OS: email bridge. Runs in your Google account only.
+  return `// Life OS: SFU email bridge. Runs in your Google account only.
 const LIFE_OS_URL = ${JSON.stringify(endpoint)};
 const LIFE_OS_TOKEN = ${JSON.stringify(token)};
+// SFU mail only. Your Gmail's own mail is never sent.
+const SFU = "{to:sfu.ca cc:sfu.ca from:sfu.ca}";
 // Password-reset emails never leave Gmail.
 const PASSWORD_RESET = ${PASSWORD_RESET.toString()};
 
@@ -29,14 +32,28 @@ function post(emails) {
   if (r.getResponseCode() !== 200) throw new Error("Life OS said " + r.getResponseCode() + ": " + r.getContentText());
 }
 
+// Older emails you forward from Outlook arrive as attached .eml files.
+function attachedEmails(m) {
+  return m.getAttachments({ includeInlineImages: false }).filter(function (a) {
+    return a.getContentType() === "message/rfc822" || /\\.eml$/i.test(a.getName());
+  });
+}
+
 function sendCourseEmails() {
   const props = PropertiesService.getUserProperties();
   const me = (Session.getActiveUser().getEmail() || "").toLowerCase();
-  // First run looks back 3 days; after that, from the newest email already sent.
+  // First run looks back 3 days; after that, from the newest email handled.
   const since = Number(props.getProperty("LIFE_OS_SINCE") || Date.now() - 3 * 86400000);
-  const query = "after:" + Math.floor(since / 1000 - 600) + " -in:sent -in:drafts -in:chats";
+  const query = SFU + " after:" + Math.floor(since / 1000 - 600) + " -in:sent -in:drafts -in:chats";
   let newest = since;
   let batch = [];
+  let size = 0;
+  function add(item) {
+    const n = JSON.stringify(item).length;
+    if (batch.length && (batch.length === 25 || size + n > 800000)) { post(batch); batch = []; size = 0; }
+    batch.push(item);
+    size += n;
+  }
   // Up to 250 conversations per run; anything left goes next hour.
   for (let start = 0; start < 250; start += 50) {
     const threads = GmailApp.search(query, start, 50);
@@ -46,12 +63,26 @@ function sendCourseEmails() {
         const from = m.getFrom() || "";
         if (when < since - 600000 || m.isDraft()) return;
         if (me && from.toLowerCase().indexOf(me) !== -1) return; // your own replies
+        if (when > newest) newest = when;
+        const id = m.getHeader("Message-ID") || m.getId();
+        const eml = attachedEmails(m);
+        if (eml.length) {
+          eml.forEach(function (a, i) {
+            add({ id: id + "#" + i, raw: a.getDataAsString().slice(0, 400000) });
+          });
+          return;
+        }
         const subject = m.getSubject() || "";
         const body = (m.getPlainBody() || "").slice(0, 10000);
         if (isPasswordReset(subject, body)) return;
-        batch.push({ id: m.getId(), subject: subject, from: from, date: m.getDate().toISOString(), body: body });
-        if (when > newest) newest = when;
-        if (batch.length === 25) { post(batch); batch = []; }
+        add({
+          id: id,
+          subject: subject,
+          from: from,
+          to: [m.getTo(), m.getCc()].filter(String).join(", ").slice(0, 4000),
+          date: m.getDate().toISOString(),
+          body: body,
+        });
       });
     });
     if (threads.length < 50) break;

@@ -2,7 +2,15 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
-## 2026-11-26: all incoming email
+## 2026-11-26: SFU mail only, plus older SFU mail
+
+| Change                                                              | Status              | Notes                                                                                                                                          |
+| ------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Only SFU mail is sent and stored (to, cc or from an sfu.ca address) | Implemented, Tested | Owner correction. The script's Gmail search is SFU-only, and the server drops anything else. The 25 non-SFU emails already copied were deleted |
+| Older SFU mail forwarded from Outlook as attachments is unpacked    | Implemented, Tested | `postal-mime` (MIT-0) parses each .eml for its original sender, date and text. Message-ID dedupes against mail that was already redirected     |
+| No 60-day cleanup for SFU mail                                      | Implemented         | So older mail stays readable. The Email list shows the newest 100                                                                              |
+
+## 2026-11-26: all incoming email (superseded)
 
 | Change                                                             | Status              | Notes                                                                                                                    |
 | ------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |

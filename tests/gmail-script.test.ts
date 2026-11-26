@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { gmailScript } from "@/lib/gmail-script";
-import { isPasswordReset } from "@/lib/course-updates";
+import { isPasswordReset, isSfuMail } from "@/lib/course-updates";
 
 it("produces a valid Apps Script with the endpoint and token filled in", () => {
   const s = gmailScript(
@@ -12,6 +12,7 @@ it("produces a valid Apps Script with the endpoint and token filled in", () => {
   expect(s).toContain('"https://lifeos.example/api/internal/intake/email"');
   expect(s).toContain("everyHours(1)");
   expect(s).toContain("-in:sent");
+  expect(s).toContain("{to:sfu.ca cc:sfu.ca from:sfu.ca}");
 });
 
 it("the script's own reset test matches the server's", () => {
@@ -44,4 +45,16 @@ it("drops password resets but keeps sign-in codes", () => {
   expect(isPasswordReset("SFU MBB practice moved", "Practice is at 6pm")).toBe(
     false,
   );
+});
+
+it("keeps only SFU mail", () => {
+  expect(isSfuMail("Prof <prof@sfu.ca>", "")).toBe(true);
+  expect(
+    isSfuMail("Canvas <notifications@instructure.com>", "fela@sfu.ca"),
+  ).toBe(true);
+  expect(isSfuMail("IT <help@its.sfu.ca>", "")).toBe(true);
+  expect(isSfuMail("Starbucks <news@starbucks.ca>", "me@gmail.com")).toBe(
+    false,
+  );
+  expect(isSfuMail("Fake <a@notsfu.ca>", "")).toBe(false);
 });

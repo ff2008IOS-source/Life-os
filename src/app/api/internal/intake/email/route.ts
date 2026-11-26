@@ -7,15 +7,25 @@ const body = z
   .object({
     emails: z
       .array(
-        z
-          .object({
-            id: z.string().min(1).max(300),
-            subject: z.string().max(1000),
-            from: z.string().max(500),
-            date: z.string().max(100),
-            body: z.string().max(40000),
-          })
-          .strict(),
+        z.union([
+          z
+            .object({
+              id: z.string().min(1).max(300),
+              subject: z.string().max(1000),
+              from: z.string().max(500),
+              to: z.string().max(4000).optional(),
+              date: z.string().max(100),
+              body: z.string().max(40000),
+            })
+            .strict(),
+          // An older email forwarded as an attachment (.eml source).
+          z
+            .object({
+              id: z.string().min(1).max(300),
+              raw: z.string().max(400000),
+            })
+            .strict(),
+        ]),
       )
       .max(25),
   })
@@ -35,7 +45,7 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     const text = await request.text();
-    if (text.length > 600000)
+    if (text.length > 1000000)
       return NextResponse.json(
         { error: { code: "TOO_LARGE" } },
         { status: 413 },

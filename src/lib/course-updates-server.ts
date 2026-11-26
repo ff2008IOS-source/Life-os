@@ -1,10 +1,12 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
+import PostalMime from "postal-mime";
 import { canvasAdmin, decryptToken } from "./canvas/secure";
 import { CanvasClient } from "./canvas/client";
 import { dbError } from "./http";
 import {
   isPasswordReset,
+  isSfuMail,
   matchCourse,
   plainText,
   updateFlags,
@@ -118,18 +120,50 @@ export async function rotateIntakeToken(user: string) {
   return token;
 }
 
-export type IncomingEmail = {
+export type IncomingEmail =
+  | {
+      id: string;
+      subject: string;
+      from: string;
+      to?: string;
+      date: string;
+      body: string;
+    }
+  | { id: string; raw: string };
+
+type Parsed = {
   id: string;
   subject: string;
   from: string;
+  to: string;
   date: string;
   body: string;
 };
 
+const person = (a?: { name?: string; address?: string } | null) =>
+  a?.address ? (a.name ? `${a.name} <${a.address}>` : a.address) : "";
+
+/** An email forwarded as an attachment (.eml), e.g. older SFU mail. */
+async function parseRaw(id: string, raw: string): Promise<Parsed> {
+  const m = await PostalMime.parse(raw);
+  const people = [...(m.to ?? []), ...(m.cc ?? [])]
+    .map((a) => person(a))
+    .join(", ");
+  return {
+    id: (m.messageId || id).slice(0, 300),
+    subject: m.subject ?? "",
+    from: person(m.from),
+    to: people,
+    date: m.date ?? "",
+    body: m.text || m.html || "",
+  };
+}
+
 /**
- * Emails posted by the owner's Gmail script. Course mail is matched to a
- * course and flagged; other mail is kept for 60 days in the Email list.
- * Password resets are dropped.
+ * SFU emails posted by the owner's Gmail script (redirected from Outlook,
+ * or older mail forwarded as attachments). Course mail is matched to a
+ * course and flagged; the rest shows under Week → Inbox. Password resets
+ * and non-SFU mail are dropped.
  */
 export async function ingestEmails(token: string, emails: IncomingEmail[]) {
   const db = canvasAdmin();
@@ -146,7 +180,18 @@ export async function ingestEmails(token: string, emails: IncomingEmail[]) {
     .select("id,code")
     .eq("user_id", user);
   dbError(courses.error);
-  const rows: Row[] = emails.flatMap((e) => {
+  const parsed: Parsed[] = [];
+  for (const e of emails) {
+    if ("raw" in e) {
+      try {
+        parsed.push(await parseRaw(e.id, e.raw));
+      } catch {
+        // An attachment that isn't a readable email is skipped.
+      }
+    } else parsed.push({ ...e, to: e.to ?? "" });
+  }
+  const rows: Row[] = parsed.flatMap((e) => {
+    if (!isSfuMail(e.from, e.to)) return [];
     const body = plainText(e.body);
     const title = e.subject.slice(0, 500) || "(no subject)";
     if (isPasswordReset(title, body)) return [];
@@ -157,7 +202,7 @@ export async function ingestEmails(token: string, emails: IncomingEmail[]) {
     return {
       user_id: user,
       course_id,
-      source: "email",
+      source: "email" as const,
       external_id: e.id.slice(0, 300),
       title,
       body,
@@ -170,13 +215,6 @@ export async function ingestEmails(token: string, emails: IncomingEmail[]) {
     };
   });
   const added = await insert(rows);
-  await db
-    .from("course_messages")
-    .delete()
-    .eq("user_id", user)
-    .eq("source", "email")
-    .is("course_id", null)
-    .lt("posted_at", new Date(Date.now() - 60 * 86400000).toISOString());
   await db
     .from("email_intake_tokens")
     .update({ last_used_at: new Date().toISOString() })
