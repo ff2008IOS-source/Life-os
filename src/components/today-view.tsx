@@ -1,4 +1,5 @@
 "use client";
+import { CourseUpdatesCard } from "./course-updates";
 import { WeekFitLine } from "./week-fit-line";
 import { wrapUp } from "@/lib/wrap-up";
 import { FollowUpNudge } from "./career-follow-ups";
@@ -842,6 +843,12 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
         </div>
 
         <div className="td-col">
+          <CourseUpdatesCard
+            courseCode={(id) =>
+              b.assessments.find((a) => a.course_id === id)?.course
+            }
+          />
+
           <section className="td-card" aria-label="Due this week">
             <div className="td-card-head">
               <h2 className="td-card-title">Due this week</h2>

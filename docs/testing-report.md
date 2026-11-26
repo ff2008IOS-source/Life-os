@@ -1,15 +1,15 @@
 # Testing report
 
-Run date: 2026-11-25, on the `claude/funny-mayer-j25zzj` branch before merge.
+Run date: 2026-11-26, on the `claude/funny-mayer-j25zzj` branch before merge.
 
 | Check                                                    | Result         |
 | -------------------------------------------------------- | -------------- |
 | `npx tsc --noEmit`                                       | Pass           |
 | `npm run lint`                                           | Pass           |
 | `npx prettier --check .`                                 | Pass           |
-| `npm test` (vitest)                                      | **408 passed** |
+| `npm test` (vitest)                                      | **418 passed** |
 | `npm run build`                                          | Pass           |
-| `npm run test:e2e` (Playwright, PGlite fixture database) | **36 passed**  |
+| `npm run test:e2e` (Playwright, PGlite fixture database) | **37 passed**  |
 
 ## New tests this phase
 

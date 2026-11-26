@@ -1710,3 +1710,94 @@ html:not([data-diagnostics]) .tech-detail {
   font-size: 13px;
   color: var(--secondary);
 }
+
+/* Course updates (announcements and course emails) */
+.update-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.update {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.update:last-child {
+  border-bottom: 0;
+}
+.update-icon {
+  color: var(--secondary);
+  padding-top: 2px;
+}
+.update-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.update-title {
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.update-meta {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.update-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.update-flag {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--secondary);
+}
+.update-flag-grading,
+.update-flag-schedule {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+.update-flag-mark {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+}
+.update-body {
+  font-size: 14px;
+  color: var(--secondary);
+  white-space: pre-line;
+  margin: 4px 0 0;
+}
+.update-seen .update-title {
+  color: var(--secondary);
+}
+
+.email-steps {
+  display: grid;
+  gap: 12px;
+  padding-left: 20px;
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+.email-script {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.email-script textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}

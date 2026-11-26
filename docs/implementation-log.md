@@ -2,6 +2,16 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-26: course updates
+
+| Change                                                                                  | Status              | Notes                                                                                                                                                                           |
+| --------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Canvas announcements read for every linked course (last 60 days), synced at most hourly | Implemented, Tested | Flags messages that may change grading, move a date or time, or post a mark                                                                                                     |
+| Forwarded course emails (Outlook rule → Gmail → Apps Script → Life OS)                  | Implemented, Tested | Private per-owner token, only its SHA-256 hash stored; ≤25 emails per post; no new OAuth scope and $0                                                                           |
+| Course updates on Today and on each course in School, with "Seen"                       | Implemented, Tested | e2e: a forwarded email moving an exam appears on School and Today and can be marked seen                                                                                        |
+| Crowdmark marks                                                                         | Documented          | Crowdmark has no student API. Marks reach Life OS when instructors export them to Canvas, or through the "your results are available" email, which is flagged "New mark posted" |
+| Submitted work showing a Canvas placeholder 0 is treated as awaiting a mark             | Implemented, Tested | PHIL 100W was wrongly shown at 55%                                                                                                                                              |
+
 ## 2026-11-25: follow-up batch
 
 | Change                                                                       | Status              | Notes                                                                                                                                       |
