@@ -57,6 +57,12 @@ type State = {
   next?: string | null;
   operations?: Operation[];
   more_operations?: boolean;
+  change_log?: {
+    id: string;
+    operation_type: string;
+    intended: Values;
+    verified_at: string | null;
+  }[];
   tests: {
     id: string;
     spreadsheet_url: string;
@@ -637,6 +643,7 @@ export function SheetRestPanel() {
               import_only: "Import only",
               export_only: "Export only",
               paused: "Paused",
+              life_os_owned: "Life OS is the source of truth",
             }[d.mode] ?? d.mode}
             {" · Last updated: "}
             {d.last_read_at ? stamp(d.last_read_at) : "Not synced yet"}
@@ -928,6 +935,36 @@ export function SheetRestPanel() {
               />
             </details>
           )}
+          {d.mode === "life_os_owned" && (
+            <p className="small muted">
+              Life OS values win over hand edits made after ownership began.
+              Rows that already had content then are history and are never
+              changed. Pending changes below are the preview: nothing is written
+              until approved (unless automatic approval is on).
+            </p>
+          )}
+          {d.mode === "life_os_owned" &&
+            d.config.columns.some((c) => c.key === "week_of") && (
+              <Button
+                disabled={busy}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Build next week's review row from your Life OS grades and tasks? It is queued as a change to review before anything is written. This week's existing row is history and is not changed.",
+                    )
+                  )
+                    void act({
+                      action: "weekly_review",
+                      dataset_id: d.id,
+                      day: new Date(
+                        Date.now() + 7 * 86400000,
+                      ).toLocaleDateString("en-CA"),
+                    });
+                }}
+              >
+                Build next week&apos;s review
+              </Button>
+            )}
           <h3>Outgoing changes</h3>
           {!state?.operations?.length && (
             <p className="small muted">No pending changes.</p>
@@ -964,6 +1001,40 @@ export function SheetRestPanel() {
               )}
             </div>
           ))}
+          <details>
+            <summary>Change log and undo</summary>
+            {!state?.change_log?.length && (
+              <p className="small muted">No confirmed changes yet.</p>
+            )}
+            {state?.change_log?.map((c) => (
+              <div className="stack" key={c.id}>
+                <p className="small" style={{ overflowWrap: "anywhere" }}>
+                  {c.verified_at ? stamp(c.verified_at) : ""} ·{" "}
+                  {c.operation_type} · {JSON.stringify(c.intended)}
+                </p>
+                {c.operation_type === "update" && (
+                  <Button
+                    disabled={busy}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Restore the previous values? This creates a new change you can review.",
+                        )
+                      )
+                        void act({
+                          action: "undo",
+                          dataset_id: d.id,
+                          operation_id: c.id,
+                          confirmed: true,
+                        });
+                    }}
+                  >
+                    Undo
+                  </Button>
+                )}
+              </div>
+            ))}
+          </details>
           {state?.more_operations && (
             <p>
               More operations are pending. Process these before the next batch.

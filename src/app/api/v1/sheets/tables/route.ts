@@ -25,6 +25,13 @@ import {
   readDataset,
 } from "@/lib/integrations/sheet-rest-server";
 import {
+  syncAndCorrect,
+  previewOwned,
+  undoOperation,
+  changeLog,
+  proposeWeeklyReview,
+} from "@/lib/integrations/sheet-owned";
+import {
   createSheetTest,
   verifySheetTest,
 } from "@/lib/integrations/sheet-rest-test";
@@ -88,6 +95,32 @@ const inputSchema = z.discriminatedUnion("action", [
     })
     .strict(),
   z.object({ action: z.literal("sync"), ...base }).strict(),
+  z
+    .object({
+      action: z.literal("activate_owned"),
+      ...base,
+      version: z.number().int(),
+      allow_insert: z.boolean(),
+      automatic_outbound: z.boolean(),
+      ...confirmed,
+    })
+    .strict(),
+  z.object({ action: z.literal("preview"), ...base }).strict(),
+  z
+    .object({
+      action: z.literal("undo"),
+      ...base,
+      operation_id: id,
+      ...confirmed,
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("weekly_review"),
+      ...base,
+      day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .strict(),
   z
     .object({
       action: z.literal("mode"),
@@ -204,7 +237,7 @@ export async function GET(request: Request) {
       .order("id")
       .limit(101);
     if (after) query = query.gt("id", id.parse(after));
-    const [rows, ops, runs] = await Promise.all([
+    const [rows, ops, runs, log] = await Promise.all([
       query,
       db
         .from("sheet_rest_operations")
@@ -228,6 +261,7 @@ export async function GET(request: Request) {
         .eq("dataset_id", dataset)
         .order("started_at", { ascending: false })
         .limit(10),
+      changeLog(user.id, dataset),
     ]);
     for (const r of [rows, ops, runs]) dbError(r.error);
     return NextResponse.json(
@@ -240,6 +274,7 @@ export async function GET(request: Request) {
         operations: ops.data!.slice(0, 100),
         more_operations: ops.data!.length > 100,
         runs: runs.data,
+        change_log: log,
       },
       { headers: { "Cache-Control": "no-store" } },
     );
@@ -384,7 +419,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ saved: true });
     }
     if (input.action === "sync")
-      return NextResponse.json(await synchronizeDataset(user.id, d.id));
+      return NextResponse.json(await syncAndCorrect(user.id, d.id));
+    if (input.action === "activate_owned") {
+      // Freezes rows that already hold content, then switches mode. Nothing is written to Google here.
+      const r = await db.rpc("activate_life_os_owned", {
+        p_user: user.id,
+        p_dataset: d.id,
+        p_version: input.version,
+        p_allow_insert: input.allow_insert,
+        p_automatic: input.automatic_outbound,
+      });
+      dbError(r.error);
+      return NextResponse.json({ activated: true, frozen_rows: r.data });
+    }
+    if (input.action === "preview")
+      return NextResponse.json({ changes: await previewOwned(d) });
+    if (input.action === "undo")
+      return NextResponse.json(
+        await undoOperation(user.id, d.id, input.operation_id),
+      );
+    if (input.action === "weekly_review")
+      return NextResponse.json(
+        await proposeWeeklyReview(db, user.id, d.id, input.day),
+      );
     if (input.action === "mode") {
       if (input.automatic_outbound && !input.outbound_enabled)
         throw new ApiError(
