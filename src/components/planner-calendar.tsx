@@ -294,9 +294,14 @@ export function PlannerCalendar({
     restored.current = view + from;
     scroller.current.scrollTop = Math.max(
       0,
-      ((showsToday ? nowMinute - 90 : firstStart - 30) as number) * MINUTE,
+      // The current time inside the planning window; otherwise the first event.
+      (showsToday &&
+      nowMinute >= window_.start * 60 &&
+      nowMinute < window_.end * 60
+        ? nowMinute - 90
+        : Math.min(firstStart, window_.start * 60) - 30) * MINUTE,
     );
-  }, [view, from, data, firstStart, showsToday, nowMinute]);
+  }, [view, from, data, firstStart, showsToday, nowMinute, window_]);
 
   const stamps = calendars
     .map((c) => c.last_synced_at)
