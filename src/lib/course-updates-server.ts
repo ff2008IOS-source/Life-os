@@ -131,13 +131,14 @@ export type IncomingEmail =
     }
   | { id: string; raw: string };
 
-type Parsed = {
+export type Parsed = {
   id: string;
   subject: string;
   from: string;
   to: string;
   date: string;
   body: string;
+  url?: string | null;
 };
 
 const person = (a?: { name?: string; address?: string } | null) =>
@@ -160,38 +161,22 @@ async function parseRaw(id: string, raw: string): Promise<Parsed> {
 }
 
 /**
- * SFU emails posted by the owner's Gmail script (redirected from Outlook,
- * or older mail forwarded as attachments). Course mail is matched to a
- * course and flagged; the rest shows under Week → Inbox. Password resets
- * and non-SFU mail are dropped.
+ * Saves emails for the owner: matched to a course and flagged when they are
+ * course mail. Password resets (and, from Gmail, non-SFU mail) are dropped.
+ * The email's own Message-ID keeps each one stored once.
  */
-export async function ingestEmails(token: string, emails: IncomingEmail[]) {
-  const db = canvasAdmin();
-  const t = await db
-    .from("email_intake_tokens")
-    .select("user_id")
-    .eq("token_hash", hashToken(token))
-    .maybeSingle();
-  dbError(t.error);
-  if (!t.data) return null;
-  const user = t.data.user_id as string;
-  const courses = await db
+export async function storeEmails(
+  user: string,
+  parsed: Parsed[],
+  opts: { sfuOnly: boolean },
+) {
+  const courses = await canvasAdmin()
     .from("courses")
     .select("id,code")
     .eq("user_id", user);
   dbError(courses.error);
-  const parsed: Parsed[] = [];
-  for (const e of emails) {
-    if ("raw" in e) {
-      try {
-        parsed.push(await parseRaw(e.id, e.raw));
-      } catch {
-        // An attachment that isn't a readable email is skipped.
-      }
-    } else parsed.push({ ...e, to: e.to ?? "" });
-  }
   const rows: Row[] = parsed.flatMap((e) => {
-    if (!isSfuMail(e.from, e.to)) return [];
+    if (opts.sfuOnly && !isSfuMail(e.from, e.to)) return [];
     const body = plainText(e.body);
     const title = e.subject.slice(0, 500) || "(no subject)";
     if (isPasswordReset(title, body)) return [];
@@ -207,14 +192,43 @@ export async function ingestEmails(token: string, emails: IncomingEmail[]) {
       title,
       body,
       sender: e.from.slice(0, 300) || null,
-      url: null,
+      url: e.url ?? null,
       posted_at: Number.isFinite(Date.parse(e.date))
         ? new Date(e.date).toISOString()
         : new Date().toISOString(),
       flags: course_id ? updateFlags(title, body) : [],
     };
   });
-  const added = await insert(rows);
+  return insert(rows);
+}
+
+/**
+ * SFU emails posted by the owner's Gmail script (redirected from Outlook,
+ * or older mail forwarded as attachments). Course mail is matched to a
+ * course and flagged; the rest shows under Week → Inbox. Password resets
+ * and non-SFU mail are dropped.
+ */
+export async function ingestEmails(token: string, emails: IncomingEmail[]) {
+  const db = canvasAdmin();
+  const t = await db
+    .from("email_intake_tokens")
+    .select("user_id")
+    .eq("token_hash", hashToken(token))
+    .maybeSingle();
+  dbError(t.error);
+  if (!t.data) return null;
+  const user = t.data.user_id as string;
+  const parsed: Parsed[] = [];
+  for (const e of emails) {
+    if ("raw" in e) {
+      try {
+        parsed.push(await parseRaw(e.id, e.raw));
+      } catch {
+        // An attachment that isn't a readable email is skipped.
+      }
+    } else parsed.push({ ...e, to: e.to ?? "" });
+  }
+  const added = await storeEmails(user, parsed, { sfuOnly: true });
   await db
     .from("email_intake_tokens")
     .update({ last_used_at: new Date().toISOString() })

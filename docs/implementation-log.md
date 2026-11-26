@@ -2,6 +2,14 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-26: direct SFU Outlook connection
+
+| Change                                                                                                            | Status              | Notes                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Settings → SFU Outlook: Microsoft sign-in with read-only mail access (`Mail.Read`, `offline_access`, `User.Read`) | Implemented, Tested | Public client with PKCE, so no client secret. The owner registers a free app in Microsoft Entra and pastes its client ID. SFU may require IT approval; if so, the panel says so                          |
+| Imports the whole mailbox, newest first, then keeps checking for new mail                                         | Implemented, Tested | Skips Sent, Drafts, Deleted, Junk and Outbox. Resumes where it stopped; runs while Settings is open and briefly whenever course updates sync. The email's own Message-ID dedupes against the Gmail route |
+| Refresh token encrypted with the server key (AES-256-GCM, per-owner AAD)                                          | Implemented         | The owner's API never returns it                                                                                                                                                                         |
+
 ## 2026-11-26: SFU mail only, plus older SFU mail
 
 | Change                                                              | Status              | Notes                                                                                                                                          |

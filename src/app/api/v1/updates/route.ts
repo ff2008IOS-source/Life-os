@@ -6,6 +6,7 @@ import {
   rotateIntakeToken,
   syncAnnouncements,
 } from "@/lib/course-updates-server";
+import { syncOutlook } from "@/lib/outlook-server";
 
 /**
  * Recent course updates (Canvas announcements and course emails), or with
@@ -62,8 +63,12 @@ export async function POST(request: Request) {
     checkMutation(request);
     const { db, user } = await authorized();
     const x = input.parse(await readJson(request));
-    if (x.action === "sync")
-      return NextResponse.json(await syncAnnouncements(user.id));
+    if (x.action === "sync") {
+      const canvas = await syncAnnouncements(user.id);
+      // New SFU Outlook mail too, briefly; a failure here never blocks Canvas.
+      const outlook = await syncOutlook(user.id, 8000).catch(() => null);
+      return NextResponse.json({ ...canvas, outlook: Boolean(outlook) });
+    }
     if (x.action === "token")
       return NextResponse.json({ token: await rotateIntakeToken(user.id) });
     const r = await db

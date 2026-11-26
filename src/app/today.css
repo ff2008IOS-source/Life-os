@@ -1801,3 +1801,28 @@ html:not([data-diagnostics]) .tech-detail {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
 }
+.outlook-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+.outlook-fields input {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+@media (max-width: 560px) {
+  .outlook-fields {
+    grid-template-columns: 1fr;
+  }
+}
+.email-steps code {
+  word-break: break-all;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
