@@ -68,7 +68,10 @@ test("Sync all skips paused/test tables, continues on failure and displays hones
     panel.getByText("2 of 3 did not sync:", { exact: true }),
   ).toBeVisible();
   await expect(
-    panel.getByText("This table is already syncing. Try again shortly."),
+    // The message also appears inside the row's status line since #67.
+    panel.getByText("This table is already syncing. Try again shortly.", {
+      exact: true,
+    }),
   ).toBeVisible();
   const results = panel.getByRole("region", { name: "Sync all results" });
   await results.getByText("Show all tables").click();
