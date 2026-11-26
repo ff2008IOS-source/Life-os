@@ -2,6 +2,15 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-26: "It's fine" overlaps are remembered everywhere
+
+| Change                                                                                                                                       | Status              | Notes                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------- |
+| "It's fine" on an overlap is saved (as a briefing dismissal, `overlap-ok:` key) instead of being forgotten on refresh                        | Implemented, Tested | Owner bug report. Works across devices                                                 |
+| One rule (`overlaps.ts`) for Today's clash card and timeline, Week's ⚠ markers, the briefing's overlap list and count, and the weekly review | Implemented, Tested | Two weekly events overlapping is never a clash (the briefing didn't apply this before) |
+| Week: an overlapping event's details say what it overlaps, with "It's fine"                                                                  | Implemented, Tested |                                                                                        |
+| A pair is matched by both titles and start times of day, so the same overlap next week stays fine                                            | Implemented, Tested |                                                                                        |
+
 ## 2026-11-26: calendar redesign
 
 | Change                                                                                                                                                                                                                              | Status              | Notes                                                                     |

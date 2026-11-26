@@ -40,6 +40,8 @@ import {
   type Tone,
 } from "@/lib/calendar-style";
 import { isGame } from "@/lib/basketball";
+import { isClash, overlapKey } from "@/lib/overlaps";
+import { useAcceptedOverlaps } from "./use-overlaps";
 import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
 
@@ -244,6 +246,41 @@ export function PlannerCalendar({
     g.event.work_session
       ? { tone: "study" as Tone, label: g.event.title || "Work session" }
       : eventStyle(g.event.title, name(g.event.calendar_id));
+  const { accepted, accept } = useAcceptedOverlaps();
+  /** Events this one clashes with (weekly pairs and "It's fine" pairs aren't). */
+  const partners = (g: EventGroup) => {
+    if (!g.event.start_at || !g.event.end_at || g.event.busy_status === "free")
+      return [];
+    const s = Date.parse(g.event.start_at),
+      e = Date.parse(g.event.end_at);
+    return groups.filter(
+      (o) =>
+        o.id !== g.id &&
+        !!o.event.start_at &&
+        !!o.event.end_at &&
+        !isLong(o) &&
+        o.event.busy_status !== "free" &&
+        Date.parse(o.event.start_at) < e &&
+        s < Date.parse(o.event.end_at) &&
+        !(
+          o.event.title === g.event.title &&
+          o.event.start_at === g.event.start_at
+        ) &&
+        isClash(
+          {
+            title: g.event.title,
+            start: g.event.start_at!,
+            recurring: g.event.recurring,
+          },
+          {
+            title: o.event.title,
+            start: o.event.start_at!,
+            recurring: o.event.recurring,
+          },
+          accepted,
+        ),
+    );
+  };
   const showDue = kind === "all" || kind === "deadlines";
   const due = (day: string) =>
     showDue
@@ -1005,15 +1042,7 @@ export function PlannerCalendar({
                           return cluster.items.map((item) => {
                             const g = item;
                             const s = styleOf(g);
-                            const clashesWith = cluster.items.some(
-                              (other) =>
-                                other.id !== item.id &&
-                                other.start < item.end &&
-                                item.start < other.end &&
-                                !(
-                                  item.event.recurring && other.event.recurring
-                                ),
-                            );
+                            const clashesWith = partners(g).length > 0;
                             const clash = clashesWith || overlaps.has(g.id);
                             const width = `calc((100% - 4px) / ${item.columns})`;
                             const height = Math.max(
@@ -1148,6 +1177,31 @@ export function PlannerCalendar({
                 )}
             </p>
             <strong>{eventTimeLabel(details.event)}</strong>
+            {partners(details).map((o) => (
+              <div className="cal-clash-note" key={o.id}>
+                <span>
+                  Overlaps <strong>{styleOf(o).label}</strong> (
+                  {eventTimeLabel(o.event)})
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    void accept(
+                      overlapKey(
+                        {
+                          title: details.event.title,
+                          start: details.event.start_at!,
+                        },
+                        { title: o.event.title, start: o.event.start_at! },
+                      ),
+                    ).catch(() => setMessage("Couldn’t save that. Try again."))
+                  }
+                >
+                  It’s fine
+                </Button>
+              </div>
+            ))}
             {details.sources.length > 1 && (
               <p className="muted small">
                 {details.sources.length} matching entries are grouped. Originals
