@@ -769,7 +769,11 @@ export function CareerWorkspace() {
                     <span className={`career-meta ${due ? "career-due" : ""}`}>
                       {c.next_follow_up_date
                         ? `Follow up ${friendlyDate(c.next_follow_up_date)}`
-                        : "No follow-up set"}
+                        : due
+                          ? since !== null
+                            ? `${since} days since you talked · follow up`
+                            : "Follow-up noted, no date yet"
+                          : "No follow-up set"}
                       {c.last_contact_at
                         ? ` · last talked ${friendlyDate(c.last_contact_at.slice(0, 10))}`
                         : ""}
