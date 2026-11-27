@@ -509,9 +509,11 @@ async function reconcileAcademics(
         (m) => m[1] + "%",
       );
       const avg = r["Assessed avg"];
-      if (cited.some((p) => p !== avg))
+      const same = (p: string) =>
+        Math.abs(parseFloat(p) - parseFloat(avg)) < 0.05;
+      if (cited.some((p) => !same(p)))
         c.notes.push(
-          `${r.Course}: workbook "Assessed avg" ${avg} is the weighted average of scored exams; its note also cites ${[...new Set(cited)].filter((p) => p !== avg).join(", ")} (a different measure, e.g. Canvas's graded-work total). Kept as written in Reference; Life OS computes the course grade from its own records.`,
+          `${r.Course}: workbook "Assessed avg" ${avg} is the weighted average of scored exams; its note also cites ${[...new Set(cited)].filter((p) => !same(p)).join(", ")} (a different measure, e.g. Canvas's graded-work total). Kept as written in Reference; Life OS computes the course grade from its own records.`,
         );
     }
   }
@@ -520,18 +522,44 @@ async function reconcileAcademics(
 /** Dashboard metrics are formulas over the Fall 2026 priority table. */
 function verifyDashboard(records: ImportRecord[], t: TabSummary) {
   const pr = records.find((r) => r.key === "wb:reference:fall-2026-priorities");
-  const rows =
-    (pr && pr.table === "career_entries"
-      ? (pr.details.rows as { status: string }[])
-      : []) ?? [];
+  if (!pr || pr.table !== "career_entries") return;
+  const rows = (pr.details.rows as { status: string }[]) ?? [];
   if (!rows.length) return;
   const complete = rows.filter((r) => /^complete/i.test(r.status)).length;
   const progress = rows.filter((r) =>
     /progress|on track/i.test(r.status),
   ).length;
-  t.notes.push(
-    `Checked the dashboard metrics against its priority table: ${rows.length} priorities, ${complete} complete, ${progress} in progress, completion ${Math.round((complete / rows.length) * 100)}%. (The workbook shows 8, 1, 7 and 13%.)`,
+  const risk = rows.filter((r) => /risk/i.test(r.status)).length;
+  const pct = Math.round((complete / rows.length) * 100) + "%";
+  const shown = (pr.details.metrics ?? {}) as Record<string, string>;
+  const pairs: [string, string, string][] = [
+    ["Current priorities", String(rows.length), shown["Current priorities"]],
+    ["Complete", String(complete), shown["Complete"]],
+    [
+      "On Track / In Progress",
+      String(progress),
+      shown["On Track / In Progress"],
+    ],
+    ["At Risk", String(risk), shown["At Risk"]],
+    ["Completion %", pct, shown["Completion %"]],
+  ];
+  const off = pairs.filter(
+    ([, mine, theirs]) => theirs != null && theirs !== mine,
   );
+  const list = pairs.map(([k, v]) => `${k} ${v}`).join(", ");
+  if (!Object.keys(shown).length)
+    t.notes.push(
+      `Recomputed the dashboard metrics from its priority table: ${list}. The workbook's metrics table wasn't found to compare.`,
+    );
+  else if (off.length)
+    t.unresolved.push({
+      record: "Dashboard metrics",
+      issue: `Recomputed from the priority table: ${list}; the workbook shows ${off.map(([k, , v]) => `${k} ${v}`).join(", ")}.`,
+    });
+  else
+    t.notes.push(
+      `Dashboard metrics verified: recomputing from the priority table gives the same values the workbook shows (${list}).`,
+    );
   t.notes.push(
     "Next actions, Coming up, Check status and Career focus are formulas over other tabs; Today and Week now compute the same from Life OS records.",
   );
