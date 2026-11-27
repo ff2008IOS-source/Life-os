@@ -117,9 +117,9 @@
 .lv-arrive {
   animation: lv-arrive 0.45s var(--lv-ease);
 }
+/* Slide only: the text stays at full contrast while it moves in. */
 @keyframes lv-arrive {
   from {
-    opacity: 0;
     transform: translateY(10px);
   }
 }
@@ -477,22 +477,12 @@
   font-weight: 600;
   margin-left: 6px;
   vertical-align: middle;
-  animation: lv-fade 4s ease forwards;
 }
 .lv-up {
   color: var(--success);
 }
 .lv-down {
   color: var(--accent);
-}
-@keyframes lv-fade {
-  0%,
-  75% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
 }
 
 /* 09 · Avatar */
@@ -547,8 +537,7 @@
   .lv-leaving,
   .lv-arrive,
   .lv-rhythm i.lv-on,
-  .lv-shimmer i,
-  .lv-roll small {
+  .lv-shimmer i {
     animation: none;
   }
   .lv-ball {
