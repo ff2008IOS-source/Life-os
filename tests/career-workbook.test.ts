@@ -174,3 +174,23 @@ describe("dashboard tab", () => {
     });
   });
 });
+
+describe("course notes", () => {
+  it("keeps the next step on the next assessment", async () => {
+    const { currentAction } = await import("@/lib/career/workbook");
+    expect(
+      currentAction("Prepare for Exam 2 Friday Nov 13", "Exam 3", "Fri Dec 4"),
+    ).toBe("Prepare for Exam 3 (Fri Dec 4)");
+    expect(currentAction("Review Exam 3 practice set", "Exam 3", "")).toBe(
+      "Review Exam 3 practice set",
+    );
+  });
+  it("drops grade percentages, which come from Canvas and the syllabus", async () => {
+    const { withoutPercentages } = await import("@/lib/career/workbook");
+    expect(
+      withoutPercentages(
+        "Exam 1 82.4%; Canvas shows 76.48%. Office hours Tuesdays.",
+      ),
+    ).toBe("Office hours Tuesdays.");
+  });
+});

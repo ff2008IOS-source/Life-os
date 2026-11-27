@@ -495,6 +495,7 @@ async function reconcileAcademics(
       });
   }
   const c = s("Course Command Centre");
+  const averaged: string[] = [];
   for (const r of rows.courses) {
     if (!r.Course) continue;
     const id = [...codeOf.entries()].find(
@@ -514,23 +515,15 @@ async function reconcileAcademics(
       r["Next Assessment"] &&
       !norm(r["Next Action"]).includes(norm(r["Next Assessment"]))
     )
-      c.unresolved.push({
-        record: `${r.Course} next step`,
-        issue: `Workbook's next assessment is "${r["Next Assessment"]}${r["Due Date"] ? ` (${r["Due Date"]})` : ""}" but its Next Action still says "${r["Next Action"].slice(0, 90)}…". Life OS shows the next assessment from the course's records; the old action text is kept in Reference.`,
-      });
-    if (/\d+(\.\d+)?%/.test(r.Notes ?? "") && r["Assessed avg"]) {
-      const cited = [...(r.Notes ?? "").matchAll(/(\d+(?:\.\d+)?)%/g)].map(
-        (m) => m[1] + "%",
+      c.notes.push(
+        `${r.Course}: the workbook's Next Action was older than its next assessment, so the next step is now "Prepare for ${r["Next Assessment"]}${r["Due Date"] ? ` (${r["Due Date"]})` : ""}".`,
       );
-      const avg = r["Assessed avg"];
-      const same = (p: string) =>
-        Math.abs(parseFloat(p) - parseFloat(avg)) < 0.05;
-      if (cited.some((p) => !same(p)))
-        c.notes.push(
-          `${r.Course}: workbook "Assessed avg" ${avg} is the weighted average of scored exams; its note also cites ${[...new Set(cited)].filter((p) => !same(p)).join(", ")} (a different measure, e.g. Canvas's graded-work total). Kept as written in Reference; Life OS computes the course grade from its own records.`,
-        );
-    }
+    if (r["Assessed avg"]) averaged.push(r.Course);
   }
+  if (averaged.length)
+    c.notes.push(
+      `The workbook's "Assessed avg" for ${averaged.join(", ")} isn't used: School computes each course grade from Canvas and the syllabus weights.`,
+    );
 }
 
 /** Dashboard metrics are formulas over the Fall 2026 priority table. */
