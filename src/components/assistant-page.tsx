@@ -423,20 +423,17 @@ export function AssistantPage({
               <p className="form-hint">
                 Your week, calendar, tasks, goals, assessments and grades,
                 course files and the conversation so far are sent to Google
-                Gemini (free tier), or to Groq when Gemini is unavailable.
-                Google may use free-tier conversations to improve its products.
-                Canvas credentials are never included. Conversations stay in
-                Life OS and can be deleted below or exported in Privacy
-                settings. Nothing paid is ever used.
+                Gemini (free tier). Google may use free-tier conversations to
+                improve its products. Canvas credentials are never included.
+                Conversations stay in Life OS and can be deleted below or
+                exported in Privacy settings. Nothing paid is ever used.
               </p>
               <Button disabled={busy || !state}>Save AI settings</Button>
             </form>
             <p className="form-hint">
               {state?.configured
-                ? state.provider === "gemini"
-                  ? "Gemini connected (Groq as backup)"
-                  : "Groq connected · add a Gemini key for longer conversations"
-                : "AI is not configured for this deployment"}{" "}
+                ? "Gemini connected"
+                : "Add a Gemini key to start the review"}{" "}
               · {state?.usage?.requests ?? 0} requests used today.
             </p>
           </div>
@@ -445,7 +442,7 @@ export function AssistantPage({
       {state && (!state.settings?.enabled || !state.configured) && (
         <div className="assistant-notice" role="status">
           {!state.configured
-            ? "The AI connection is unavailable on this deployment."
+            ? "The review needs a Gemini key. Add GEMINI_API_KEY in Vercel, then redeploy."
             : "Enable AI to continue the guided weekly review."}
           <Button
             variant="outline"
