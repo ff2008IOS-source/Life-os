@@ -85,7 +85,8 @@ export async function syncLinkedTasks(
     const start = typeof d.picks_for === "string" ? d.picks_for : null;
     if (!start || !Array.isArray(d.picks)) continue;
     const end = addDays(start, 6);
-    if (today < start || today > end) continue;
+    // Created as soon as they're chosen; gone once their week has passed.
+    if (today > end) continue;
     (d.picks as unknown[])
       .filter((p): p is string => typeof p === "string" && !!p.trim())
       .slice(0, 3)
