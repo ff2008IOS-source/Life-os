@@ -8,6 +8,7 @@ import { EmptyState, TaskList } from "./task-list";
 import { EntityEditor, type EntityEditorState } from "./entity-editor";
 import { goalProgress } from "@/lib/insights";
 import { friendlyDate } from "@/lib/dates";
+import { TrailMap } from "./shapes";
 export function GoalsPage() {
   const { data } = useWorkspace();
   const [editor, setEditor] = useState<EntityEditorState | null>(null);
@@ -81,20 +82,38 @@ export function GoalsPage() {
                       <span>{Math.round(progress.percent)}%</span>
                     )}
                   </div>
-                  {progress.percent !== null && (
-                    <div
-                      className="progress-track"
-                      role="progressbar"
-                      aria-label={g.title}
-                      aria-valuenow={Math.round(progress.percent)}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    >
+                  {milestones.length > 0 ? (
+                    <TrailMap
+                      finish={g.title}
+                      stops={milestones
+                        .slice()
+                        .sort((a, b) =>
+                          String(a.target_date ?? "9999").localeCompare(
+                            String(b.target_date ?? "9999"),
+                          ),
+                        )
+                        .map((m) => ({
+                          title: m.title,
+                          done: m.status === "completed",
+                          date: m.target_date,
+                        }))}
+                    />
+                  ) : (
+                    progress.percent !== null && (
                       <div
-                        className="progress-fill"
-                        style={{ width: `${progress.percent}%` }}
-                      />
-                    </div>
+                        className="progress-track"
+                        role="progressbar"
+                        aria-label={g.title}
+                        aria-valuenow={Math.round(progress.percent)}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <div
+                          className="progress-fill"
+                          style={{ width: `${progress.percent}%` }}
+                        />
+                      </div>
+                    )
                   )}
                 </div>
                 {milestones.map((m) => (

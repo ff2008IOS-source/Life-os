@@ -312,7 +312,11 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
   await page.goto("/reviews");
   await page.getByRole("button", { name: /Resume week of Aug 17/ }).click();
   await page.locator("summary", { hasText: "Week of Aug 17" }).first().click();
-  await expect(page.getByText("First win")).toBeVisible();
+  await expect(
+    page.locator("details[open]").getByText("First win"),
+  ).toBeVisible();
+  // Past weeks also show as postcards.
+  await expect(page.locator(".postcard").first()).toBeVisible();
   await page.goto("/reviews");
   const start = page.getByRole("button", {
     name: "Start weekly conversation",

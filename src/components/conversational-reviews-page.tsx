@@ -18,6 +18,7 @@ import { TaskEditor } from "./task-editor";
 import type { Review, Task } from "@/lib/schemas";
 import type { AssistantReply } from "@/lib/assistant/provider";
 import { localDate, friendlyDate } from "@/lib/dates";
+import { Postcards } from "./shapes";
 export function ReviewsPage() {
   const { data, mutate, pending, notify } = useWorkspace();
   const summaryId = useId();
@@ -194,11 +195,41 @@ export function ReviewsPage() {
             placeholder="Search reviews…"
           />
         </label>
+        <Postcards
+          cards={history
+            .slice()
+            .sort((a, b) => b.period_start.localeCompare(a.period_start))
+            .slice(0, 12)
+            .map((r) => {
+              const d = (r.details ?? {}) as Record<string, unknown>;
+              const line = (v: unknown) =>
+                typeof v === "string" ? v.split("\n")[0].trim() : "";
+              return {
+                id: r.id,
+                week: `Week of ${friendlyDate(r.period_start)}`,
+                title:
+                  line(r.achievements) ||
+                  line(r.conversation_summary) ||
+                  (r.completed_at ? "Reviewed" : "Draft"),
+                risk: line(r.obstacles) || undefined,
+                verdict:
+                  line(d.overall_status) ||
+                  (r.completed_at ? "Done" : undefined),
+                onOpen: () => {
+                  const el = document.getElementById(`review-${r.id}`);
+                  if (el instanceof HTMLDetailsElement) {
+                    el.open = true;
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                },
+              };
+            })}
+        />
         {history
           .slice()
           .sort((a, b) => b.period_start.localeCompare(a.period_start))
           .map((r) => (
-            <details className="panel" key={r.id}>
+            <details className="panel" key={r.id} id={`review-${r.id}`}>
               <summary>
                 Week of {friendlyDate(r.period_start)} ·{" "}
                 {r.completed_at ? "Completed" : "Draft"}

@@ -7,6 +7,8 @@ import { WeekFitLine } from "./week-fit-line";
 import { wrapUp } from "@/lib/wrap-up";
 import { FollowUpNudge } from "./career-follow-ups";
 import { DayArc, RhythmDots, Shimmer, Swish, useLeaving } from "./living";
+import { areaOf, weekSkyline } from "@/lib/areas";
+import { minutesLabel } from "@/lib/calendar-style";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
@@ -355,6 +357,43 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
   const weekDays = Array.from({ length: 7 }, (_, i) =>
     fmt(agenda.week.start + i * 86400000 + 12 * 3600000, "yyyy-MM-dd"),
   );
+  const skyline = weekSkyline(
+    b.planning.events,
+    b.assessments
+      .filter((a) => a.due_at || a.due_date)
+      .map((a) => ({
+        title: a.title,
+        label: a.course,
+        due: a.due_at
+          ? Date.parse(a.due_at)
+          : Date.parse(a.due_date + "T20:00:00Z"),
+      })),
+    weekDays[0],
+    zone,
+  );
+  const busiest = Math.max(240, ...skyline.map((d) => d.busyMinutes));
+  const freeToday = agenda.gaps.reduce((n, g) => n + g.minutes, 0);
+  const nextExam =
+    agenda.due.find(
+      (d) =>
+        d.status !== "done" && /exam|midterm|test|final|quiz/i.test(d.title),
+    ) ??
+    b.assessments
+      .filter(
+        (a) =>
+          /exam|midterm|test|final/i.test(a.title) &&
+          a.earned_score === null &&
+          (a.due_at || a.due_date),
+      )
+      .map((a) => ({
+        title: a.title,
+        label: a.course,
+        due: a.due_at
+          ? Date.parse(a.due_at)
+          : Date.parse(a.due_date + "T20:00:00Z"),
+      }))
+      .filter((a) => a.due >= now.getTime())
+      .sort((x, y) => x.due - y.due)[0];
 
   // Do this next
   const session = focus?.session ?? null;
@@ -411,7 +450,6 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       ),
     )
     .slice(0, 3);
-  const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
   const today = agenda.today;
 
   return (
@@ -479,6 +517,46 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             }
           />
         </div>
+        <div className="headline-numbers" aria-label="Today at a glance">
+          {agenda.next.length > 0 && (
+            <div
+              className={`area-${areaOf(agenda.next[0].item.title, agenda.next[0].item.label)}`}
+            >
+              <b>{agenda.next.length}</b>
+              <span>
+                thing{agenda.next.length === 1 ? "" : "s"} worth doing, starting
+                with {agenda.next[0].item.title.split(/\s[—·-]\s/)[0]}
+              </span>
+            </div>
+          )}
+          {nextExam && (
+            <Link href="/areas/academics" className="area-school">
+              <b>
+                {Math.max(
+                  0,
+                  Math.ceil((nextExam.due - now.getTime()) / 86400000),
+                )}
+              </b>
+              <span>
+                days until {nextExam.label} {nextExam.title}
+              </span>
+            </Link>
+          )}
+          <Link href="/planner?section=calendar" className="area-study">
+            <b>
+              {freeToday >= 60
+                ? `${Math.floor(freeToday / 60)}h`
+                : `${freeToday}m`}
+            </b>
+            <span>free in the rest of today</span>
+          </Link>
+          <div className="area-career">
+            <b>
+              {agenda.week.deadlinesDone}/{agenda.week.deadlinesTotal}
+            </b>
+            <span>deadlines cleared this week</span>
+          </div>
+        </div>
         {reconnect && (
           <div className="td-reconnect" role="alert">
             <p>
@@ -500,9 +578,20 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
       <div className="td-grid">
         <div className="td-col">
           <section
-            className={`td-now ${choice && leaving.isLeaving(choice.item.key) ? "lv-leaving" : ""}`}
+            className={`td-now shape-poster area-${
+              session
+                ? areaOf(sessionTask?.title ?? "")
+                : choice
+                  ? areaOf(choice.item.title, choice.item.label)
+                  : "other"
+            } ${choice && leaving.isLeaving(choice.item.key) ? "lv-leaving" : ""}`}
             aria-label="Do this next"
           >
+            {(session || choice) && (
+              <span className="poster-number" aria-hidden>
+                {session ? Math.floor(elapsed / 60) : choice!.minutes}
+              </span>
+            )}
             {session ? (
               <>
                 <div className="td-now-top">
@@ -771,7 +860,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             </section>
           )}
 
-          <section className="td-card" aria-label="Today’s plan">
+          <section className="td-card shape-river" aria-label="Today’s plan">
             <div className="td-card-head">
               <h2 className="td-card-title">Today’s plan</h2>
               <Link href="/planner?section=calendar" className="td-link">
@@ -794,11 +883,34 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                   : "Connect Google Calendar in Settings to see your day here."}
               </p>
             )}
-            <ol className="td-timeline">
-              {agenda.timeline.map((e) => {
+            <ol className="td-timeline river">
+              {agenda.timeline.map((e, i) => {
                 const past = e.end <= now.getTime();
-                return (
-                  <li key={e.id} className={past ? "td-past" : undefined}>
+                const current = e.start <= now.getTime() && !past;
+                const area =
+                  e.kind === "event"
+                    ? areaOf(e.title, "", e.meta)
+                    : areaOf(e.item.title, e.item.label);
+                const prevEnd = i > 0 ? agenda.timeline[i - 1].end : null;
+                const gapStart = prevEnd ?? null;
+                const gap =
+                  gapStart !== null &&
+                  e.start - gapStart >= 45 * 60000 &&
+                  e.start > now.getTime()
+                    ? Math.round(
+                        (e.start - Math.max(gapStart, now.getTime())) / 60000,
+                      )
+                    : 0;
+                return [
+                  gap >= 45 ? (
+                    <li key={e.id + ":gap"} className="river-gap" aria-hidden>
+                      <span>{minutesLabel(gap)} free</span>
+                    </li>
+                  ) : null,
+                  <li
+                    key={e.id}
+                    className={`area-${area} ${past ? "td-past" : ""} ${current ? "river-now" : ""}`}
+                  >
                     <time className="td-time">{clock(e.start)}</time>
                     {e.kind === "event" ? (
                       <div
@@ -842,8 +954,8 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                         </span>
                       </button>
                     )}
-                  </li>
-                );
+                  </li>,
+                ];
               })}
             </ol>
             {work.length > 0 && (
@@ -868,44 +980,61 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
               policy={b.planning.policy}
               tasks={data.tasks}
             />
-            <div className="td-stat">
-              <div>
+            <ol className="skyline" aria-label="How full each day is">
+              {skyline.map((d) => (
+                <li
+                  key={d.date}
+                  className={`${d.date < agenda.today ? "past" : ""} ${d.date === agenda.today ? "today" : ""}`}
+                >
+                  <div
+                    className="bar"
+                    style={{
+                      height: `${Math.max(4, (d.busyMinutes / busiest) * 100)}%`,
+                    }}
+                    title={`${d.events} events · ${minutesLabel(d.busyMinutes)} busy`}
+                  >
+                    {d.pins[0] && (
+                      <span className="pin">
+                        {d.pins[0]}
+                        {d.pins.length > 1 ? ` +${d.pins.length - 1}` : ""}
+                      </span>
+                    )}
+                  </div>
+                  <span className="label">
+                    <b>{fmt(Date.parse(d.date + "T20:00:00Z"), "EEE")}</b>
+                    <small>
+                      {d.events
+                        ? `${d.events} event${d.events === 1 ? "" : "s"}`
+                        : "open"}
+                    </small>
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <div className="headline-numbers week-numbers">
+              <div className="area-study">
+                <b>{(agenda.week.focusMinutes / 60).toFixed(1)}h</b>
                 <span>Focus time logged</span>
-                <span>{(agenda.week.focusMinutes / 60).toFixed(1)} h</span>
+                <RhythmDots
+                  days={weekDays}
+                  filled={b.weekly.focus_days ?? []}
+                  today={agenda.today}
+                />
               </div>
-              <RhythmDots
-                days={weekDays}
-                filled={b.weekly.focus_days ?? []}
-                today={agenda.today}
-              />
-            </div>
-            <div className="td-stat">
-              <div>
+              <div className="area-school">
+                <b>
+                  {agenda.week.deadlinesDone}
+                  <small> of {agenda.week.deadlinesTotal}</small>
+                </b>
                 <span>Deadlines cleared</span>
-                <span>
-                  {agenda.week.deadlinesDone} of {agenda.week.deadlinesTotal}
-                </span>
               </div>
-              <progress
-                className="td-bar td-bar-orange"
-                max={Math.max(1, agenda.week.deadlinesTotal)}
-                value={agenda.week.deadlinesDone}
-                aria-label={`Deadlines cleared ${pct(agenda.week.deadlinesDone, agenda.week.deadlinesTotal)}%`}
-              />
-            </div>
-            <div className="td-stat">
-              <div>
+              <div className="area-career">
+                <b>
+                  {agenda.week.goalsMoved}
+                  <small> of {agenda.week.goalsTotal}</small>
+                </b>
                 <span>Goals moved forward</span>
-                <span>
-                  {agenda.week.goalsMoved} of {agenda.week.goalsTotal}
-                </span>
               </div>
-              <progress
-                className="td-bar td-bar-green"
-                max={Math.max(1, agenda.week.goalsTotal)}
-                value={agenda.week.goalsMoved}
-                aria-label={`Goals moved forward ${pct(agenda.week.goalsMoved, agenda.week.goalsTotal)}%`}
-              />
             </div>
             {graded.length > 0 && (
               <p className="td-muted td-small">
@@ -934,7 +1063,10 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             }
           />
 
-          <section className="td-card" aria-label="Due this week">
+          <section
+            className="td-card area-paper area-school"
+            aria-label="Due this week"
+          >
             <div className="td-card-head">
               <h2 className="td-card-title">Due this week</h2>
               <Link href="/areas/academics" className="td-link">
@@ -997,7 +1129,10 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
           <FollowUpNudge />
 
           {(nudgeOverdue || nudgeStep || quickWins.length > 0) && (
-            <section className="td-card" aria-label="Keep your goals moving">
+            <section
+              className="td-card area-paper area-career"
+              aria-label="Keep your goals moving"
+            >
               <div className="td-card-head">
                 <h2 className="td-card-title">Keep your goals moving</h2>
                 <Link href="/goals" className="td-link">

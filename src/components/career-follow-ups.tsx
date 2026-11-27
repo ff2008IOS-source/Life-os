@@ -6,6 +6,7 @@ import { calendarRequest } from "./use-calendar";
 import type { FollowUp } from "@/lib/follow-ups";
 import { dueLabel } from "@/lib/display";
 import { Avatar } from "./living";
+import { PeopleOrbit } from "./shapes";
 
 type State = {
   connected: boolean;
@@ -77,7 +78,7 @@ export function FollowUpNudge() {
   const deadline = state?.deadlines[0];
   if (!next && !deadline) return null;
   return (
-    <section className="td-card" aria-label="Career">
+    <section className="td-card area-paper area-career" aria-label="Career">
       <div className="td-card-head">
         <h2 className="td-card-title">Career</h2>
         <Link href="/growth" className="td-link">
@@ -157,6 +158,17 @@ export function CareerFollowUps() {
           Career <ArrowRight size={14} aria-hidden />
         </Link>
       </div>
+      {state.follow_ups.length > 0 && (
+        <PeopleOrbit
+          people={state.follow_ups.map((f) => ({
+            id: f.row_id,
+            name: f.name,
+            photo: f.photo,
+            due: f.due,
+            daysSince: f.days_since,
+          }))}
+        />
+      )}
       <ul className="topic-list">
         {state.follow_ups.map((f) => (
           <li key={f.row_id} className="person">

@@ -1,0 +1,682 @@
+/* Shapes: each kind of information gets its own form instead of a grey
+   card. Area colours are shared with the calendar (today.css --tone-*). */
+:root {
+  --area-school: #2f55c9;
+  --area-career: #2f7d45;
+  --area-ball: #c8302a;
+  --area-study: #7a4fc2;
+  --area-gym: #2a7489;
+  --area-other: #6e6258;
+  /* Deep pairs for the poster: white text stays readable in both themes. */
+  --poster-school: #2f55c9, #10225c;
+  --poster-career: #2f7d45, #0d3a1c;
+  --poster-ball: #d63a31, #5a0f0b;
+  --poster-study: #7a4fc2, #2c1458;
+  --poster-gym: #2a7489, #0c3340;
+  --poster-other: #c2480f, #5b1d06;
+}
+.dark {
+  --area-school: #8fb0ff;
+  --area-career: #6fcf86;
+  --area-ball: #ff7468;
+  --area-study: #c4a4ff;
+  --area-gym: #6bb7c9;
+  --area-other: #b0a397;
+}
+/* The calendar's category colours are the area colours. */
+:root,
+.dark {
+  --tone-class: var(--area-school);
+  --tone-mbb: var(--area-ball);
+  --tone-study: var(--area-study);
+  --tone-gym: var(--area-gym);
+  --tone-career: var(--area-career);
+  --tone-other: var(--area-other);
+}
+.area-school {
+  --area: var(--area-school);
+}
+.area-career {
+  --area: var(--area-career);
+}
+.area-ball {
+  --area: var(--area-ball);
+}
+.area-study {
+  --area: var(--area-study);
+}
+.area-gym {
+  --area: var(--area-gym);
+}
+.area-other {
+  --area: var(--area-other);
+}
+
+/* 07 · Area paper: a tinted ground with a faint dot texture. */
+.area-paper {
+  position: relative;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--area) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--area) 22%, var(--border));
+}
+.area-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--area) 26%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-size: 6px 6px;
+  opacity: 0.45;
+  pointer-events: none;
+}
+.area-title {
+  color: var(--area);
+}
+.area-heading {
+  font-size: clamp(30px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--area);
+}
+
+/* 01 · Poster: Do this next */
+.td-now.shape-poster {
+  --poster: var(--poster-other);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: #fff;
+  border: 0;
+  background: radial-gradient(120% 95% at 88% 0%, var(--poster));
+  padding: 26px;
+}
+.td-now.shape-poster.area-school {
+  --poster: var(--poster-school);
+}
+.td-now.shape-poster.area-career {
+  --poster: var(--poster-career);
+}
+.td-now.shape-poster.area-ball {
+  --poster: var(--poster-ball);
+}
+.td-now.shape-poster.area-study {
+  --poster: var(--poster-study);
+}
+.td-now.shape-poster.area-gym {
+  --poster: var(--poster-gym);
+}
+.td-now.shape-poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(
+    rgb(255 255 255 / 0.08) 1px,
+    transparent 1px
+  );
+  background-size: 4px 4px;
+  pointer-events: none;
+}
+.shape-poster .td-now-title {
+  font-size: clamp(26px, 3.4vw, 36px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: #fff;
+  max-width: 18ch;
+}
+.shape-poster .td-kicker,
+.shape-poster .td-now-window {
+  color: rgb(255 255 255 / 0.85);
+}
+.shape-poster .td-chip {
+  background: rgb(255 255 255 / 0.16);
+  color: #fff;
+  border-color: transparent;
+}
+.shape-poster .td-btn-primary,
+.shape-poster .td-btn-light {
+  background: #fff;
+  color: #2a1208;
+  border-color: #fff;
+}
+.shape-poster .td-btn-outline {
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid rgb(255 255 255 / 0.6);
+}
+.shape-poster .td-btn-outline:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.shape-poster .td-timer {
+  color: #fff;
+}
+.poster-number {
+  position: absolute;
+  right: -6px;
+  bottom: -36px;
+  z-index: -1;
+  font-size: 190px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: rgb(255 255 255 / 0.1);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 02 · The day as a river */
+.td-card.shape-river {
+  background: transparent;
+  border: 0;
+  padding-inline: 4px;
+}
+.td-timeline.river {
+  position: relative;
+  gap: 4px;
+}
+.td-timeline.river::before {
+  content: "";
+  position: absolute;
+  left: 61px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--border);
+}
+.td-timeline.river > li {
+  position: relative;
+  padding-left: 0;
+}
+.td-timeline.river > li::before {
+  content: "";
+  position: absolute;
+  left: 56px;
+  top: 16px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2.5px solid var(--area, var(--muted));
+  z-index: 1;
+}
+.td-timeline.river > li.river-now::before {
+  background: var(--area);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--area) 22%, transparent);
+}
+.td-timeline.river .td-event,
+.td-timeline.river .td-work {
+  margin-left: 22px;
+  background: transparent;
+  border: 0;
+  border-left: 3px solid color-mix(in srgb, var(--area) 70%, transparent);
+  border-radius: 0 10px 10px 0;
+  padding-block: 6px;
+}
+.td-timeline.river .td-work {
+  background: color-mix(in srgb, var(--area) 8%, transparent);
+}
+.td-timeline.river .td-event strong,
+.td-timeline.river .td-work strong {
+  font-size: 15.5px;
+}
+.td-timeline.river > li.river-gap::before {
+  display: none;
+}
+.river-gap {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+}
+.river-gap span {
+  margin-left: 84px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--area-career);
+}
+.river-gap::after {
+  content: "";
+  position: absolute;
+  left: 61px;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: repeating-linear-gradient(
+    var(--area-career) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+/* 03 · Week skyline */
+.skyline {
+  list-style: none;
+  margin: 26px 0 4px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  height: 150px;
+}
+.skyline li {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 6px;
+  height: 100%;
+  min-width: 0;
+}
+.skyline .bar {
+  align-self: end;
+  position: relative;
+  border-radius: 9px 9px 4px 4px;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--accent) 72%, transparent),
+    color-mix(in srgb, var(--accent) 22%, transparent)
+  );
+  min-height: 6px;
+  transition: height 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.skyline li.past .bar {
+  /* Paler, not transparent: the pin on top keeps full contrast. */
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--accent) 32%, transparent),
+    color-mix(in srgb, var(--accent) 10%, transparent)
+  );
+}
+.skyline li.today .bar {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+.skyline .pin {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 6px;
+  padding: 2px 5px;
+}
+.skyline .label {
+  text-align: center;
+  line-height: 1.1;
+}
+.skyline .label b {
+  display: block;
+  font-size: 12.5px;
+}
+.skyline .label small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* 10 · Headline numbers */
+.headline-numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 14px 24px;
+  margin-top: 14px;
+}
+.headline-numbers > a,
+.headline-numbers > div {
+  display: grid;
+  gap: 2px;
+  border-left: 3px solid var(--area);
+  padding-left: 12px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.headline-numbers b {
+  font-size: clamp(34px, 4.4vw, 48px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--area);
+  font-variant-numeric: tabular-nums;
+}
+.headline-numbers span {
+  font-size: 13px;
+  color: var(--secondary);
+  line-height: 1.3;
+}
+.headline-numbers > a:hover span {
+  color: var(--text);
+}
+.week-numbers {
+  margin-top: 18px;
+}
+.week-numbers b {
+  font-size: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skyline .bar {
+    transition: none;
+  }
+}
+.headline-numbers b small {
+  font-size: 0.42em;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--secondary);
+}
+.week-numbers .lv-rhythm {
+  margin-top: 8px;
+}
+.area-band {
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid;
+}
+.area-icon {
+  background: color-mix(in srgb, var(--area) 16%, transparent);
+  color: var(--area);
+}
+.area-paper .td-card-title {
+  color: var(--area);
+}
+.area-paper .td-nudge {
+  background: color-mix(in srgb, var(--area) 7%, var(--surface));
+}
+
+/* 05 · Courses on a shelf */
+.course-shelf {
+  flex: 1 1 100%;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 10px;
+  height: 200px;
+  padding: 0 2px 0;
+  border-bottom: 3px solid var(--text);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.course-chip.spine {
+  --spine: var(--area-school);
+  flex: 1 0 76px;
+  max-width: 150px;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px 10px 0 0;
+  border: 0;
+  background: color-mix(in srgb, var(--spine) 10%, var(--surface-hover));
+  transition: transform 0.2s;
+}
+.course-chip.spine:hover {
+  background: color-mix(in srgb, var(--spine) 16%, var(--surface-hover));
+  transform: translateY(-3px);
+}
+.course-chip.spine.active {
+  box-shadow: none;
+  outline: 3px solid var(--spine);
+  outline-offset: -3px;
+}
+.course-chip.spine-1 {
+  --spine: var(--area-study);
+}
+.course-chip.spine-2 {
+  --spine: var(--area-ball);
+}
+.course-chip.spine-3 {
+  --spine: var(--area-career);
+}
+.course-chip.spine-4 {
+  --spine: var(--warning);
+}
+.course-chip.spine-5 {
+  --spine: var(--area-gym);
+}
+.spine-code {
+  position: absolute;
+  top: 9px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  z-index: 1;
+}
+.spine-open {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  right: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--spine) 34%, transparent) 0 5px,
+    transparent 5px 10px
+  );
+}
+.spine-fill {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 8px;
+  background: var(--spine);
+  border-radius: 8px 8px 0 0;
+  transition: height 1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.spine-fill b {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--surface);
+  letter-spacing: -0.02em;
+}
+.spine-none {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .course-shelf {
+    height: 160px;
+  }
+  .course-chip.spine {
+    flex-basis: 64px;
+  }
+}
+
+/* 06 · People in orbit */
+.orbit {
+  position: relative;
+  aspect-ratio: 1.6;
+  width: 100%;
+  max-width: 100%;
+  margin: 6px 0 14px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--area-career) 13%, transparent),
+    transparent 70%
+  );
+}
+.orbit-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px dashed var(--border);
+  border-radius: 50%;
+}
+.orbit-you {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 13px;
+}
+.orbit-person {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: var(--secondary);
+  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform 0.2s;
+}
+.orbit-person:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+.orbit-person.due {
+  color: var(--accent);
+}
+.orbit-person:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+/* 09 · Past weeks as postcards */
+.postcards {
+  list-style: none;
+  margin: 4px 0 18px;
+  padding: 10px 4px 18px;
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+.postcard {
+  flex: 0 0 min(250px, 78%);
+  scroll-snap-align: start;
+}
+.postcard-body {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  background: var(--surface);
+  border: 0;
+  border-top: 6px solid var(--area);
+  border-radius: 6px;
+  padding: 14px 16px;
+  box-shadow:
+    0 1px 0 var(--border),
+    0 12px 22px -16px rgb(0 0 0 / 0.45);
+  transition: transform 0.2s;
+}
+.postcard-body:hover {
+  transform: translateY(-3px);
+}
+.postcard-week {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.postcard-body strong {
+  font-size: 16.5px;
+  line-height: 1.25;
+}
+.postcard-risk {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.postcard-stamp {
+  justify-self: end;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--area);
+  border: 1.5px solid var(--area);
+  border-radius: 4px;
+  padding: 3px 6px;
+  rotate: -6deg;
+}
+
+/* 11 · Goals as a trail map */
+.trail {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 4px 0 6px;
+  overflow: visible;
+}
+.trail-path,
+.trail-done {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.trail-path {
+  stroke: var(--border);
+  stroke-dasharray: 2 10;
+}
+.trail-done {
+  stroke: var(--area-career);
+}
+.trail-stop {
+  fill: var(--surface);
+  stroke: var(--muted);
+  stroke-width: 2.5;
+}
+.trail-stop.done {
+  fill: var(--area-career);
+  stroke: var(--area-career);
+}
+.trail-stop.here {
+  stroke: var(--accent);
+  stroke-width: 4;
+}
+.trail-label {
+  font-size: 12.5px;
+  fill: var(--secondary);
+}
+.trail-label.here {
+  fill: var(--accent);
+  font-weight: 600;
+}
+.trail-label.finish {
+  fill: var(--text);
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-person,
+  .postcard-body,
+  .course-chip.spine {
+    transition: none;
+  }
+}
