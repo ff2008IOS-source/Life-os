@@ -109,3 +109,68 @@ describe("sheet ranges", () => {
     ]);
   });
 });
+
+describe("dashboard tab", () => {
+  // Same layout as the real Dashboard: tables separated by one blank row.
+  const dash = {
+    id: 1,
+    title: "Dashboard",
+    values: [
+      [
+        "North Star",
+        "Target",
+        "",
+        "KPI",
+        "Target",
+        "Current",
+        "Status",
+        "Notes",
+      ],
+      [
+        "[TEST] Direction",
+        "Somewhere",
+        "",
+        "GPA",
+        "3.3+",
+        "",
+        "In Progress",
+        "",
+      ],
+      [],
+      ["CURRENT PRIORITY: FALL 2026"],
+      ["Priority", "Objective", "Measure", "Status", "Next Action", "Deadline"],
+      ["Critical", "[TEST] One", "m", "In Progress", "a", "2026-12-20"],
+      ["High", "[TEST] Two", "m", "Complete", "a", "2026-09-15"],
+      ["Medium", "[TEST] Three", "m", "In Progress", "a", "2026-12-20"],
+      [],
+      ["Dashboard Metrics", "Value", "", "Rule", "Use"],
+      ["Current priorities", "3", "", "Sheet", "x"],
+      ["Complete", "1"],
+      ["On Track / In Progress", "2"],
+      ["At Risk", "0"],
+      ["Completion %", "33%"],
+      [],
+      ["NOVEMBER 2026 CAREER MILESTONES — SELF-SET TARGETS"],
+      ["#", "Objective", "Evidence / current state", "Status"],
+      ["1", "[TEST] First", "e", "In Progress"],
+      [],
+      ["TRACKING RULE", "A plan is not a result."],
+    ],
+  };
+  const { records } = readWorkbook({ tabs: [...workbook.tabs, dash] });
+  const ref = (k: string) =>
+    records.find((r) => r.key === "wb:reference:" + k) as {
+      details: Record<string, unknown>;
+    };
+  it("stops each table where it ends", () => {
+    expect(ref("north-star").details.north_star).toHaveLength(1);
+    expect(ref("fall-2026-priorities").details.rows).toHaveLength(3);
+    expect(ref("november-2026-milestones").details.rows).toHaveLength(1);
+  });
+  it("keeps the workbook's own metrics to verify against", () => {
+    expect(ref("fall-2026-priorities").details.metrics).toMatchObject({
+      "Current priorities": "3",
+      "Completion %": "33%",
+    });
+  });
+});

@@ -140,6 +140,10 @@ function headerRow(tab: Tab, labels: string[], after = -1) {
   return -1;
 }
 
+const section = (row: string[]) =>
+  /^[A-Z][A-Z &·:,0-9\-—]{3,}$/.test(row[0]) &&
+  row.filter(Boolean).length === 1;
+
 /** Rows of a table under a header, until a blank row or the next section. */
 function tableRows(
   tab: Tab,
@@ -155,7 +159,7 @@ function tableRows(
       if (!(tab.values[i + 1] ?? []).map(text).some(Boolean)) break;
       continue;
     }
-    if (stop?.(row)) break;
+    if (section(row) || stop?.(row)) break;
     rows.push({
       at: i + 1,
       get: (h: string) => {
@@ -166,10 +170,6 @@ function tableRows(
   }
   return rows;
 }
-
-const section = (row: string[]) =>
-  /^[A-Z][A-Z &·:,0-9\-—]{3,}$/.test(row[0]) &&
-  row.filter(Boolean).length === 1;
 
 const tabOf = (wb: Workbook, name: TabName) =>
   wb.tabs.find((t) => t.title === name);
@@ -546,7 +546,14 @@ export function readWorkbook(wb: Workbook) {
         "Dashboard",
         "Current priority: Fall 2026",
         {
-          rows: tableRows(dash, pr).map((r) => ({
+          rows: tableRows(
+            dash,
+            pr,
+            (row) =>
+              !/^(critical|high|medium|low)$/i.test(
+                row[dash.values[pr].map(text).indexOf("Priority")] ?? "",
+              ),
+          ).map((r) => ({
             priority: r.get("Priority"),
             objective: r.get("Objective"),
             measure: r.get("Measure"),
@@ -556,6 +563,18 @@ export function readWorkbook(wb: Workbook) {
             why: r.get("Why It Matters"),
             weekly_check: r.get("Weekly Check"),
           })),
+          // What the workbook's own formulas show, to check against.
+          metrics: Object.fromEntries(
+            (() => {
+              const m = headerRow(dash, ["Dashboard Metrics", "Value"]);
+              return m < 0
+                ? []
+                : tableRows(dash, m).map((r) => [
+                    r.get("Dashboard Metrics"),
+                    r.get("Value"),
+                  ]);
+            })(),
+          ),
         },
         2,
       );
@@ -566,7 +585,11 @@ export function readWorkbook(wb: Workbook) {
         "Dashboard",
         "November 2026 career milestones (self-set)",
         {
-          rows: tableRows(dash, ms).map((r) => ({
+          rows: tableRows(
+            dash,
+            ms,
+            (row) => !/^\d+$/.test(row[dash.values[ms].map(text).indexOf("#")]),
+          ).map((r) => ({
             n: r.get("#"),
             objective: r.get("Objective"),
             evidence: r.get("Evidence / current state"),
