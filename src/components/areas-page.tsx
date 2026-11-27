@@ -3,11 +3,9 @@ import { dayLabel } from "@/lib/display";
 import { visibleArea } from "@/lib/visible-areas";
 import { realWorkspace } from "@/lib/real-workspace";
 import Link from "next/link";
-import { CareerRoadmap } from "./career-roadmap";
+import { CareerWorkspace } from "./career-workspace";
 import { AcademicsPanel } from "./academics-panel";
 import { projectSummary } from "@/lib/project-summary";
-import { ContactsPanel } from "./contacts-panel";
-import { CareerPanel } from "./career-panel";
 import { useState } from "react";
 import {
   GraduationCap,
@@ -292,14 +290,7 @@ export function AreasPage({
                   initialAssessment={initialAssessment}
                 />
               ) : slug === "career" ? (
-                <>
-                  <CareerRoadmap />
-                  <details className="panel">
-                    <summary>Earlier imported career archive</summary>
-                    <CareerPanel />
-                  </details>
-                  <ContactsPanel />
-                </>
+                <CareerWorkspace />
               ) : (
                 <section className="panel">
                   <div className="panel-heading">

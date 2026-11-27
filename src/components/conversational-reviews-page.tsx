@@ -50,6 +50,11 @@ export function ReviewsPage() {
     task: Task | null;
   } | null>(null);
   const review = data.reviews.find((r) => r.id === active);
+  // Up to three priorities for the week after the review; they become
+  // tasks for that week, so Today and Week show them.
+  const [picks, setPicks] = useState(["", "", ""]);
+  const picksFor = (r: Review) =>
+    format(addDays(new Date(r.period_end + "T12:00:00"), 1), "yyyy-MM-dd");
   function payload(r?: Review) {
     return {
       period_start: r?.period_start ?? week,
@@ -63,12 +68,19 @@ export function ReviewsPage() {
       decisions: r?.decisions ?? "",
       priorities: r?.priorities ?? "",
       conversation_summary: r?.conversation_summary ?? "",
+      details: r?.details ?? {},
     };
   }
   function open(r: Review) {
     setActive(r.id);
     setWeek(r.period_start);
     setSummary(r.conversation_summary ?? "");
+    const d = (r.details ?? {}) as { picks?: unknown; picks_for?: unknown };
+    const saved =
+      d.picks_for === picksFor(r) && Array.isArray(d.picks)
+        ? (d.picks as string[])
+        : [];
+    setPicks([0, 1, 2].map((i) => String(saved[i] ?? "")));
     setCandidate(null);
     setChecked(false);
     setError("");
@@ -111,6 +123,11 @@ export function ReviewsPage() {
         review.id,
         {
           ...payload(review),
+          details: {
+            ...(review.details ?? {}),
+            picks: picks.map((p) => p.trim()).filter(Boolean),
+            picks_for: picksFor(review),
+          },
           conversation_summary: summary,
           completed_at: complete
             ? new Date().toISOString()
@@ -118,6 +135,11 @@ export function ReviewsPage() {
         },
         review.version,
       );
+      // Next week's priorities become tasks for that week.
+      await calendarRequest("/api/v1/career/records", {
+        method: "POST",
+        body: JSON.stringify({ action: "sync_tasks" }),
+      }).catch(() => {});
       notify(
         complete
           ? "Weekly conversation review completed"
@@ -181,11 +203,7 @@ export function ReviewsPage() {
                 Week of {friendlyDate(r.period_start)} ·{" "}
                 {r.completed_at ? "Completed" : "Draft"}
               </summary>
-              <p className="preserve-lines">
-                {r.conversation_summary ||
-                  r.achievements ||
-                  "No reflection saved yet."}
-              </p>
+              <ReviewDetail r={r} />
             </details>
           ))}
       </>
@@ -264,6 +282,26 @@ export function ReviewsPage() {
                 setChecked(false);
               }}
             />
+            <fieldset className="review-picks">
+              <legend>Next week’s priorities (up to 3)</legend>
+              {picks.map((p, i) => (
+                <input
+                  key={i}
+                  aria-label={`Priority ${i + 1} for next week`}
+                  placeholder={
+                    i === 0 ? "e.g. ECON 115 — Exam 3 practice" : undefined
+                  }
+                  maxLength={200}
+                  value={p}
+                  onChange={(e) => {
+                    const next = [...picks];
+                    next[i] = e.target.value;
+                    setPicks(next);
+                    setChecked(false);
+                  }}
+                />
+              ))}
+            </fieldset>
             <label className="inline-check">
               <input
                 type="checkbox"
@@ -380,5 +418,33 @@ export function ReviewsPage() {
         />
       )}
     </>
+  );
+}
+
+/** A saved review, including the picks and progress kept from the workbook. */
+function ReviewDetail({ r }: { r: Review }) {
+  const d = (r.details ?? {}) as Record<string, unknown>;
+  const picks = Array.isArray(d.picks) ? (d.picks as string[]) : [];
+  const rows: [string, unknown][] = [
+    ["Win", r.achievements],
+    ["Risk", r.obstacles],
+    ["Picks", picks.join(" · ")],
+    ["Basketball", d.basketball],
+    ["Skills", d.skills],
+    ["Networking", d.networking],
+    ["Next week", d.top_three ?? (picks.length ? null : r.priorities)],
+    ["Summary", r.conversation_summary],
+  ];
+  const shown = rows.filter(([, v]) => typeof v === "string" && v.trim());
+  if (!shown.length) return <p className="muted">No reflection saved yet.</p>;
+  return (
+    <dl className="review-detail">
+      {shown.map(([k, v]) => (
+        <div key={k}>
+          <dt>{k}</dt>
+          <dd className="preserve-lines">{String(v)}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

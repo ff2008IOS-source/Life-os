@@ -20,7 +20,6 @@ import { useFocusSession } from "./focus-session-provider";
 import { Button } from "./ui/button";
 import type { AcademicData } from "./academic-editor";
 import type { BriefingController } from "./use-briefing";
-import type { SavedPlans } from "@/lib/services/saved-plans";
 import type { Task } from "@/lib/schemas";
 import { reviewAvailability } from "@/lib/temporal-context";
 import { useCurrentTime } from "./use-current-time";
@@ -49,13 +48,11 @@ function Card({
 export function DashboardWidgets({
   layout,
   initialAcademic,
-  initialPlans,
   briefing,
   priorities,
 }: {
   layout: DashboardLayout;
   initialAcademic?: AcademicData | null;
-  initialPlans?: SavedPlans | null;
   briefing: BriefingController;
   priorities: Task[];
 }) {
@@ -107,66 +104,48 @@ export function DashboardWidgets({
     };
   }, [needsAcademics, initialAcademic]);
   const needsCareer = shown.some((w) => ["career", "learning"].includes(w.id));
-  const [plans, setPlans] = useState<SavedPlans | null>(initialPlans ?? null),
-    [planError, setPlanError] = useState("");
+  // Career skills come from Life OS records (Growth → Career).
+  const [skills, setSkills] = useState<
+    { id: string; title: string; status: string | null }[] | null
+  >(null);
+  const [planError, setPlanError] = useState("");
   useEffect(() => {
     if (!needsCareer) return;
     let live = true;
-    const load = (event?: Event) => {
-      if (event && !affects(event, ["sheets"])) return;
-      void calendarRequest<NonNullable<typeof plans>>(
-        "/api/v1/sheets/tables?overview=true&skills=true",
-      )
-        .then((r) => {
-          if (live) {
-            setPlans(r);
-            setPlanError("");
-          }
-        })
-        .catch(() => {
-          if (live)
-            setPlanError(
-              "Your saved skill plan could not load. Open Career to check it.",
-            );
-        });
-    };
-    if (!initialPlans) load();
-    window.addEventListener("lifeos:changed", load);
+    void calendarRequest<{
+      entries: {
+        id: string;
+        kind: string;
+        title: string;
+        status: string;
+        details: { level?: string };
+      }[];
+    }>("/api/v1/career/records")
+      .then((r) => {
+        if (live)
+          setSkills(
+            r.entries
+              .filter((e) => e.kind === "skill")
+              .map((e) => ({
+                id: e.id,
+                title: e.title,
+                status:
+                  e.details.level ?? (e.status === "unknown" ? null : e.status),
+              })),
+          );
+      })
+      .catch(() => {
+        if (live)
+          setPlanError(
+            "Your skills could not load. Open Career to check them.",
+          );
+      });
     return () => {
       live = false;
-      window.removeEventListener("lifeos:changed", load);
     };
-  }, [needsCareer, initialPlans]);
-  const skillSourceError = plans?.datasets.some(
-    (d) =>
-      d.config.columns.some((c) => /^skill$/i.test(c.header)) &&
-      plans.overview.find((x) => x.dataset_id === d.id)?.error,
-  )
-    ? "Your saved skill entries could not load. Check the Career page."
-    : "";
-  const skills =
-    plans?.datasets
-      .filter((d) => d.config.columns.some((c) => /^skill$/i.test(c.header)))
-      .flatMap((d) => {
-        const section = plans.overview.find((x) => x.dataset_id === d.id);
-        const title = d.config.columns.find((c) => /^skill$/i.test(c.header));
-        const status = d.config.columns.find((c) =>
-          /^(status|level|progress|current level)$/i.test(c.header),
-        );
-        return (section?.rows ?? [])
-          .filter((r) => !["deleted", "remote_deleted"].includes(r.state))
-          .slice(0, 4)
-          .map((r) => ({
-            id: r.id,
-            title: String(
-              r.local_values[title!.key] ?? "Skill name not recorded",
-            ),
-            status: status
-              ? String(r.local_values[status.key] ?? "Not recorded")
-              : null,
-            error: section?.error,
-          }));
-      }) ?? [];
+  }, [needsCareer]);
+  const skillSourceError = "";
+  const plans = skills;
   const projects = data.projects.filter(
     (p) =>
       availableProject(p) &&
@@ -336,11 +315,11 @@ export function DashboardWidgets({
           <p role="alert">{planError || skillSourceError}</p>
         ) : !plans ? (
           <p>Loading saved skills…</p>
-        ) : skills.length ? (
+        ) : skills?.length ? (
           <ul className="dashboard-records">
-            {skills.slice(0, 4).map((skill) => (
+            {(skills ?? []).slice(0, 4).map((skill) => (
               <li key={skill.id}>
-                <Link href="/areas/career#connected-roadmap">
+                <Link href="/areas/career">
                   {skill.title}
                   {skill.status ? ` · ${skill.status}` : ""}
                 </Link>
@@ -348,12 +327,10 @@ export function DashboardWidgets({
             ))}
           </ul>
         ) : (
-          <p className="small muted">
-            No saved skill entries are available in this preview.
-          </p>
+          <p className="small muted">No skills yet. Add one in Career.</p>
         )}
         <p className="small muted">
-          A preview of saved skill entries; open Career for the complete plan.
+          Your first few skills; open Career for the full list and evidence.
         </p>
         <h3>Study topics</h3>
 

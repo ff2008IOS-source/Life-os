@@ -1,5 +1,6 @@
 import { workerOutcome } from "@/lib/worker-outcome";
 import { restSheetsWorker } from "@/lib/integrations/sheet-rest-server";
+import { sheetsDisabled } from "@/lib/career/sheets-switch";
 import { sheetSyncWorker } from "@/lib/integrations/sheet-sync-server";
 import { managedCalendarWorker } from "@/lib/integrations/calendar-sync-service";
 import { canvasDocumentWorker } from "@/lib/canvas/documents-server";
@@ -44,8 +45,13 @@ export async function POST(request: Request) {
       personalWorkflowWorker(),
       canvasDocumentWorker(),
       managedRead,
-      sheetSyncWorker(),
-      restSheetsWorker(),
+      // Optional spreadsheet mirror: off means skipped, never a failure.
+      sheetsDisabled()
+        ? Promise.resolve({ skipped: "sheets_disabled" })
+        : sheetSyncWorker(),
+      sheetsDisabled()
+        ? Promise.resolve({ skipped: "sheets_disabled" })
+        : restSheetsWorker(),
     ]);
     const response = Object.fromEntries(
       results.map((r, i) => [

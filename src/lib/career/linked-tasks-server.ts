@@ -18,6 +18,12 @@ type Linked = {
   description: string;
 };
 
+const addDays = (iso: string, n: number) => {
+  const t = new Date(iso + "T12:00:00Z");
+  t.setUTCDate(t.getUTCDate() + n);
+  return t.toISOString().slice(0, 10);
+};
+
 const DONE_STATUSES =
   /^(submitted|applied|offer|accepted|rejected|declined|withdrawn|closed|complete)/i;
 
@@ -42,9 +48,9 @@ export async function syncLinkedTasks(
       .from("reviews")
       .select("id,period_start,period_end,details")
       .eq("user_id", user)
-      .lte("period_start", today)
-      .gte("period_end", today)
-      .limit(2),
+      .gte("period_start", addDays(today, -21))
+      .order("period_start", { ascending: false })
+      .limit(5),
     db
       .from("tasks")
       .select("id,version,source_key,status,title,due_date,deleted_at")
@@ -72,20 +78,26 @@ export async function syncLinkedTasks(
       description: "Follow-up from Growth → People.",
     });
   // This week's review picks feed the daily plan.
+  // A review's picks are for the week in `picks_for` (a Sunday review
+  // written in Life OS picks for the following week).
   for (const r of reviews.data ?? []) {
-    const picks = ((r.details as { picks?: string[] })?.picks ?? []).slice(
-      0,
-      3,
-    );
-    picks.forEach((p, i) =>
-      want.push({
-        key: `pick:${r.id}:${i}`,
-        title: p.slice(0, 200),
-        due_date: r.period_end,
-        active: true,
-        description: "This week's pick from your Sunday review.",
-      }),
-    );
+    const d = (r.details ?? {}) as { picks?: unknown; picks_for?: unknown };
+    const start = typeof d.picks_for === "string" ? d.picks_for : null;
+    if (!start || !Array.isArray(d.picks)) continue;
+    const end = addDays(start, 6);
+    if (today < start || today > end) continue;
+    (d.picks as unknown[])
+      .filter((p): p is string => typeof p === "string" && !!p.trim())
+      .slice(0, 3)
+      .forEach((p, i) =>
+        want.push({
+          key: `pick:${r.id}:${i}`,
+          title: p.trim().slice(0, 200),
+          due_date: end,
+          active: true,
+          description: "This week's pick from your Sunday review.",
+        }),
+      );
   }
   const existing = new Map(
     (tasks.data ?? []).map((t) => [String(t.source_key), t]),

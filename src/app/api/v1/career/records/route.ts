@@ -109,6 +109,7 @@ const input = z.discriminatedUnion("action", [
     })
     .strict(),
   z.object({ action: z.literal("archive_contact"), id: z.uuid() }).strict(),
+  z.object({ action: z.literal("sync_tasks") }).strict(),
   z
     .object({
       action: z.literal("log_conversation"),
@@ -243,6 +244,8 @@ export async function POST(request: Request) {
         .eq("user_id", user.id)
         .eq("id", x.id);
       dbError(r.error);
+    } else if (x.action === "sync_tasks") {
+      // Nothing to change; the linked tasks refresh below.
     } else {
       const r = await db
         .from("contact_interactions")

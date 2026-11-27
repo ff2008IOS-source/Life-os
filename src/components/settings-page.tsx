@@ -22,7 +22,7 @@ import { SchedulingPanel } from "./scheduling-panel";
 import { WorkSessionsPanel } from "./work-sessions-panel";
 import { OccurrencesPanel } from "./occurrences-panel";
 import { TechnicalDetailsToggle } from "./technical-details";
-import { CareerPanel } from "./career-panel";
+import { CareerImportPanel } from "./career-import-panel";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
 export function SettingsPage({
   initialSection = "profile",
@@ -209,6 +209,7 @@ export function SettingsPage({
             </div>
             <h2 className="settings-group">Spreadsheets</h2>
             <div className="settings-grid">
+              <CareerImportPanel />
               <SheetRestPanel />
               <details className="panel settings-panel">
                 <summary>Legacy imports and migration tools</summary>
@@ -216,7 +217,6 @@ export function SettingsPage({
                   Records imported before two-way sync. New tables use Google
                   Sheets above.
                 </p>
-                <CareerPanel compact />
                 <SheetSyncPanel />
               </details>
             </div>

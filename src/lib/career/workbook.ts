@@ -451,6 +451,7 @@ export function readWorkbook(wb: Workbook) {
         conversation_summary: r.get("Notes"),
         details: {
           picks,
+          picks_for: start,
           basketball: r.get("Basketball Progress") || null,
           skills: r.get("Skill Progress") || null,
           networking: r.get("Networking") || null,
