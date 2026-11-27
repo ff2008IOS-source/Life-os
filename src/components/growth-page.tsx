@@ -81,9 +81,9 @@ export function GrowthPage() {
     formatInTimeZone(new Date(d + "T12:00:00Z"), "UTC", "MMM d");
   return (
     <div className="td">
-      <header className="td-header">
-        <p className="td-eyebrow">GROWTH</p>
-        <h1>Where you’re headed</h1>
+      <header className="td-header area-band area-paper area-career">
+        <p className="td-eyebrow area-title">GROWTH</p>
+        <h1 className="area-heading">Where you’re headed</h1>
         <p className="td-summary">
           {goals.length} active goal{goals.length === 1 ? "" : "s"}
           {stuck

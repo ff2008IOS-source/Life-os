@@ -172,6 +172,25 @@ export function AcademicsPanel({
     }
     return null;
   };
+  /** Share of the course grade already decided (0–100), with confirmed rules. */
+  const decidedFor = (courseKey: string) => {
+    const course = data.courses.find((c) => c.id === courseKey);
+    if (
+      course?.grading_rules_confirmed !== true ||
+      course.grading_method === "unknown"
+    )
+      return null;
+    return academicGrade(
+      String(course.grading_method),
+      data.assessments.filter(
+        (a) => a.course_id === courseKey,
+      ) as unknown as GradeAssessment[],
+      data.grading_categories.filter(
+        (g) => g.course_id === courseKey,
+      ) as unknown as GradeCategory[],
+      { inventoryComplete: false, rulesVerified: true },
+    ).graded_weight;
+  };
   const nowMs = now.getTime();
   const dueMs = (a: AcademicRow) =>
     a.due_at
@@ -306,12 +325,13 @@ export function AcademicsPanel({
       )}
       <div className="course-switcher">
         <div
-          className="course-chips"
+          className="course-chips course-shelf"
           role="radiogroup"
           aria-label="Selected course"
         >
-          {courses.map((c) => {
+          {courses.map((c, i) => {
             const avg = averageFor(c.id);
+            const decided = decidedFor(c.id);
             return (
               <button
                 key={c.id}
@@ -319,12 +339,30 @@ export function AcademicsPanel({
                 data-course-id={c.id}
                 aria-label={`${String(c.code)} · ${String(c.title ?? "")}${avg !== null ? ` · average ${Math.round(avg)}%` : ""}`}
                 aria-checked={c.id === selected}
-                className={`course-chip ${c.id === selected ? "active" : ""}`}
+                className={`course-chip spine spine-${i % 6} ${c.id === selected ? "active" : ""}`}
                 onClick={() => setCourseId(c.id)}
               >
-                <strong>{String(c.code)}</strong>
-                {avg !== null && (
-                  <Mark earned={avg} unit="percent" showFraction={false} />
+                <strong className="spine-code">{String(c.code)}</strong>
+                {decided !== null && decided < 100 && (
+                  <span
+                    className="spine-open"
+                    style={{ height: `${(100 - decided) * 0.62}%` }}
+                    aria-hidden
+                  />
+                )}
+                <span
+                  className="spine-fill"
+                  style={{
+                    height: `${avg !== null ? Math.max(12, avg * 0.8) : 0}%`,
+                  }}
+                  aria-hidden
+                >
+                  {avg !== null && <b>{Math.round(avg)}</b>}
+                </span>
+                {avg === null && (
+                  <span className="spine-none" aria-hidden>
+                    —
+                  </span>
                 )}
               </button>
             );

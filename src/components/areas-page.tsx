@@ -147,15 +147,24 @@ export function AreasPage({
   return (
     <>
       <div className="page-heading">
-        <div className="area-workspace-header no-margin">
-          <span
-            className="section-icon"
-            style={{ background: area.color + "15", color: area.color }}
-          >
+        <div
+          className={`area-workspace-header no-margin area-band area-paper area-${
+            slug === "academics"
+              ? "school"
+              : slug === "career"
+                ? "career"
+                : slug === "basketball"
+                  ? "ball"
+                  : "other"
+          }`}
+        >
+          <span className="section-icon area-icon">
             <Icon />
           </span>
           <div>
-            <h1>{slug === "academics" ? "School" : area.name}</h1>
+            <h1 className="area-heading">
+              {slug === "academics" ? "School" : area.name}
+            </h1>
           </div>
         </div>
         {slug === "projects" && (
