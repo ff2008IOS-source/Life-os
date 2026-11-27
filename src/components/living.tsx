@@ -254,6 +254,7 @@ export function CountdownRing({
   const tone = days <= 3 ? "lv-low" : days <= 7 ? "lv-ok" : "lv-calm";
   return (
     <span
+      role="img"
       className={`lv-count ${tone}`}
       style={{ width: size, height: size }}
       aria-label={
@@ -289,6 +290,7 @@ export function SignalBars({
   const tone = level <= 1 ? "lv-low" : level <= 2 ? "lv-ok" : "lv-good";
   return (
     <span
+      role="img"
       className={`lv-signal ${tone}`}
       aria-label={`Mastery ${level} of ${max}`}
     >
