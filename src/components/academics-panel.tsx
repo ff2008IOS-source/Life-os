@@ -975,16 +975,56 @@ export function AcademicsPanel({
                   </div>
                 ) : (
                   <>
-                    <section className="course-section" aria-label="Syllabus">
+                    <section
+                      className="course-section syllabus-pin area-paper area-school"
+                      aria-label="Syllabus"
+                    >
                       <div className="course-section-head">
-                        <h3>Syllabus</h3>
+                        <h3 className="area-title">
+                          Syllabus · {String(current.code)}
+                        </h3>
                       </div>
+                      {upcoming.length > 0 && (
+                        <dl className="key-dates">
+                          {upcoming.slice(0, 4).map((a) => (
+                            <div key={a.id}>
+                              <dt>
+                                {dueLabel({
+                                  due_at: a.due_at as string | null,
+                                  due_date: a.due_date as string | null,
+                                })}
+                              </dt>
+                              <dd>
+                                {String(a.title)}
+                                {typeof a.weight === "number"
+                                  ? ` · ${Number(a.weight)}%`
+                                  : ""}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
                       <SyllabusReference key={selected} course={selected!} />
                     </section>
                     <CanvasMaterials
                       key={selected}
                       localCourseId={selected}
                       embedded
+                      termStart={
+                        (data.academic_terms.find(
+                          (t) => t.id === current.term_id,
+                        )?.start_date as string | null | undefined) ?? null
+                      }
+                      suggestions={[
+                        ...upcoming
+                          .slice(0, 2)
+                          .map((a) => String(a.title).toLowerCase()),
+                        ...topics
+                          .filter((t) => t.mastery !== "mastered")
+                          .slice(0, 2)
+                          .map((t) => String(t.title).toLowerCase()),
+                        "syllabus",
+                      ]}
                     />
                     {current.description ? (
                       <section className="course-section" aria-label="Notes">

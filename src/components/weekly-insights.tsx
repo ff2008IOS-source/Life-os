@@ -28,25 +28,33 @@ export function WeeklyInsights() {
           {formatInTimeZone(d.refreshed_at, d.timezone, "MMM d, h:mm a")}
         </span>
       </div>
-      <div className="insight-highlights">
-        <div>
-          <strong>{d.weekly.completed_tasks || "—"}</strong>
+      <div className="headline-numbers insight-numbers">
+        <div className="area-career">
+          <b>{d.weekly.completed_tasks || "—"}</b>
           <span>
             {d.weekly.completed_tasks
-              ? "tasks completed"
+              ? `tasks completed${d.weekly.completed_on_time ? `, ${d.weekly.completed_on_time} by their deadline` : ""}${d.weekly.completed_late ? ` · ${d.weekly.completed_late} after it` : ""}`
               : "No completed tasks"}
           </span>
-          {d.weekly.completed_tasks > 0 && (
-            <small>
-              {d.weekly.completed_on_time} by their deadline
-              {d.weekly.completed_late
-                ? ` · ${d.weekly.completed_late} after it`
-                : ""}
-            </small>
-          )}
         </div>
-        <div>
-          <strong>{d.weekly.milestones.length || "—"}</strong>
+        <div className="area-study">
+          <b>
+            {Math.round(
+              (d.weekly.reported_minutes + d.weekly.reported_academic_minutes) /
+                6,
+            ) / 10}
+            h
+          </b>
+          <span>focus time logged</span>
+        </div>
+        <div className="area-school">
+          <b>{d.weekly.needs_review.length}</b>
+          <span>
+            topic{d.weekly.needs_review.length === 1 ? "" : "s"} to review
+          </span>
+        </div>
+        <div className="area-other">
+          <b>{d.weekly.milestones.length || "—"}</b>
           <span>
             {d.weekly.milestones.length
               ? "milestones reached"
@@ -54,10 +62,9 @@ export function WeeklyInsights() {
           </span>
         </div>
         {d.weekly.deferrals > 0 && (
-          <div>
-            <strong>{d.weekly.deferrals}</strong>
-            <span>tasks deferred</span>
-            <small>Review what keeps getting pushed back</small>
+          <div className="area-ball">
+            <b>{d.weekly.deferrals}</b>
+            <span>tasks deferred · review what keeps getting pushed back</span>
           </div>
         )}
       </div>

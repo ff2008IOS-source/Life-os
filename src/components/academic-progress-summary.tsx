@@ -5,9 +5,11 @@ import { calendarRequest } from "./use-calendar";
 import type { AcademicData } from "./academic-editor";
 import {
   academicGrade,
+  gradeParts,
   type GradeAssessment,
   type GradeCategory,
 } from "@/lib/academic-grades";
+import { GradeRing } from "./living";
 import {
   standingLabel,
   possibleAssessmentDuplicates,
@@ -69,6 +71,17 @@ export function AcademicProgressSummary({
                   ),
                 ),
           );
+          const parts =
+            course.grading_rules_confirmed === true &&
+            String(course.grading_method) !== "unknown"
+              ? gradeParts(
+                  String(course.grading_method),
+                  rows as unknown as (GradeAssessment & { title?: string })[],
+                  data.grading_categories.filter(
+                    (c) => c.course_id === course.id,
+                  ) as unknown as (GradeCategory & { name?: string })[],
+                )
+              : [];
           return (
             <Link
               href={`/areas/academics?course=${course.id}`}
@@ -76,7 +89,11 @@ export function AcademicProgressSummary({
               key={course.id}
             >
               <h3>{String(course.code)}</h3>
-              <strong>{standing.value}</strong>
+              {parts.length > 0 ? (
+                <GradeRing parts={parts} value={standing.value} size={96} />
+              ) : (
+                <strong>{standing.value}</strong>
+              )}
               <span>{standing.title}</span>
               <small>{summary.missing_scores} results pending</small>
             </Link>
