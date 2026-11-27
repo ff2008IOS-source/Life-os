@@ -46,6 +46,35 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
     expect(live.status()).toBe(503);
   }
 
+  // A review already written in Life OS for a week the workbook also has.
+  // (An earlier test may already have written it; reuse it if so.)
+  const reviews = async () =>
+    (await (await page.request.get("/api/v1/reviews")).json()).data as {
+      id: string;
+      version: number;
+      period_start: string;
+      achievements: string;
+      conversation_summary: string | null;
+    }[];
+  const earlier = (await reviews()).find(
+    (r) => r.period_start === "2026-11-09",
+  );
+  const body = {
+    period_start: "2026-11-09",
+    period_end: "2026-11-15",
+    achievements: "",
+    conversation_summary: "[TEST] Written in Life OS",
+  };
+  const mine = earlier
+    ? await page.request.patch(`/api/v1/reviews/${earlier.id}`, {
+        headers: ORIGIN,
+        data: { version: earlier.version, data: body },
+      })
+    : await post("/api/v1/reviews", body);
+  expect(mine.ok(), await mine.text()).toBe(true);
+  const reviewOf = async (start: string) =>
+    (await reviews()).find((r) => r.period_start === start);
+
   // 1. Import: a dry run writes nothing; the import adds records once.
   const dry = await (
     await post("/api/v1/career/import", { dry_run: true, snapshot: workbook })
@@ -65,7 +94,13 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
       skipped: unknown[];
     };
   expect(tab(first, "Network & Applications").imported).toBe(4);
+  // Aug 17 and Nov 23 are new; Nov 9 joins the review written in Life OS.
   expect(tab(first, "Weekly Review").imported).toBe(2);
+  expect(tab(first, "Weekly Review").matched).toBe(1);
+  expect(await reviewOf("2026-11-09")).toMatchObject({
+    achievements: "Second win", // was empty, filled from the workbook
+    conversation_summary: "[TEST] Written in Life OS",
+  });
   expect(tab(first, "Weekly Review").skipped).toHaveLength(2);
 
   // 2. Growth → Career: log a conversation and schedule the follow-up.
@@ -206,6 +241,13 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
     await post("/api/v1/career/import", { dry_run: false, snapshot: workbook })
   ).json();
   for (const t of second.tabs) expect(t.imported, t.tab).toBe(0);
+  // The review written in Life OS stays as written on every later run.
+  expect(
+    second.results.filter((r: { outcome: string }) => r.outcome === "updated"),
+  ).toEqual([]);
+  expect((await reviewOf("2026-11-09"))?.conversation_summary).toBe(
+    "[TEST] Written in Life OS",
+  );
   const after = await (await page.request.get("/api/v1/career/records")).json();
   expect(after.contacts).toHaveLength(2);
   const milestone = after.entries.find((e: { title: string }) =>
