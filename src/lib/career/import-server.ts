@@ -245,6 +245,60 @@ export async function importWorkbook(
       continue;
     }
     t.matched++;
+    const lifeOsReview =
+      rec.table === "reviews" &&
+      (!existing.import_hash ||
+        "workbook" in ((existing.details as object | null) ?? {}));
+    if (lifeOsReview) {
+      // A review written in Life OS: keep it (on this and every later
+      // run), fill only what it left empty, keep the workbook's beside it.
+      const first = !existing.import_hash;
+      const before = (existing.details as { workbook?: unknown }).workbook;
+      if (!first && hashOf({ w: before }) === hashOf({ w: rec.details })) {
+        results.push({ key: rec.key, outcome: "unchanged" });
+        continue;
+      }
+      // Empty fields are filled only the first time, so clearing one in
+      // Life OS later is not undone by the next import.
+      const fill: Record<string, unknown> = {};
+      if (first)
+        for (const f of [
+          "achievements",
+          "obstacles",
+          "priorities",
+          "conversation_summary",
+        ] as const)
+          if (
+            !String(existing[f] ?? "").trim() &&
+            (vals as unknown as Record<string, string>)[f]
+          )
+            fill[f] = (vals as unknown as Record<string, string>)[f];
+      const details = {
+        ...(existing.details as object),
+        workbook: rec.details,
+      };
+      await write(() =>
+        db
+          .from("reviews")
+          .update({
+            ...fill,
+            details,
+            source_key: rec.key,
+            import_hash: hashOf(
+              projection({ ...existing, ...fill, details }, "reviews"),
+            ),
+            imported_at: stamp,
+          })
+          .eq("user_id", user)
+          .eq("id", existing!.id),
+      );
+      if (first && Object.keys(fill).length < 4)
+        t.notes.push(
+          `Week of ${rec.period_start}: kept the review written in Life OS; added the workbook's version alongside.`,
+        );
+      results.push({ key: rec.key, outcome: "merged" });
+      continue;
+    }
     const current = hashOf(projection(existing, rec.table));
     if (current === hash) {
       if (!existing.source_key)
@@ -269,46 +323,6 @@ export async function importWorkbook(
           .eq("id", existing!.id),
       );
       results.push({ key: rec.key, outcome: "updated" });
-      continue;
-    }
-    if (rec.table === "reviews" && !existing.import_hash) {
-      // A review written in Life OS: keep it, fill only what it left empty.
-      const fill: Record<string, unknown> = {};
-      for (const f of [
-        "achievements",
-        "obstacles",
-        "priorities",
-        "conversation_summary",
-      ] as const)
-        if (
-          !String(existing[f] ?? "").trim() &&
-          (vals as unknown as Record<string, string>)[f]
-        )
-          fill[f] = (vals as unknown as Record<string, string>)[f];
-      const details = {
-        ...(existing.details as object),
-        workbook: rec.details,
-      };
-      await write(() =>
-        db
-          .from("reviews")
-          .update({
-            ...fill,
-            details,
-            source_key: rec.key,
-            import_hash: hashOf(
-              projection({ ...existing, ...fill, details }, "reviews"),
-            ),
-            imported_at: stamp,
-          })
-          .eq("user_id", user)
-          .eq("id", existing!.id),
-      );
-      if (Object.keys(fill).length < 4)
-        t.notes.push(
-          `Week of ${rec.period_start}: kept the review written in Life OS; added the workbook's version alongside.`,
-        );
-      results.push({ key: rec.key, outcome: "merged" });
       continue;
     }
     // Edited in Life OS since the last import: keep the edit; keep the

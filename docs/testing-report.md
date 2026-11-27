@@ -29,6 +29,29 @@ Run date: 2026-11-26, on the `claude/funny-mayer-j25zzj` branch before merge.
   - with the clock pinned to the evening, the wrap-up's Find time hands a task to the scheduler and Close out completes it.
 - `tests/e2e/y-warm-workspaces.spec.ts`: `/basketball` redirects to Week.
 
+## Career migration (2026-11-27)
+
+- `tests/career-workbook.test.ts`:
+  - school-year date inference;
+  - target employers kept apart from applications;
+  - text follow-ups kept as notes;
+  - stable milestone keys across renames;
+  - reviews and empty weeks;
+  - Calendar Playbook kept whole;
+  - Dashboard table boundaries and metrics;
+  - Sheets column names past Z.
+- `tests/e2e/y-career-migration.spec.ts` (iPad portrait):
+  - dry run, import and re-import with no duplicates, keeping edits and Life OS reviews;
+  - follow-up flags;
+  - logging a conversation, checked after reload;
+  - application deadline to Submitted;
+  - portfolio edit and evidence in a fresh session;
+  - opening an old review and saving a new review whose priority appears in next week's plan;
+  - a missing School score staying unknown;
+  - anonymous access refused.
+
+  CI runs it again with `LIFE_OS_SHEETS_DISABLED=1`.
+
 ## Test data
 
 All e2e records are synthetic and labelled `[TEST]` in an isolated fixture database. The owner's real data is only read, during production verification.

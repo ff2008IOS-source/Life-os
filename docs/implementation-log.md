@@ -2,6 +2,18 @@
 
 Status keys: **Proposed**, **Planned**, **Implemented** (code merged), **Tested** (automated tests pass), **Production-verified** (checked on https://lifeos-beta-ivory.vercel.app with the owner's account).
 
+## 2026-11-27: career workbook retired into Life OS
+
+The full report is in [CAREER_MIGRATION.md](CAREER_MIGRATION.md).
+
+| Change                                                                                    | Status                        | Notes                                                                                                                        |
+| ----------------------------------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Native career records, a conversation log and review details (migration `20261127010000`) | Implemented, Tested, Applied  | Additive; row-level security on the new table                                                                                |
+| Growth → Career workspace (People, Applications, Skills & portfolio, Plans, Reference)    | Implemented, Tested, Deployed | It replaces three panels that read the sheet mirror                                                                          |
+| Linked tasks for follow-ups, application deadlines and review picks                       | Implemented, Tested, Deployed | Today, Week, search and reminders read them                                                                                  |
+| Repeatable workbook import with a dry run and per-tab reconciliation                      | Implemented, Tested, Deployed | Run on production on 2026-11-27 after a backup. PRs #69–#71 fixed a 29-column tab, Dashboard table edges and review re-runs. |
+| `LIFE_OS_SHEETS_DISABLED` kill switch                                                     | Implemented, Tested           | CI runs the career e2e with it on. Not set in production.                                                                    |
+
 ## 2026-11-26: every choice saved to the account
 
 Audit of everything the owner can do. All data actions (tasks, marks, topics, Seen, Got it, Undo, It's fine, settings, check-ins, reviews) already saved to the account. These didn't, and now do:
