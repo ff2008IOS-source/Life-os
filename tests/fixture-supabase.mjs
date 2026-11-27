@@ -471,6 +471,7 @@ const server = createServer((req, res) => {
           "course_messages",
           "email_intake_tokens",
           "outlook_connections",
+          "contact_interactions",
         ];
         if (!tables.includes(table)) throw Error("Unknown table");
         const params = [];
