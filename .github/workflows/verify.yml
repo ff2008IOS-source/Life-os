@@ -32,6 +32,10 @@ jobs:
       - run: npm run test:bundle
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      # Retiring the workbook: the career workflows again, with Sheets off.
+      - run: npm run test:e2e -- tests/e2e/y-career-migration.spec.ts
+        env:
+          LIFE_OS_SHEETS_DISABLED: "1"
       - run: npm run test:requests -- --output=request-results
       - name: Retain synthetic dashboard measurements
         if: success()

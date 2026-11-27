@@ -32,6 +32,10 @@ export default defineConfig({
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "synthetic-test-publishable-key",
         LIFE_OS_ALLOWED_EMAIL: "beta@example.invalid",
         LIFE_OS_APP_ORIGIN: "http://127.0.0.1:3000",
+        // The career import reads a saved workbook copy in tests (no Google).
+        LIFE_OS_ALLOW_SNAPSHOT_IMPORT: "1",
+        // Set by the Sheets-independence run: only Sheets is turned off.
+        LIFE_OS_SHEETS_DISABLED: process.env.LIFE_OS_SHEETS_DISABLED ?? "",
         // Synthetic, test-only key for short-lived sign-in cookies.
         CANVAS_ENCRYPTION_KEY: "0".repeat(64),
       },

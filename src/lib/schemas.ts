@@ -123,6 +123,8 @@ export const reviewInput = z
     missed_commitments: text,
     decisions: text,
     priorities: text,
+    /** Picks for the next week and the workbook's progress columns. */
+    details: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .refine((r) => r.period_end >= r.period_start, {

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, ArrowRight } from "lucide-react";
 import { calendarRequest } from "./use-calendar";
-import { contactKey, type FollowUp } from "@/lib/follow-ups";
+import type { FollowUp } from "@/lib/follow-ups";
 import { dueLabel } from "@/lib/display";
 
 type State = {
@@ -45,45 +45,22 @@ export function useFollowUps() {
       live = false;
     };
   }, []);
-  /** Logs a conversation today in Life OS; the sheet itself is untouched. */
+  /** Logs a quick check-in today, in Life OS. */
   const talked = useCallback(
     async (f: FollowUp) => {
-      const now = new Date().toISOString();
-      if (f.record) {
-        await calendarRequest(`/api/v1/contacts/${f.record.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            version: f.record.version,
-            data: {
-              name: f.name,
-              organization: f.organization || null,
-              role: f.role || null,
-              email: null,
-              relationship_notes: "",
-              source_id: null,
-              source_key: contactKey(f.row_id),
-              last_contact_at: now,
-              next_follow_up_date: null,
-            },
+      await calendarRequest("/api/v1/career/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "log_conversation",
+          contact_id: f.row_id,
+          occurred_on: new Date().toLocaleDateString("en-CA", {
+            timeZone: "America/Vancouver",
           }),
-        });
-      } else {
-        await calendarRequest("/api/v1/contacts", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Idempotency-Key": crypto.randomUUID(),
-          },
-          body: JSON.stringify({
-            name: f.name,
-            organization: f.organization || null,
-            role: f.role || null,
-            source_key: contactKey(f.row_id),
-            last_contact_at: now,
-          }),
-        });
-      }
+          summary: "Checked in",
+          next_follow_up_date: null,
+        }),
+      });
       await load();
     },
     [load],
@@ -149,7 +126,7 @@ export function FollowUpNudge() {
   );
 }
 
-/** Growth: everyone in the contacts sheet, who's due first. */
+/** Growth: everyone in your contacts, who's due first. */
 export function CareerFollowUps() {
   const { state, error, talked } = useFollowUps();
   const [busy, setBusy] = useState("");
@@ -160,8 +137,7 @@ export function CareerFollowUps() {
       <section className="td-card" aria-label="People">
         <h2 className="td-card-title">People</h2>
         <p className="course-empty">
-          Connect your career spreadsheet in Settings → Connections to see who
-          to check in with.
+          Add the people you want to keep in touch with in Career.
         </p>
       </section>
     );
@@ -175,6 +151,9 @@ export function CareerFollowUps() {
             {due ? `${due} to check in with` : "All caught up"}
           </span>
         </h2>
+        <Link href="/areas/career" className="td-link">
+          Career <ArrowRight size={14} aria-hidden />
+        </Link>
       </div>
       <ul className="topic-list">
         {state.follow_ups.map((f) => (
@@ -224,8 +203,8 @@ export function CareerFollowUps() {
         </>
       ) : state.applications ? (
         <p className="course-note">
-          Add a Deadline column to your Application pipeline sheet and the
-          closest deadlines will show here and on Today.
+          Give an application a deadline in Career and it shows here, on Today
+          and in Week.
         </p>
       ) : null}
     </section>

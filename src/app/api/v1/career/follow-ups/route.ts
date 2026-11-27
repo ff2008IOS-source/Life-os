@@ -1,66 +1,93 @@
 import { NextResponse } from "next/server";
+import { formatInTimeZone } from "date-fns-tz";
 import { authorized } from "@/lib/auth";
 import { dbError, failure } from "@/lib/http";
-import {
-  applicationDeadlines,
-  followUps,
-  type ContactLog,
-  type SheetRow,
-} from "@/lib/follow-ups";
+import type { FollowUp } from "@/lib/follow-ups";
 
-/** People to check in with and upcoming application deadlines. */
+const ZONE = "America/Vancouver";
+const DAY = 86400000;
+
+/**
+ * People to check in with and upcoming application deadlines, from the
+ * owner's Life OS records (Growth → Career). No spreadsheet is read.
+ * A contact is due when its scheduled follow-up date has arrived, or, with
+ * no date set, when nothing has been logged for 30 days.
+ */
 export async function GET() {
   try {
     const { db, user } = await authorized();
-    const sets = await db
-      .from("sheet_rest_datasets")
-      .select("id,title,config")
-      .eq("user_id", user.id)
-      .eq("test_only", false)
-      .limit(21);
-    dbError(sets.error);
-    const has = (d: { config: unknown }, key: string) =>
-      JSON.stringify(
-        (d.config as { columns?: { key: string }[] })?.columns ?? [],
-      ).includes(`"${key}"`);
-    const contacts = (sets.data ?? []).filter((d) => has(d, "last_contact"));
-    const pipelines = (sets.data ?? []).filter(
-      (d) => /application|pipeline/i.test(String(d.title)) && has(d, "status"),
-    );
-    const ids = [...contacts, ...pipelines].map((d) => d.id);
-    if (!ids.length)
-      return NextResponse.json(
-        { follow_ups: [], deadlines: [], connected: false },
-        { headers: { "Cache-Control": "private, no-store" } },
+    const [contacts, apps] = await Promise.all([
+      db
+        .from("contacts")
+        .select(
+          "id,version,name,organization,role,relationship_notes,last_contact_at,next_follow_up_date",
+        )
+        .eq("user_id", user.id)
+        .is("archived_at", null)
+        .limit(500),
+      db
+        .from("career_entries")
+        .select("id,title,status,due_date")
+        .eq("user_id", user.id)
+        .eq("kind", "application")
+        .is("archived_at", null)
+        .not("due_date", "is", null)
+        .limit(500),
+    ]);
+    dbError(contacts.error);
+    dbError(apps.error);
+    const today = formatInTimeZone(new Date(), ZONE, "yyyy-MM-dd");
+    const days = (a: string, b: string) =>
+      Math.round(
+        (Date.parse(a + "T12:00:00Z") - Date.parse(b + "T12:00:00Z")) / DAY,
       );
-    const rows = await db
-      .from("sheet_rest_rows")
-      .select("id,version,dataset_id,state,local_values")
-      .eq("user_id", user.id)
-      .in("dataset_id", ids)
-      .limit(1000);
-    dbError(rows.error);
-    const all = (rows.data ?? []) as SheetRow[];
-    const logs = await db
-      .from("contacts")
-      .select("id,version,source_key,last_contact_at")
-      .eq("user_id", user.id)
-      .like("source_key", "sheet-row:%")
-      .limit(500);
-    dbError(logs.error);
-    const inSet = (set: { id: string }[]) => (r: SheetRow) =>
-      set.some((d) => d.id === r.dataset_id);
+    const follow_ups: FollowUp[] = (contacts.data ?? [])
+      .map((c) => {
+        const last = c.last_contact_at
+          ? formatInTimeZone(c.last_contact_at, ZONE, "yyyy-MM-dd")
+          : null;
+        const since = last ? days(today, last) : null;
+        const next = c.next_follow_up_date as string | null;
+        return {
+          row_id: c.id,
+          version: c.version,
+          dataset_id: "",
+          name: c.name,
+          role: c.role ?? "",
+          organization: c.organization ?? "",
+          last_contact: last,
+          days_since: since,
+          note: next
+            ? `Follow up ${next}`
+            : ((c.relationship_notes ?? "").split("\n")[0] ?? ""),
+          due: next ? next <= today : since === null || since >= 30,
+          record: { id: c.id, version: c.version },
+          next_follow_up_date: next,
+        } as FollowUp;
+      })
+      .sort(
+        (a, b) =>
+          Number(b.due) - Number(a.due) ||
+          (b.days_since ?? Infinity) - (a.days_since ?? Infinity) ||
+          a.name.localeCompare(b.name),
+      );
+    const done =
+      /^(submitted|applied|offer|accepted|rejected|declined|withdrawn|closed|complete)/i;
+    const deadlines = (apps.data ?? [])
+      .filter((a) => a.due_date >= today && !done.test(String(a.status)))
+      .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))
+      .map((a) => ({
+        row_id: a.id,
+        title: a.title,
+        status: a.status,
+        deadline: a.due_date,
+      }));
     return NextResponse.json(
       {
         connected: true,
-        follow_ups: followUps(
-          all.filter(inSet(contacts)),
-          new Date(),
-          30,
-          (logs.data ?? []) as ContactLog[],
-        ),
-        deadlines: applicationDeadlines(all.filter(inSet(pipelines))),
-        applications: all.filter(inSet(pipelines)).length,
+        follow_ups,
+        deadlines,
+        applications: (apps.data ?? []).length,
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );

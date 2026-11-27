@@ -1,41 +1,13 @@
 "use client";
-import { affects } from "@/lib/workspace-change";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { calendarRequest } from "./use-calendar";
-import type { SavedPlans } from "@/lib/services/saved-plans";
+import { useCareer } from "./career-workspace";
 import type { AcademicData } from "./academic-editor";
 import { Button } from "./ui/button";
-function useSavedPlans() {
-  const [data, setData] = useState<SavedPlans | null>(null),
-    [error, setError] = useState("");
-  useEffect(() => {
-    let live = true;
-    const load = (event?: Event) => {
-      if (event && !affects(event, ["sheets"])) return;
-      void calendarRequest<SavedPlans>("/api/v1/sheets/tables?overview=true")
-        .then((d) => {
-          if (live) {
-            setData(d);
-            setError("");
-          }
-        })
-        .catch(() => {
-          if (live) setError("Connected records couldn’t load.");
-        });
-    };
-    load();
-    window.addEventListener("lifeos:changed", load);
-    return () => {
-      live = false;
-      window.removeEventListener("lifeos:changed", load);
-    };
-  }, []);
-  return { data, error };
-}
 export function LearningPage() {
-  const saved = useSavedPlans(),
+  const career = useCareer(),
     [academic, setAcademic] = useState<AcademicData | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -51,10 +23,7 @@ export function LearningPage() {
       live = false;
     };
   }, []);
-  const skills =
-    saved.data?.datasets.filter((d) =>
-      d.config.columns.some((c) => /^skill$/i.test(c.header)),
-    ) ?? [];
+  const skills = (career.data?.entries ?? []).filter((e) => e.kind === "skill");
   return (
     <>
       <div className="page-heading">
@@ -69,68 +38,29 @@ export function LearningPage() {
         <div className="panel-heading">
           <h2>Learning paths</h2>
         </div>
-        {saved.error && (
-          <p role="alert">
-            {saved.error}{" "}
-            <Link href="/settings?section=integrations">Check connections</Link>
-          </p>
-        )}
-        {!saved.data && !saved.error && (
+        {career.error && <p role="alert">{career.error}</p>}
+        {!career.data && !career.error && (
           <p className="muted">Loading learning paths…</p>
         )}
         <div className="learning-list">
-          {skills.flatMap((d) => {
-            const section = saved.data!.overview.find(
-              (o) => o.dataset_id === d.id,
-            );
-            if (section?.error)
-              return [
-                <p role="alert" key={d.id}>
-                  Skill records couldn’t load.
-                </p>,
-              ];
-            const title = d.config.columns.find((c) =>
-                /^skill$/i.test(c.header),
-              )!,
-              level = d.config.columns.find((c) =>
-                /^(current level|status)$/i.test(c.header),
-              ),
-              rhythm = d.config.columns.find((c) =>
-                /^practice rhythm$/i.test(c.header),
-              );
-            return (section?.rows ?? [])
-              .filter((r) => r.state !== "deleted")
-              .map((r) => (
-                <div className="learning-row" key={r.id}>
-                  <div>
-                    <h2>
-                      {String(r.local_values[title.key] ?? "Unnamed skill")}
-                    </h2>
-                    {rhythm && r.local_values[rhythm.key] ? (
-                      <p>{String(r.local_values[rhythm.key])}</p>
-                    ) : null}
-                    <Link
-                      className="text-link"
-                      href="/areas/career#connected-roadmap"
-                    >
-                      View learning plan <ArrowUpRight size={14} />
-                    </Link>
-                  </div>
-                  {level && (
-                    <span className="small muted">
-                      {String(r.local_values[level.key] ?? "Not recorded")}
-                    </span>
-                  )}
-                </div>
-              ));
-          })}
+          {skills.map((s) => (
+            <div className="learning-row" key={s.id}>
+              <div>
+                <h2>{s.title}</h2>
+                {s.details.rhythm ? <p>{String(s.details.rhythm)}</p> : null}
+                <Link className="text-link" href="/areas/career">
+                  View in Career <ArrowUpRight size={14} />
+                </Link>
+              </div>
+              <span className="small muted">
+                {String(s.details.level ?? s.status)}
+              </span>
+            </div>
+          ))}
         </div>
-        {saved.data && !skills.length && (
+        {career.data && !skills.length && (
           <p className="muted">
-            No learning paths connected.{" "}
-            <Link href="/settings?section=integrations">
-              Connect a learning plan
-            </Link>{" "}
+            No skills yet. <Link href="/areas/career">Add one in Career</Link>{" "}
             or <Link href="/areas/academics?view=study">add study topics</Link>.
           </p>
         )}

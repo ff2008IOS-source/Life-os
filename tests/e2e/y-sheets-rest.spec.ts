@@ -152,11 +152,12 @@ test("Sheets table controls preserve formulas, review conflicts and require expl
         .analyze()
     ).violations,
   ).toEqual([]);
-  // The ordinary Career page uses the same guarded editor, rather than a stale legacy import.
+  // The optional mirror's row editor lives in Settings; career records
+  // themselves are kept in Growth → Career.
   await page.request.post("/api/v1/workspace/initialize", {
     headers: { Origin: "http://127.0.0.1:3000" },
   });
-  await page.goto("/areas/career");
+  await page.goto("/settings?section=integrations");
   await page
     .getByRole("main")
     .getByText("Connected plan details", { exact: true })

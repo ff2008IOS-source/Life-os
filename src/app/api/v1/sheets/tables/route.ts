@@ -1,3 +1,4 @@
+import { sheetsDisabled } from "@/lib/career/sheets-switch";
 import { readSavedPlans } from "@/lib/services/saved-plans";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -284,6 +285,14 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   try {
+    // With Sheets turned off, the optional mirror does nothing; Life OS
+    // records are read and saved without it.
+    if (sheetsDisabled())
+      throw new ApiError(
+        503,
+        "Google Sheets is turned off. Your Life OS records are unaffected.",
+        "SHEETS_DISABLED",
+      );
     checkMutation(request);
     const { user } = await authorized();
     const input = inputSchema.parse(await readJson(request));
