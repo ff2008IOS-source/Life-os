@@ -456,6 +456,68 @@ export function ReviewsPage() {
 }
 
 /** A saved review, including the picks and progress kept from the workbook. */
+/** The conversation saved with a past review, loaded when opened. Any day. */
+function ReviewConversation({ reviewId }: { reviewId: string }) {
+  const [state, setState] = useState<
+    | { status: "idle" | "loading" }
+    | { status: "ready"; turns: { q: string; a: string }[] }
+    | { status: "error" }
+  >({ status: "idle" });
+  const load = async () => {
+    if (state.status !== "idle") return;
+    setState({ status: "loading" });
+    try {
+      const list = await calendarRequest<{
+        conversations?: { id: string }[];
+      }>(`/api/v1/assistant?review=${reviewId}`);
+      const id = list.conversations?.[0]?.id;
+      if (!id) return setState({ status: "ready", turns: [] });
+      const ex = await calendarRequest<{
+        exchanges?: {
+          question: string;
+          status: string;
+          response: { answer?: string } | null;
+        }[];
+      }>(`/api/v1/assistant?conversation=${id}`);
+      setState({
+        status: "ready",
+        turns: (ex.exchanges ?? [])
+          .filter((e) => e.response?.answer)
+          .map((e) => ({ q: e.question, a: e.response!.answer! })),
+      });
+    } catch {
+      setState({ status: "error" });
+    }
+  };
+  return (
+    <details
+      className="review-conversation"
+      onToggle={(e) => {
+        if ((e.currentTarget as HTMLDetailsElement).open) void load();
+      }}
+    >
+      <summary>Conversation</summary>
+      {state.status === "loading" && <p className="muted">Loading…</p>}
+      {state.status === "error" && (
+        <p className="muted">The conversation couldn’t load. Try again.</p>
+      )}
+      {state.status === "ready" &&
+        (state.turns.length ? (
+          <ol className="review-chat">
+            {state.turns.map((t, i) => (
+              <li key={i}>
+                <p className="review-chat-me">{t.q}</p>
+                <p className="review-chat-ai preserve-lines">{t.a}</p>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted">No conversation was saved with this week.</p>
+        ))}
+    </details>
+  );
+}
+
 function ReviewDetail({ r }: { r: Review }) {
   const d = (r.details ?? {}) as Record<string, unknown>;
   const picks = Array.isArray(d.picks) ? (d.picks as string[]) : [];
@@ -470,15 +532,21 @@ function ReviewDetail({ r }: { r: Review }) {
     ["Summary", r.conversation_summary],
   ];
   const shown = rows.filter(([, v]) => typeof v === "string" && v.trim());
-  if (!shown.length) return <p className="muted">No reflection saved yet.</p>;
   return (
-    <dl className="review-detail">
-      {shown.map(([k, v]) => (
-        <div key={k}>
-          <dt>{k}</dt>
-          <dd className="preserve-lines">{String(v)}</dd>
-        </div>
-      ))}
-    </dl>
+    <>
+      {shown.length ? (
+        <dl className="review-detail">
+          {shown.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd className="preserve-lines">{String(v)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="muted">No reflection saved yet.</p>
+      )}
+      <ReviewConversation reviewId={r.id} />
+    </>
   );
 }
