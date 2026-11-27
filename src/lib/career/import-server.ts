@@ -356,6 +356,26 @@ export async function importWorkbook(
     results.push({ key: rec.key, outcome: "kept_life_os_edit" });
   }
 
+  // Weeks reviewed in the workbook are completed reviews once the week is
+  // over. The current week stays open for its Sunday review.
+  const today = localDate(now);
+  const reviewed = records.filter(
+    (r): r is Extract<ImportRecord, { table: "reviews" }> =>
+      r.table === "reviews" && r.period_end < today,
+  );
+  if (reviewed.length)
+    await write(() =>
+      db
+        .from("reviews")
+        .update({ completed_at: stamp })
+        .eq("user_id", user)
+        .in(
+          "source_key",
+          reviewed.map((r) => r.key),
+        )
+        .is("completed_at", null),
+    );
+
   // Snapshot rows the workbook no longer has: leave them, but say so.
   for (const [key, old] of legacy) {
     const kind = String(old.kind);

@@ -103,6 +103,19 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
   });
   expect(tab(first, "Weekly Review").skipped).toHaveLength(2);
 
+  // Weeks already reviewed in the workbook are completed; the current
+  // week (Nov 9–15 under the test clock) stays open for Sunday.
+  const done = async (start: string) =>
+    (
+      (await (await page.request.get("/api/v1/reviews")).json()).data as {
+        period_start: string;
+        completed_at: string | null;
+      }[]
+    ).find((r) => r.period_start === start)?.completed_at ?? null;
+  expect(await done("2026-08-17")).not.toBeNull();
+  expect(await done("2026-11-09")).toBeNull();
+  expect(await done("2026-11-23")).toBeNull();
+
   // Only people with a follow-up pending are flagged: Avery has one noted
   // (no date); Blake was contacted 18 days ago.
   const dueNames = async () =>
