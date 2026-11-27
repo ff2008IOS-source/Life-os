@@ -94,7 +94,8 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
       skipped: unknown[];
     };
   expect(tab(first, "Network & Applications").imported).toBe(4);
-  // Aug 17 and Nov 23 are new; Nov 9 joins the review written in Life OS.
+  // Reviews cover the week before "Week Of": Aug 10 and Nov 16 are new;
+  // the Nov 16 row (covering Nov 9–15) joins the review written in Life OS.
   expect(tab(first, "Weekly Review").imported).toBe(2);
   expect(tab(first, "Weekly Review").matched).toBe(1);
   expect(await reviewOf("2026-11-09")).toMatchObject({
@@ -112,9 +113,9 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
         completed_at: string | null;
       }[]
     ).find((r) => r.period_start === start)?.completed_at ?? null;
-  expect(await done("2026-08-17")).not.toBeNull();
+  expect(await done("2026-08-10")).not.toBeNull();
   expect(await done("2026-11-09")).toBeNull();
-  expect(await done("2026-11-23")).toBeNull();
+  expect(await done("2026-11-16")).toBeNull();
 
   // Only people with a follow-up pending are flagged: Avery has one noted
   // (no date); Blake was contacted 18 days ago.
@@ -323,8 +324,8 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
 
   // 6. Sunday review: open an old one, save this week's with a priority.
   await page.goto("/reviews");
-  await page.getByRole("button", { name: /Resume week of Aug 17/ }).click();
-  await page.locator("summary", { hasText: "Week of Aug 17" }).first().click();
+  await page.getByRole("button", { name: /Resume week of Aug 10/ }).click();
+  await page.locator("summary", { hasText: "Week of Aug 10" }).first().click();
   await expect(
     page.locator("details[open]").getByText("First win"),
   ).toBeVisible();

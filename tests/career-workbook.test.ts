@@ -64,9 +64,11 @@ describe("career workbook import", () => {
   });
 
   it("imports each reviewed week with its picks and skips empty weeks", () => {
+    // Picks for the week of Nov 23; the review covers Nov 16–22.
     expect(by("wb:review:2026-11-23")).toMatchObject({
       table: "reviews",
-      period_end: "2026-11-29",
+      period_start: "2026-11-16",
+      period_end: "2026-11-22",
       details: {
         picks: ["PHIL 100 — Confirm paper", "ECON 115 — Prepare for Exam 3"],
       },
