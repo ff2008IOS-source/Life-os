@@ -144,6 +144,25 @@ const section = (row: string[]) =>
   /^[A-Z][A-Z &·:,0-9\-—]{3,}$/.test(row[0]) &&
   row.filter(Boolean).length === 1;
 
+/**
+ * A course's next action, kept current: when it still points at an earlier
+ * assessment than the course's next one, the next step is preparing for
+ * the next assessment.
+ */
+export function currentAction(action: string, next: string, due: string) {
+  if (!next || norm(action).includes(norm(next))) return action;
+  return `Prepare for ${next}${due ? ` (${due})` : ""}`;
+}
+
+/** Notes without the sentences that quote grade percentages. */
+export function withoutPercentages(notes: string) {
+  return notes
+    .split(/(?<=[.;])\s+/)
+    .filter((part) => !/\d%/.test(part))
+    .join(" ")
+    .trim();
+}
+
 /** Rows of a table under a header, until a blank row or the next section. */
 function tableRows(
   tab: Tab,
@@ -616,15 +635,19 @@ export function readWorkbook(wb: Workbook) {
             course: r.get("Course"),
             next_assessment: r.get("Next Assessment"),
             due: r.get("Due Date"),
-            assessed_avg: r.get("Assessed avg"),
+            // No "Assessed avg": course averages come only from Canvas and
+            // the syllabus weights (School), never from the workbook.
             target_grade: r.get("Target Grade"),
-            next_action: r.get("Next Action"),
-            action_check: r.get("Action check"),
+            next_action: currentAction(
+              r.get("Next Action"),
+              r.get("Next Assessment"),
+              r.get("Due Date"),
+            ),
             topic_mastery: r.get("Topic mastery (1–5)"),
             priority: r.get("Priority"),
             study_hours: r.get("Study Hrs / Wk"),
             status: r.get("Status"),
-            notes: r.get("Notes"),
+            notes: withoutPercentages(r.get("Notes")),
           })),
         },
         4,
