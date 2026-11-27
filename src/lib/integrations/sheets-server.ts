@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/auth";
 import { connectionAccess } from "./google-server";
 import { hasSheetsReadAccess } from "./google-oauth";
+import { columnLetter } from "./sheet-columns";
 export const CAREER_SHEET_ID = "1xDTpBdZ4FGXdTIcquq_pFXfTxdUy84xOD8vpgRAtgZc";
 export async function sheetRead(
   path: string,
@@ -74,12 +75,12 @@ export async function readCareerSheet(
   );
   const tabs = [];
   for (const { properties: t } of meta.sheets) {
-    if (t.gridProperties.rowCount > 2000 || t.gridProperties.columnCount > 26)
+    if (t.gridProperties.rowCount > 2000 || t.gridProperties.columnCount > 52)
       throw new ApiError(
         422,
         "A source tab exceeds the verified import limit. Review its range before importing.",
       );
-    const range = `'${t.title.replaceAll("'", "''")}'!A1:${String.fromCharCode(65 + Math.min(t.gridProperties.columnCount, 26) - 1)}${t.gridProperties.rowCount}`;
+    const range = `'${t.title.replaceAll("'", "''")}'!A1:${columnLetter(t.gridProperties.columnCount)}${t.gridProperties.rowCount}`;
     const response = z
       .object({
         values: z
