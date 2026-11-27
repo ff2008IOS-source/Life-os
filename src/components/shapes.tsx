@@ -21,7 +21,9 @@ export function ringOf(days: number | null) {
   return days === null || days > 30 ? 2 : days > 14 ? 1 : 0;
 }
 export function PeopleOrbit({ people }: { people: OrbitPerson[] }) {
-  const rings = [0.2, 0.32, 0.44];
+  // Ring radii as a share of the height; the box is 1.2 wide per 1 tall.
+  const rings = [0.17, 0.29, 0.4];
+  const xf = 100 / 1.2;
   const byRing = [0, 1, 2].map((r) =>
     people.filter((p) => ringOf(p.daysSince) === r),
   );
@@ -35,7 +37,7 @@ export function PeopleOrbit({ people }: { people: OrbitPerson[] }) {
         <span
           key={r}
           className="orbit-ring"
-          style={{ width: `${r * 2 * 62.5}%`, height: `${r * 2 * 100}%` }}
+          style={{ width: `${r * 2 * xf}%`, height: `${r * 2 * 100}%` }}
           aria-hidden
         />
       ))}
@@ -45,7 +47,7 @@ export function PeopleOrbit({ people }: { people: OrbitPerson[] }) {
       {byRing.flatMap((group, r) =>
         group.map((p, i) => {
           const angle = (i / group.length) * 2 * Math.PI + r * 0.9 + 0.4;
-          const x = 50 + Math.cos(angle) * rings[r] * 62.5;
+          const x = 50 + Math.cos(angle) * rings[r] * xf;
           const y = 50 + Math.sin(angle) * rings[r] * 100;
           const first = p.name
             .replace(/\[.*?\]/g, "")
@@ -89,6 +91,7 @@ export type Postcard = {
 const VERDICT_AREA: Record<string, string> = {
   "on track": "career",
   steady: "school",
+  reviewed: "school",
   mixed: "study",
   "off track": "ball",
   "at risk": "ball",

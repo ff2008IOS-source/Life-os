@@ -585,9 +585,10 @@
 .career-person {
   gap: 14px;
 }
+/* The person, then the action underneath: the card is narrow. */
 .td-nudge.td-nudge-person {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
 }
 .td-nudge-person > div {
@@ -596,14 +597,12 @@
   gap: 2px;
   min-width: 0;
 }
-@media (max-width: 520px) {
-  .td-nudge.td-nudge-person {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .td-nudge-person > button {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
+.td-nudge-person > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.person:has(> .lv-avatar) {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
 .course-grade-stat .lv-ring {
   width: 124px;
