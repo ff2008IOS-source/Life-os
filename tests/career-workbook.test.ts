@@ -96,3 +96,16 @@ describe("career workbook import", () => {
     expect(hashOf({ a: 1 })).not.toBe(hashOf({ a: 2 }));
   });
 });
+
+describe("sheet ranges", () => {
+  it("names columns past Z the way Sheets does", async () => {
+    const { columnLetter } = await import("@/lib/integrations/sheet-columns");
+    expect([1, 26, 27, 29, 52].map(columnLetter)).toEqual([
+      "A",
+      "Z",
+      "AA",
+      "AC",
+      "AZ",
+    ]);
+  });
+});
