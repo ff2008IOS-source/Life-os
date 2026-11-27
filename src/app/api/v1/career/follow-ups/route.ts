@@ -3,6 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { authorized } from "@/lib/auth";
 import { dbError, failure } from "@/lib/http";
 import type { FollowUp } from "@/lib/follow-ups";
+import { followUpDue } from "@/lib/career/follow-up-rule";
 
 const ZONE = "America/Vancouver";
 const DAY = 86400000;
@@ -22,7 +23,7 @@ export async function GET() {
       db
         .from("contacts")
         .select(
-          "id,version,name,organization,role,relationship_notes,last_contact_at,next_follow_up_date",
+          "id,version,name,organization,role,relationship_notes,last_contact_at,next_follow_up_date,photo",
         )
         .eq("user_id", user.id)
         .is("archived_at", null)
@@ -62,11 +63,8 @@ export async function GET() {
           note: next
             ? `Follow up ${next}`
             : ((c.relationship_notes ?? "").split("\n")[0] ?? ""),
-          due: next
-            ? next <= today
-            : since !== null
-              ? since >= 30
-              : /^next follow-up:/im.test(c.relationship_notes ?? ""),
+          due: followUpDue(c, today, since),
+          photo: c.photo ?? null,
           record: { id: c.id, version: c.version },
           next_follow_up_date: next,
         } as FollowUp;

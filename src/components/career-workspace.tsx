@@ -11,6 +11,8 @@ import {
 import { calendarRequest } from "./use-calendar";
 import { Modal } from "./dialog";
 import { friendlyDate } from "@/lib/dates";
+import { Avatar } from "./living";
+import { followUpDue } from "@/lib/career/follow-up-rule";
 
 /**
  * Growth → Career: where career records are kept and updated. One page,
@@ -37,6 +39,7 @@ type Contact = {
   relationship_notes: string;
   last_contact_at: string | null;
   next_follow_up_date: string | null;
+  photo?: string | null;
 };
 type Interaction = {
   id: string;
@@ -309,6 +312,29 @@ function EntryEditor({
   );
 }
 
+/** Crops an image to a centred square and shrinks it to 192 px (JPEG). */
+async function squarePhoto(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 192;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No canvas");
+  ctx.drawImage(
+    bitmap,
+    (bitmap.width - side) / 2,
+    (bitmap.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    192,
+    192,
+  );
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
 function ContactEditor({
   contact,
   onClose,
@@ -319,6 +345,8 @@ function ContactEditor({
   act: (b: unknown) => Promise<void>;
 }) {
   const [error, setError] = useState("");
+  const [photo, setPhoto] = useState<string | null>(contact?.photo ?? null);
+  const [name, setName] = useState(contact?.name ?? "");
   return (
     <Modal
       open
@@ -342,6 +370,7 @@ function ContactEditor({
               relationship_notes: String(f.get("relationship_notes") || ""),
               next_follow_up_date:
                 String(f.get("next_follow_up_date") || "") || null,
+              photo,
             });
             onClose();
           } catch (err) {
@@ -349,9 +378,48 @@ function ContactEditor({
           }
         }}
       >
+        <div className="career-photo">
+          <Avatar name={name || "?"} photo={photo} size={64} />
+          <div className="career-photo-actions">
+            <label className="td-btn td-btn-ghost td-btn-sm">
+              {photo ? "Change photo" : "Add photo"}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                aria-label="Profile picture"
+                onChange={async (e) => {
+                  const file = e.currentTarget.files?.[0];
+                  e.currentTarget.value = "";
+                  if (!file) return;
+                  try {
+                    setPhoto(await squarePhoto(file));
+                    setError("");
+                  } catch {
+                    setError("That image couldn't be read. Try a JPEG or PNG.");
+                  }
+                }}
+              />
+            </label>
+            {photo && (
+              <button
+                type="button"
+                className="td-link td-link-muted"
+                onClick={() => setPhoto(null)}
+              >
+                Remove photo
+              </button>
+            )}
+          </div>
+        </div>
         <label>
           Name
-          <input name="name" required defaultValue={contact?.name ?? ""} />
+          <input
+            name="name"
+            required
+            defaultValue={contact?.name ?? ""}
+            onChange={(e) => setName(e.currentTarget.value)}
+          />
         </label>
         <div className="career-form-row">
           <label>
@@ -667,9 +735,26 @@ export function CareerWorkspace() {
               const history = data.interactions.filter(
                 (i) => i.contact_id === c.id,
               );
-              const due = c.next_follow_up_date && c.next_follow_up_date <= t;
+              const since = c.last_contact_at
+                ? Math.round(
+                    (Date.parse(t + "T12:00:00Z") -
+                      Date.parse(
+                        c.last_contact_at.slice(0, 10) + "T12:00:00Z",
+                      )) /
+                      86400000,
+                  )
+                : null;
+              const due = followUpDue(c, t, since);
               return (
                 <li key={c.id} className="career-row career-person">
+                  <button
+                    type="button"
+                    className="career-avatar-btn"
+                    onClick={() => setPerson(c)}
+                    aria-label={`${c.photo ? "Change" : "Add"} a photo for ${c.name}`}
+                  >
+                    <Avatar name={c.name} photo={c.photo} due={due} />
+                  </button>
                   <div className="career-row-main">
                     <button
                       className="career-name"

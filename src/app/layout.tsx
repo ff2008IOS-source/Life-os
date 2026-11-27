@@ -4,6 +4,7 @@ import "./globals.css";
 import "./consumer.css";
 import "./warm.css";
 import "./today.css";
+import "./living.css";
 import { Providers } from "@/components/providers";
 const interfaceFont = localFont({
   src: "./fonts/inter-latin.woff2",

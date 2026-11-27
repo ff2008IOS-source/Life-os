@@ -10,6 +10,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { calendarRequest } from "./use-calendar";
+import { MailEnvelope } from "./living";
 import { friendlyDate } from "@/lib/dates";
 import type { UpdateAction } from "@/lib/update-actions";
 
@@ -307,6 +308,14 @@ export function MailChangesCard({
 }) {
   const { feed, reload } = useMailChanges();
   const [busy, setBusy] = useState(false);
+  // The envelope opens once the updates arrive, so the source is clear.
+  const [opened, setOpened] = useState(false);
+  const count = feed ? feed.changes.length + feed.needs.length : 0;
+  useEffect(() => {
+    if (!count) return;
+    const t = setTimeout(() => setOpened(true), 300);
+    return () => clearTimeout(t);
+  }, [count]);
   if (!feed || (!feed.changes.length && !feed.needs.length)) return null;
   const act = async (body: unknown) => {
     setBusy(true);
@@ -320,7 +329,10 @@ export function MailChangesCard({
   return (
     <section className="td-card" aria-label="Updated from your mail">
       <div className="td-card-head">
-        <h2 className="td-card-title">Updated from your mail</h2>
+        <h2 className="td-card-title">
+          <MailEnvelope open={opened} />
+          Updated from your mail
+        </h2>
         {feed.changes.length > 0 && (
           <button
             className="td-link td-link-muted"

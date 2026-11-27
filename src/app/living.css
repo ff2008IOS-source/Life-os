@@ -1,0 +1,627 @@
+/* Living details: small motion that carries meaning. Built on warm.css
+   tokens (--accent, --success, --warning, --border, --muted, --text). */
+:root {
+  --lv-good: var(--success);
+  --lv-ok: var(--warning);
+  --lv-low: var(--accent);
+  --lv-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* 01 · Sync heartbeat */
+.td-dot {
+  position: relative;
+}
+.td-dot::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  color: var(--td-green, var(--success));
+  opacity: 0;
+  animation: lv-ripple 2.6s ease-out infinite;
+}
+@keyframes lv-ripple {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* 02 · Day arc */
+.lv-arc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+.lv-arc svg {
+  width: 112px;
+  height: 56px;
+  overflow: visible;
+  flex: none;
+}
+.lv-arc-track,
+.lv-arc-done {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.lv-arc-track {
+  stroke: var(--border);
+  stroke-dasharray: 1.5 5;
+}
+.lv-arc-done {
+  stroke: var(--accent);
+  stroke-dasharray: 100;
+  transition: stroke-dashoffset 1.4s var(--lv-ease);
+}
+.lv-arc-sun {
+  fill: var(--accent);
+  transition:
+    cx 1.4s var(--lv-ease),
+    cy 1.4s var(--lv-ease);
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--accent) 50%, transparent)
+  );
+}
+.lv-arc figcaption {
+  display: grid;
+  line-height: 1.25;
+}
+.lv-arc strong {
+  font-size: 15px;
+}
+.lv-arc figcaption span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* 03 · Leaving (Done) */
+.lv-leaving {
+  animation: lv-leave 0.52s var(--lv-ease) forwards;
+}
+.lv-leaving .td-now-title,
+.lv-leaving strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--muted);
+}
+@keyframes lv-leave {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.25;
+    transform: translateY(-6px) scale(0.985);
+  }
+}
+.lv-check {
+  stroke-dasharray: 22;
+  stroke-dashoffset: 22;
+  animation: lv-draw 0.35s 0.05s var(--lv-ease) forwards;
+}
+@keyframes lv-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.lv-arrive {
+  animation: lv-arrive 0.45s var(--lv-ease);
+}
+/* Slide only: the text stays at full contrast while it moves in. */
+@keyframes lv-arrive {
+  from {
+    transform: translateY(10px);
+  }
+}
+
+/* 04 · Light that follows the clock (Today header) */
+.td-header.lv-sky {
+  position: relative;
+  isolation: isolate;
+  padding: 18px 20px;
+  margin: -4px -4px 0;
+  border-radius: 22px;
+}
+.td-header.lv-sky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  transition: background 1.2s;
+  background: var(--lv-sky);
+}
+.lv-sky-morning {
+  --lv-sky: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--warning) 16%, transparent),
+    transparent 70%
+  );
+}
+.lv-sky-day {
+  --lv-sky: linear-gradient(
+    120deg,
+    color-mix(in srgb, #8fb0ff 13%, transparent),
+    transparent 70%
+  );
+}
+.lv-sky-evening {
+  --lv-sky: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    color-mix(in srgb, #8fb0ff 7%, transparent) 75%
+  );
+}
+.lv-sky-night {
+  --lv-sky: linear-gradient(
+    120deg,
+    color-mix(in srgb, #8fb0ff 10%, transparent),
+    transparent 70%
+  );
+}
+.td-greet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* 10 · Swish */
+.lv-swish {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.lv-swish svg {
+  width: 84px;
+  height: 50px;
+  flex: none;
+  overflow: visible;
+}
+.lv-swish p {
+  margin: 0;
+  color: var(--muted);
+}
+.lv-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+}
+.lv-net {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1.6;
+  stroke-dasharray: 2.5 2.5;
+}
+.lv-rim {
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+.lv-ball circle {
+  fill: var(--accent);
+}
+.lv-ball path {
+  stroke: var(--surface);
+  stroke-width: 1;
+  fill: none;
+}
+.lv-ball {
+  transform: translate(93px, 60px);
+  animation: lv-shot 1.3s 0.2s linear both;
+}
+@keyframes lv-shot {
+  0% {
+    transform: translate(8px, 60px) rotate(0);
+  }
+  20% {
+    transform: translate(26px, 24px) rotate(90deg);
+  }
+  40% {
+    transform: translate(46px, 8px) rotate(180deg);
+  }
+  60% {
+    transform: translate(68px, 10px) rotate(270deg);
+  }
+  78% {
+    transform: translate(88px, 28px) rotate(340deg);
+  }
+  88% {
+    transform: translate(93px, 42px) rotate(380deg);
+  }
+  100% {
+    transform: translate(93px, 60px) rotate(420deg);
+  }
+}
+
+/* 11 · Week rhythm */
+.lv-rhythm {
+  list-style: none;
+  margin: 6px 0 2px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+.lv-rhythm span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.lv-rhythm i {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 4px auto 0;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+}
+.lv-rhythm i.lv-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  animation: lv-pop 0.4s var(--lv-ease) both;
+}
+.lv-rhythm i.lv-today:not(.lv-on) {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+.lv-rhythm i.lv-future {
+  opacity: 0.5;
+}
+@keyframes lv-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* 12 · Shimmer */
+.lv-shimmer {
+  display: grid;
+  gap: 10px;
+  padding: 4px 0;
+}
+.lv-shimmer i {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--border) 0%,
+    color-mix(in srgb, var(--accent) 14%, var(--border)) 45%,
+    var(--border) 90%
+  );
+  background-size: 220% 100%;
+  animation: lv-shim 1.6s linear infinite;
+}
+@keyframes lv-shim {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* 13 · Mail envelope */
+.lv-env {
+  display: inline-grid;
+  width: 22px;
+  height: 17px;
+  color: var(--accent);
+  vertical-align: -2px;
+  margin-right: 8px;
+}
+.lv-env svg {
+  overflow: visible;
+}
+.lv-env-back {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.lv-env-letter {
+  fill: color-mix(in srgb, currentColor 22%, transparent);
+  transform: translateY(2px);
+  transition: transform 0.5s 0.35s var(--lv-ease);
+}
+.lv-env-flap {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  transform-origin: 12px 2px;
+  transition: transform 0.5s var(--lv-ease);
+}
+.lv-env-open .lv-env-flap {
+  transform: scaleY(-1);
+}
+.lv-env-open .lv-env-letter {
+  transform: translateY(-6px);
+}
+
+/* 05 · Grade ring */
+.lv-ring {
+  position: relative;
+  margin: 0;
+  flex: none;
+  aspect-ratio: 1;
+  max-width: 100%;
+}
+.lv-ring svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.lv-ring circle {
+  fill: none;
+  stroke-width: 9;
+}
+.lv-track {
+  stroke: var(--border);
+}
+.lv-open {
+  stroke: var(--border);
+  opacity: 0.55;
+}
+.lv-fill {
+  transition: stroke-dasharray 1.1s var(--lv-ease);
+}
+.lv-fill.lv-good {
+  stroke: var(--lv-good);
+}
+.lv-fill.lv-ok {
+  stroke: var(--lv-ok);
+}
+.lv-fill.lv-low {
+  stroke: var(--lv-low);
+}
+.lv-ring figcaption {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1.15;
+}
+.lv-ring strong {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.lv-ring figcaption span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 06 · Countdown ring */
+.lv-count {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.lv-count svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.lv-count circle {
+  fill: none;
+  stroke-width: 3.5;
+}
+.lv-count-track {
+  stroke: var(--border);
+}
+.lv-count-left {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s var(--lv-ease);
+}
+.lv-count.lv-calm .lv-count-left {
+  stroke: var(--lv-good);
+}
+.lv-count.lv-ok .lv-count-left {
+  stroke: var(--lv-ok);
+}
+.lv-count.lv-low .lv-count-left {
+  stroke: var(--lv-low);
+}
+.lv-count b {
+  position: relative;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 07 · Signal bars */
+.lv-signal {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 17px;
+  vertical-align: middle;
+}
+.lv-signal i {
+  width: 4.5px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.lv-signal.lv-good i.lv-on {
+  background: var(--lv-good);
+}
+.lv-signal.lv-ok i.lv-on {
+  background: var(--lv-ok);
+}
+.lv-signal.lv-low i.lv-on {
+  background: var(--lv-low);
+}
+
+/* 08 · Rolling number */
+.lv-roll {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lv-roll small {
+  font-size: 0.5em;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.lv-up {
+  color: var(--success);
+}
+.lv-down {
+  color: var(--accent);
+}
+
+/* 09 · Avatar */
+.lv-avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--secondary);
+}
+.lv-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.lv-avatar.lv-due {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.lv-avatar.lv-due::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: lv-breathe 2.4s ease-in-out infinite;
+}
+@keyframes lv-breathe {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.93);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .td-dot::after,
+  .lv-avatar.lv-due::before {
+    animation: none;
+    opacity: 0.4;
+    transform: none;
+  }
+  .lv-leaving,
+  .lv-arrive,
+  .lv-rhythm i.lv-on,
+  .lv-shimmer i {
+    animation: none;
+  }
+  .lv-ball {
+    animation: none;
+  }
+  .lv-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .lv-arc-done,
+  .lv-arc-sun,
+  .lv-fill,
+  .lv-count-left,
+  .lv-env-flap,
+  .lv-env-letter,
+  .td-header.lv-sky::before {
+    transition: none;
+  }
+}
+
+/* People: photo picker and rows */
+.career-photo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.career-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.career-photo-actions label {
+  cursor: pointer;
+}
+.career-avatar-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.career-person {
+  gap: 14px;
+}
+.td-nudge-person {
+  justify-content: flex-start;
+}
+.td-nudge-person > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.course-grade-stat .lv-ring {
+  width: 104px;
+  margin-top: 4px;
+}
+
+/* 14 · Week: a now-line that glows, free gaps outlined as open space */
+.cal-now {
+  transition: top 1s linear;
+}
+.cal-now::before {
+  animation: lv-glow 2.2s ease-out infinite;
+}
+@keyframes lv-glow {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 9px transparent;
+  }
+}
+.cal-free {
+  border: 1.5px dashed color-mix(in srgb, var(--success) 38%, transparent);
+  border-radius: 8px;
+  margin: 1px 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-now {
+    transition: none;
+  }
+  .cal-now::before {
+    animation: none;
+  }
+}

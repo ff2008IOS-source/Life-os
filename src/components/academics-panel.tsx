@@ -1,5 +1,6 @@
 "use client";
 import { orderTerms, visibleCourses } from "@/lib/course-visibility";
+import { CountdownRing, GradeRing, RollingNumber, SignalBars } from "./living";
 import { SyllabusReference } from "./syllabus-reference";
 import { AssessmentTable } from "./assessment-table";
 import { useCurrentTime } from "./use-current-time";
@@ -27,6 +28,7 @@ import {
 } from "./academic-editor";
 import {
   academicGrade,
+  gradeParts,
   awaitingMark,
   type GradeAssessment,
   type GradeCategory,
@@ -125,6 +127,16 @@ export function AcademicsPanel({
       rulesVerified: current?.grading_rules_confirmed === true,
     },
   );
+  // The grade ring's slices, only once the syllabus rules are confirmed.
+  const ringParts =
+    current?.grading_rules_confirmed === true &&
+    current.grading_method !== "unknown"
+      ? gradeParts(
+          String(current.grading_method),
+          assessments as unknown as (GradeAssessment & { title?: string })[],
+          categories as unknown as (GradeCategory & { name?: string })[],
+        )
+      : [];
   const pctOf = (a: AcademicRow) =>
     a.dropped ||
     awaitingMark({
@@ -414,9 +426,21 @@ export function AcademicsPanel({
             {view === "overview" && (
               <>
                 <div className="course-stats">
-                  <div>
+                  <div className="course-grade-stat">
                     <span>Current grade</span>
-                    {averageFor(selected!) !== null ? (
+                    {ringParts.length > 0 ? (
+                      <GradeRing
+                        parts={ringParts}
+                        value={
+                          averageFor(selected!) !== null ? (
+                            <RollingNumber
+                              value={averageFor(selected!)!}
+                              memory={`grade:${selected}`}
+                            />
+                          ) : null
+                        }
+                      />
+                    ) : averageFor(selected!) !== null ? (
                       <strong>
                         <Mark
                           earned={averageFor(selected!)}
@@ -463,6 +487,13 @@ export function AcademicsPanel({
                   </div>
                   <div>
                     <span>Next due</span>
+                    {upcoming[0] && dueMs(upcoming[0]) !== null && (
+                      <CountdownRing
+                        days={Math.ceil(
+                          (dueMs(upcoming[0])! - nowMs) / 86400000,
+                        )}
+                      />
+                    )}
                     <strong className="course-next">
                       {upcoming[0] ? String(upcoming[0].title) : "Nothing due"}
                     </strong>
@@ -568,7 +599,7 @@ export function AcademicsPanel({
                               unstudied: 0,
                               needs_review: 1,
                               practicing: 2,
-                              mastered: 3,
+                              mastered: 4,
                             }[m];
                             return (
                               <li key={t.id} className={`topic topic-${m}`}>
@@ -591,18 +622,7 @@ export function AcademicsPanel({
                                     </small>
                                   )}
                                 </button>
-                                <span
-                                  className="topic-meter"
-                                  role="img"
-                                  aria-label={`${m.replace("_", " ")}`}
-                                >
-                                  {[1, 2, 3].map((i) => (
-                                    <i
-                                      key={i}
-                                      className={(level ?? 0) >= i ? "on" : ""}
-                                    />
-                                  ))}
-                                </span>
+                                <SignalBars level={level ?? 0} max={4} />
                                 <span className="topic-state">
                                   {
                                     {
