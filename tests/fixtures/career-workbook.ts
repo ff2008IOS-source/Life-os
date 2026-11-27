@@ -133,7 +133,7 @@ export const workbook: Workbook = {
           "Notes A",
         ],
         [
-          "Nov 9",
+          "Nov 16",
           "Second win",
           "",
           "",

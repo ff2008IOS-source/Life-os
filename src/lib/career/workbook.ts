@@ -457,8 +457,10 @@ export function readWorkbook(wb: Workbook) {
         table: "reviews",
         tab: "Weekly Review",
         key: `wb:review:${start}`,
-        period_start: start,
-        period_end: addDays(start, 6),
+        // "Week Of" is the week the picks are for; the win and risk look
+        // back at the week before it, which is the week this review covers.
+        period_start: addDays(start, -7),
+        period_end: addDays(start, -1),
         achievements: r.get("Win"),
         obstacles: r.get("Risk"),
         priorities: [
