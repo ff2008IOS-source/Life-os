@@ -103,6 +103,17 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
   });
   expect(tab(first, "Weekly Review").skipped).toHaveLength(2);
 
+  // Only people with a follow-up pending are flagged: Avery has one noted
+  // (no date); Blake was contacted 18 days ago.
+  const dueNames = async () =>
+    (
+      (await (await page.request.get("/api/v1/career/follow-ups")).json())
+        .follow_ups as { name: string; due: boolean }[]
+    )
+      .filter((f) => f.due)
+      .map((f) => f.name);
+  expect(await dueNames()).toEqual(["[TEST] Avery Coach"]);
+
   // 2. Growth → Career: log a conversation and schedule the follow-up.
   await page.goto("/areas/career");
   const career = page.getByRole("region", { name: "Career" });

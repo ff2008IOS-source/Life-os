@@ -10,8 +10,10 @@ const DAY = 86400000;
 /**
  * People to check in with and upcoming application deadlines, from the
  * owner's Life OS records (Growth → Career). No spreadsheet is read.
- * A contact is due when its scheduled follow-up date has arrived, or, with
- * no date set, when nothing has been logged for 30 days.
+ * A contact is due when its scheduled follow-up date has arrived; with no
+ * date set, when 30 days have passed since the last logged contact, or a
+ * follow-up is noted without a date. A contact with nothing recorded is
+ * listed in Growth but not flagged.
  */
 export async function GET() {
   try {
@@ -60,7 +62,11 @@ export async function GET() {
           note: next
             ? `Follow up ${next}`
             : ((c.relationship_notes ?? "").split("\n")[0] ?? ""),
-          due: next ? next <= today : since === null || since >= 30,
+          due: next
+            ? next <= today
+            : since !== null
+              ? since >= 30
+              : /^next follow-up:/im.test(c.relationship_notes ?? ""),
           record: { id: c.id, version: c.version },
           next_follow_up_date: next,
         } as FollowUp;
