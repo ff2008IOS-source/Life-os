@@ -434,7 +434,7 @@
   --spine: var(--area-study);
 }
 .course-chip.spine-2 {
-  --spine: var(--area-ball);
+  --spine: var(--area-gym);
 }
 .course-chip.spine-3 {
   --spine: var(--area-career);
@@ -443,7 +443,7 @@
   --spine: var(--warning);
 }
 .course-chip.spine-5 {
-  --spine: var(--area-gym);
+  --spine: color-mix(in srgb, var(--area-school) 50%, var(--area-study));
 }
 .spine-code {
   position: absolute;
@@ -502,7 +502,7 @@
 /* 06 · People in orbit */
 .orbit {
   position: relative;
-  aspect-ratio: 1.6;
+  aspect-ratio: 1.2;
   width: 100%;
   max-width: 100%;
   margin: 6px 0 14px;
@@ -679,4 +679,23 @@
   .course-chip.spine {
     transition: none;
   }
+}
+
+.area-workspace-header.area-band {
+  flex: 1 1 auto;
+}
+.postcard-body strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.postcard-risk {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.postcards {
+  align-items: flex-start;
 }

@@ -214,7 +214,10 @@ export function ReviewsPage() {
                 risk: line(r.obstacles) || undefined,
                 verdict:
                   line(d.overall_status) ||
-                  (r.completed_at ? "Done" : undefined),
+                  (r.completed_at ||
+                  (r as { source_key?: string | null }).source_key
+                    ? "Reviewed"
+                    : undefined),
                 onOpen: () => {
                   const el = document.getElementById(`review-${r.id}`);
                   if (el instanceof HTMLDetailsElement) {
