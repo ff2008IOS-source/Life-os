@@ -30,7 +30,7 @@ export async function GET() {
       db
         .from("contacts")
         .select(
-          "id,version,name,organization,role,how_met,email,relationship_notes,last_contact_at,next_follow_up_date,updated_at",
+          "id,version,name,organization,role,how_met,email,relationship_notes,last_contact_at,next_follow_up_date,photo,updated_at",
         )
         .eq("user_id", user.id)
         .is("archived_at", null)
@@ -106,6 +106,13 @@ const input = z.discriminatedUnion("action", [
       how_met: text(1000).nullable(),
       relationship_notes: text(4000),
       next_follow_up_date: day.nullable(),
+      /** A small profile picture, resized in the browser; null removes it. */
+      photo: z
+        .string()
+        .max(200000)
+        .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/)
+        .nullable()
+        .optional(),
     })
     .strict(),
   z.object({ action: z.literal("archive_contact"), id: z.uuid() }).strict(),

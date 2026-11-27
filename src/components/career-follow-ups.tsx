@@ -5,6 +5,7 @@ import { Check, ArrowRight } from "lucide-react";
 import { calendarRequest } from "./use-calendar";
 import type { FollowUp } from "@/lib/follow-ups";
 import { dueLabel } from "@/lib/display";
+import { Avatar } from "./living";
 
 type State = {
   connected: boolean;
@@ -98,7 +99,8 @@ export function FollowUpNudge() {
         </div>
       )}
       {next && (
-        <div className="td-nudge">
+        <div className="td-nudge td-nudge-person">
+          <Avatar name={next.name} photo={next.photo} due size={42} />
           <div>
             <span className="td-nudge-kicker">CHECK IN</span>
             <strong>{next.name}</strong>
@@ -158,6 +160,7 @@ export function CareerFollowUps() {
       <ul className="topic-list">
         {state.follow_ups.map((f) => (
           <li key={f.row_id} className="person">
+            <Avatar name={f.name} photo={f.photo} due={f.due} size={34} />
             <div>
               <strong>{f.name}</strong>
               <span>

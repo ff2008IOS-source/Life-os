@@ -144,6 +144,40 @@ test("career records live in Life OS: import, people, applications, reviews, Sch
     ),
   ).toBe(true);
 
+  // A profile picture, saved to the account: still there after a reload.
+  await career
+    .getByRole("button", { name: "Add a photo for [TEST] Avery Coach" })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Profile picture")
+    .setInputFiles({
+      name: "avery.png",
+      mimeType: "image/png",
+      // A 4×4 synthetic PNG.
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGM4EaUBRwzEcQAikhSh0mTZTgAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    });
+  await expect(page.getByRole("dialog").locator(".lv-avatar img")).toHaveCount(
+    1,
+  );
+  await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.reload();
+  await expect(
+    career.getByRole("button", {
+      name: "Change a photo for [TEST] Avery Coach",
+    }),
+  ).toBeVisible();
+  expect(
+    (
+      await (await page.request.get("/api/v1/career/records")).json()
+    ).contacts.find((c: { name: string }) => c.name === "[TEST] Avery Coach")
+      .photo,
+  ).toMatch(/^data:image\/jpeg;base64,/);
+
   // 3. An application deadline shows up; submitting it ends the reminder.
   await career.getByRole("tab", { name: "Applications" }).click();
   await career.getByRole("button", { name: "Add application" }).click();

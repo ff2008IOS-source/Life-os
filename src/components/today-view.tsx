@@ -6,6 +6,7 @@ import { overlapKey } from "@/lib/overlaps";
 import { WeekFitLine } from "./week-fit-line";
 import { wrapUp } from "@/lib/wrap-up";
 import { FollowUpNudge } from "./career-follow-ups";
+import { DayArc, RhythmDots, Shimmer, Swish, useLeaving } from "./living";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
@@ -84,6 +85,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
   const [syncError, setSyncError] = useState("");
   const { accepted: acceptedOverlaps, accept: acceptOverlap } =
     useAcceptedOverlaps();
+  const leaving = useLeaving();
 
   const agenda: Agenda | null = useMemo(() => {
     if (!b) return null;
@@ -297,9 +299,11 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             {fmt(now.getTime(), "EEE, MMM d").toUpperCase()}
           </p>
           <h1>Today</h1>
-          <p className="td-summary">
-            {briefing.error ? "Your day couldn’t load." : "Loading your day…"}
-          </p>
+          {briefing.error ? (
+            <p className="td-summary">Your day couldn’t load.</p>
+          ) : (
+            <Shimmer lines={3} label="Loading your day" />
+          )}
           {briefing.error && (
             <button
               className="td-btn td-btn-ghost"
@@ -331,6 +335,26 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
   ]
     .filter(Boolean)
     .join(" · ");
+
+  // The day arc: where now sits in the saved planning window.
+  const hourNow =
+    Number(fmt(now.getTime(), "H")) + Number(fmt(now.getTime(), "m")) / 60;
+  const dayStart = b.planning.policy.start_hour;
+  const dayEnd = b.planning.policy.end_hour;
+  const dayFraction = (hourNow - dayStart) / Math.max(1, dayEnd - dayStart);
+  const minutesLeft = Math.max(0, Math.round((dayEnd - hourNow) * 60));
+  const ahead = agenda.timeline.filter((e) => e.start > now.getTime()).length;
+  const sky =
+    hourNow < 5 || hourNow >= 21
+      ? "night"
+      : hourNow < 11
+        ? "morning"
+        : hourNow < 17
+          ? "day"
+          : "evening";
+  const weekDays = Array.from({ length: 7 }, (_, i) =>
+    fmt(agenda.week.start + i * 86400000 + 12 * 3600000, "yyyy-MM-dd"),
+  );
 
   // Do this next
   const session = focus?.session ?? null;
@@ -392,7 +416,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
 
   return (
     <div className="td">
-      <header className="td-header">
+      <header className={`td-header lv-sky lv-sky-${sky}`}>
         <div className="td-header-row">
           <div className="td-eyebrow">
             <h1 className="td-h1">Today</h1>
@@ -430,10 +454,31 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
               </span>
             ))}
         </div>
-        <p className="td-greeting">{greeting.replace(/\.$/, "")}</p>
-        <p className="td-summary">
-          {summary || "Nothing scheduled yet today."}
-        </p>
+        <div className="td-greet-row">
+          <div>
+            <p className="td-greeting">{greeting.replace(/\.$/, "")}</p>
+            <p className="td-summary">
+              {summary || "Nothing scheduled yet today."}
+            </p>
+          </div>
+          <DayArc
+            fraction={dayFraction}
+            label={
+              hourNow < dayStart
+                ? `Day starts at ${dayStart % 12 || 12} ${dayStart < 12 ? "AM" : "PM"}`
+                : minutesLeft === 0
+                  ? "Day’s plan is done"
+                  : `${Math.floor(minutesLeft / 60)}h ${minutesLeft % 60}m left`
+            }
+            detail={
+              minutesLeft === 0
+                ? undefined
+                : ahead
+                  ? `${ahead} thing${ahead === 1 ? "" : "s"} still ahead`
+                  : "Nothing else scheduled"
+            }
+          />
+        </div>
         {reconnect && (
           <div className="td-reconnect" role="alert">
             <p>
@@ -454,7 +499,10 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
 
       <div className="td-grid">
         <div className="td-col">
-          <section className="td-now" aria-label="Do this next">
+          <section
+            className={`td-now ${choice && leaving.isLeaving(choice.item.key) ? "lv-leaving" : ""}`}
+            aria-label="Do this next"
+          >
             {session ? (
               <>
                 <div className="td-now-top">
@@ -513,7 +561,9 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                     <span className="td-now-window">{windowText}</span>
                   )}
                 </div>
-                <h2 className="td-now-title">{choice.item.title}</h2>
+                <h2 key={choice.item.key} className="td-now-title lv-arrive">
+                  {choice.item.title}
+                </h2>
                 <div className="td-chips">
                   <span className="td-chip">{choice.item.label}</span>
                   <span className="td-chip td-chip-hot">
@@ -546,7 +596,11 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                     <button
                       className="td-btn td-btn-outline"
                       disabled={!!busy}
-                      onClick={() => void completeTask(choiceTask)}
+                      onClick={() =>
+                        void leaving.run(choice.item.key, () =>
+                          completeTask(choiceTask),
+                        )
+                      }
                       aria-label={`Mark ${choiceTask.title} done`}
                     >
                       <Check size={15} aria-hidden /> Done
@@ -583,11 +637,15 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                     <span className="td-now-window">{windowText}</span>
                   )}
                 </div>
-                <h2 className="td-now-title">
-                  {reviewTopic
-                    ? `Review ${reviewTopic.title}`
-                    : "Nothing needs doing right now."}
-                </h2>
+                {reviewTopic ? (
+                  <h2 className="td-now-title">Review {reviewTopic.title}</h2>
+                ) : (
+                  <Swish>
+                    <strong className="td-now-title">
+                      Nothing needs doing right now.
+                    </strong>
+                  </Swish>
+                )}
                 {reviewTopic && (
                   <div className="td-actions">
                     <Link
@@ -612,7 +670,10 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                 </span>
               </div>
               {wrap.open.map(({ task, overdue, autoRescheduled }) => (
-                <div key={task.id} className="td-nudge">
+                <div
+                  key={task.id}
+                  className={`td-nudge ${leaving.isLeaving(task.id) ? "lv-leaving" : ""}`}
+                >
                   <div>
                     <span
                       className={`td-nudge-kicker ${overdue ? "td-hot" : ""}`}
@@ -634,7 +695,9 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                     <button
                       className="td-btn td-btn-dark td-btn-sm"
                       disabled={!!busy}
-                      onClick={() => void completeTask(task)}
+                      onClick={() =>
+                        void leaving.run(task.id, () => completeTask(task))
+                      }
                       aria-label={`Close out ${task.title}`}
                     >
                       <Check size={14} aria-hidden /> Done
@@ -810,6 +873,11 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                 <span>Focus time logged</span>
                 <span>{(agenda.week.focusMinutes / 60).toFixed(1)} h</span>
               </div>
+              <RhythmDots
+                days={weekDays}
+                filled={b.weekly.focus_days ?? []}
+                today={agenda.today}
+              />
             </div>
             <div className="td-stat">
               <div>
@@ -882,9 +950,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
             ) : (
               <>
                 {openDue.length === 0 && (
-                  <p className="td-muted">
-                    Everything due this week is handed in.
-                  </p>
+                  <Swish>Everything due this week is handed in.</Swish>
                 )}
                 <ul className="td-due">
                   {openDue.map((d) => (
@@ -939,7 +1005,10 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                 </Link>
               </div>
               {quickWins.map((t) => (
-                <div key={t.id} className="td-nudge">
+                <div
+                  key={t.id}
+                  className={`td-nudge ${leaving.isLeaving(t.id) ? "lv-leaving" : ""}`}
+                >
                   <div>
                     <span className="td-nudge-kicker">
                       QUICK WIN · FROM YOUR INBOX
@@ -949,7 +1018,9 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                   <button
                     className="td-btn td-btn-dark td-btn-sm"
                     disabled={!!busy}
-                    onClick={() => void completeTask(t)}
+                    onClick={() =>
+                      void leaving.run(t.id, () => completeTask(t))
+                    }
                   >
                     <Check size={14} aria-hidden /> Done
                   </button>

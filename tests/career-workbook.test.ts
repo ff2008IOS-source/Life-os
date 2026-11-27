@@ -194,3 +194,27 @@ describe("course notes", () => {
     ).toBe("Office hours Tuesdays.");
   });
 });
+
+describe("follow-up rule", () => {
+  it("flags a due date, 30 quiet days, or a noted follow-up; not an empty record", async () => {
+    const { followUpDue } = await import("@/lib/career/follow-up-rule");
+    const t = "2026-11-27";
+    expect(followUpDue({ next_follow_up_date: "2026-11-27" }, t, 3)).toBe(true);
+    expect(followUpDue({ next_follow_up_date: "2026-12-01" }, t, 90)).toBe(
+      false,
+    );
+    expect(followUpDue({ next_follow_up_date: null }, t, 30)).toBe(true);
+    expect(followUpDue({ next_follow_up_date: null }, t, 29)).toBe(false);
+    expect(followUpDue({ next_follow_up_date: null }, t, null)).toBe(false);
+    expect(
+      followUpDue(
+        {
+          next_follow_up_date: null,
+          relationship_notes: "Next follow-up: when free",
+        },
+        t,
+        null,
+      ),
+    ).toBe(true);
+  });
+});

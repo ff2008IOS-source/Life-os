@@ -235,3 +235,46 @@ export function academicGrade(
   }
   return result;
 }
+
+/**
+ * The parts of a course grade at their syllabus weights, for the grade
+ * ring: each weighted assessment (or, for category rules, each weighted
+ * category) with the fraction earned so far, or null when nothing in it is
+ * scored. Display only; the grade itself is `academicGrade`.
+ */
+export function gradeParts(
+  method: string,
+  assessments: (GradeAssessment & { title?: string })[],
+  categories: (GradeCategory & { name?: string })[] = [],
+): { label: string; weight: number; score: number | null }[] {
+  const active = withoutPlaceholders(assessments).filter(
+    (a) => !a.dropped && a.submission_state !== "excused",
+  );
+  const fraction = (a: GradeAssessment) =>
+    a.earned_score !== null && a.maximum_score && a.maximum_score > 0
+      ? Math.max(0, Math.min(1, a.earned_score / a.maximum_score))
+      : null;
+  if (method === "assessment_weights")
+    return active
+      .filter((a) => (a.weight ?? 0) > 0)
+      .map((a) => ({
+        label: a.title ?? "Assessment",
+        weight: a.weight!,
+        score: fraction(a),
+      }));
+  return categories
+    .filter((c) => (c.weight ?? 0) > 0)
+    .map((c) => {
+      const scored = active
+        .filter((a) => a.category_id === c.id)
+        .map(fraction)
+        .filter((f): f is number => f !== null);
+      return {
+        label: c.name ?? "Category",
+        weight: c.weight!,
+        score: scored.length
+          ? scored.reduce((n, f) => n + f, 0) / scored.length
+          : null,
+      };
+    });
+}

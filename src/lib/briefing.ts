@@ -864,6 +864,23 @@ export function buildBriefing(input: BriefingInput) {
       reported_academic_minutes: input.sessions
         .filter((x) => inWeek(x.start_at ?? x.created_at))
         .reduce((n, x) => n + (x.actual_minutes ?? 0), 0),
+      /** Days this week (local dates) with any focus time reported. */
+      focus_days: [
+        ...new Set([
+          ...work
+            .filter((c) => c.actual_minutes > 0)
+            .map((c) => briefingDay(new Date(c.reported_at), zone)),
+          ...input.sessions
+            .filter(
+              (x) =>
+                (x.actual_minutes ?? 0) > 0 &&
+                inWeek(x.start_at ?? x.created_at),
+            )
+            .map((x) =>
+              briefingDay(new Date(x.start_at ?? x.created_at), zone),
+            ),
+        ]),
+      ].sort(),
       needs_review: input.topics
         .filter((t) => t.mastery === "needs_review")
         .map((t) => ({ title: t.title, course_id: t.course_id }))

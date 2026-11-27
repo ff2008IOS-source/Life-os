@@ -50,6 +50,8 @@ export type FollowUp = {
   due: boolean;
   /** The Life OS contact record that logs conversations, when one exists. */
   record: { id: string; version: number } | null;
+  /** Profile picture (a small data URL), when the owner added one. */
+  photo?: string | null;
 };
 
 /** A conversation logged in Life OS for a sheet contact. */
