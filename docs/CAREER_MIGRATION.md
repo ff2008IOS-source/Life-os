@@ -40,6 +40,15 @@ The workbook was only read. Nothing in it was changed.
   - e2e: 42 tests, plus the career test again with Sheets off;
   - read-only production checks after import.
 
+## Production re-run (after #71)
+
+A third import on production found 98 records unchanged, 0 new and 0 updated. Read-only checks at 1024 px:
+
+- Today shows this week's picks as the next action.
+- Exactly one contact is flagged for follow-up: the one the workbook marks as pending.
+- Week shows the picks.
+- No screen scrolls sideways.
+
 ## Reconciliation by tab
 
 New = created; Matched = already in Life OS (adopted or unchanged); To resolve = listed below.
