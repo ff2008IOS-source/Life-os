@@ -601,8 +601,29 @@
   grid-column: 1 / -1;
   justify-self: start;
 }
+/* Photo · name and role · then "last talked" and the action underneath. */
 .person:has(> .lv-avatar) {
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "av main main"
+    "av since act";
+  row-gap: 2px;
+}
+.person:has(> .lv-avatar) > .lv-avatar {
+  grid-area: av;
+  align-self: start;
+  margin-top: 2px;
+}
+.person:has(> .lv-avatar) > div {
+  grid-area: main;
+}
+.person:has(> .lv-avatar) > .person-since {
+  grid-area: since;
+  grid-column: auto;
+}
+.person:has(> .lv-avatar) > button {
+  grid-area: act;
+  justify-self: end;
 }
 .course-grade-stat .lv-ring {
   width: 124px;
