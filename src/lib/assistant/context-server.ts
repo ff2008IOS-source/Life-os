@@ -18,6 +18,8 @@ export async function assistantAcademicContext(
   question: string,
   previousQuestion: string,
   pinnedCourse: string | null,
+  /** Longer excerpts for long-context models. */
+  opts: { excerpt?: number } = {},
 ) {
   const [courses, native, canvasCourses, assignments] = await Promise.all([
     db.from("courses").select("id,code,title").eq("user_id", user).limit(100),
@@ -207,7 +209,7 @@ export async function assistantAcademicContext(
             ? "Historical/practice material; does not prove current exam scope"
             : "Retrieved file text; exact current exam scope must be stated explicitly",
           truncated: document.truncated,
-          excerpt: document.text.slice(0, 1000),
+          excerpt: document.text.slice(0, opts.excerpt ?? 1000),
         }),
         trust: "untrusted_extracted_document_text",
         retrieved_at: document.extracted_at,

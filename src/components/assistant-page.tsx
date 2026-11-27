@@ -7,6 +7,7 @@ import { Modal } from "./dialog";
 import { limitMessage, type AssistantLimits } from "@/lib/assistant/limits";
 import { calendarRequest } from "./use-calendar";
 import type { AssistantReply, AssistantSource } from "@/lib/assistant/provider";
+import { Markdown } from "./markdown";
 type Conversation = {
   id: string;
   title: string;
@@ -15,6 +16,7 @@ type Conversation = {
 type State = {
   limits?: AssistantLimits;
   configured: boolean;
+  provider?: "gemini" | "groq";
   settings: {
     enabled: boolean;
     free_plan_confirmed: boolean;
@@ -405,35 +407,36 @@ export function AssistantPage({
                   name="free"
                   defaultChecked={state?.settings?.free_plan_confirmed ?? false}
                 />
-                I confirm this Groq account remains on the Free plan
+                I confirm the AI accounts stay on their free plans
               </label>
               <label>
-                Daily request allowance (1–20)
+                Daily message allowance (1–100)
                 <input
                   type="number"
                   name="limit"
                   min={1}
-                  max={20}
+                  max={100}
                   required
                   defaultValue={state?.settings?.daily_limit ?? 10}
                 />
               </label>
               <p className="form-hint">
-                Relevant task/goal/project facts, assessments across your
-                courses, course excerpts and recent conversation context are
-                sent to Groq. Canvas credentials are never included.
-                Conversations stay in Life OS and can be deleted below or
-                exported in Privacy settings. Follow-ups share a rolling token
-                allowance. There are no automatic provider retries or paid
-                fallback. Keep provider data-retention controls configured in
-                your Groq account.
+                Your week, calendar, tasks, goals, assessments and grades,
+                course files and the conversation so far are sent to Google
+                Gemini (free tier), or to Groq when Gemini is unavailable.
+                Google may use free-tier conversations to improve its products.
+                Canvas credentials are never included. Conversations stay in
+                Life OS and can be deleted below or exported in Privacy
+                settings. Nothing paid is ever used.
               </p>
               <Button disabled={busy || !state}>Save AI settings</Button>
             </form>
             <p className="form-hint">
               {state?.configured
-                ? "Groq connected"
-                : "Groq is not configured for this deployment"}{" "}
+                ? state.provider === "gemini"
+                  ? "Gemini connected (Groq as backup)"
+                  : "Groq connected · add a Gemini key for longer conversations"
+                : "AI is not configured for this deployment"}{" "}
               · {state?.usage?.requests ?? 0} requests used today.
             </p>
           </div>
@@ -497,7 +500,7 @@ export function AssistantPage({
             >
               {x.response ? (
                 <>
-                  <p>{x.response.answer}</p>
+                  <Markdown text={x.response.answer} />
                   <div
                     className="chat-source-chips"
                     role="group"
@@ -654,7 +657,7 @@ class AssistantRequestError extends Error {
 async function assistantSend<T>(url: string, options: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...options,
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(100000),
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
   });

@@ -19,6 +19,7 @@ import type { Review, Task } from "@/lib/schemas";
 import type { AssistantReply } from "@/lib/assistant/provider";
 import { localDate, friendlyDate } from "@/lib/dates";
 import { Postcards } from "./shapes";
+import { Markdown } from "./markdown";
 export function ReviewsPage() {
   const { data, mutate, pending, notify } = useWorkspace();
   const summaryId = useId();
@@ -507,7 +508,9 @@ function ReviewConversation({ reviewId }: { reviewId: string }) {
             {state.turns.map((t, i) => (
               <li key={i}>
                 <p className="review-chat-me">{t.q}</p>
-                <p className="review-chat-ai preserve-lines">{t.a}</p>
+                <div className="review-chat-ai">
+                  <Markdown text={t.a} />
+                </div>
               </li>
             ))}
           </ol>
