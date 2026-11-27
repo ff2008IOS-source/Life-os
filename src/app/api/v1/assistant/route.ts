@@ -18,7 +18,25 @@ import { assistantAcademicContext } from "@/lib/assistant/context-server";
 import { prioritizeAssistantSources } from "@/lib/assistant/academic-context";
 import { limitMessage, type AssistantLimits } from "@/lib/assistant/limits";
 import { localDate } from "@/lib/dates";
-export const maxDuration = 60;
+import { geminiAnswer, geminiConfigured } from "@/lib/assistant/gemini";
+import {
+  materialsIndexContext,
+  upcomingCalendarContext,
+} from "@/lib/assistant/study-context-server";
+
+export const maxDuration = 90;
+
+async function ownerZone(
+  db: Awaited<ReturnType<typeof authorized>>["db"],
+  user: string,
+) {
+  const p = await db
+    .from("profiles")
+    .select("timezone")
+    .eq("user_id", user)
+    .maybeSingle();
+  return (p.data?.timezone as string | undefined) || "America/Vancouver";
+}
 export async function GET(request: Request) {
   try {
     const { user, db } = await authorized();
@@ -88,7 +106,8 @@ export async function GET(request: Request) {
     );
     return NextResponse.json(
       {
-        configured: !!process.env.GROQ_API_KEY,
+        configured: !!process.env.GROQ_API_KEY || geminiConfigured(),
+        provider: geminiConfigured() ? "gemini" : "groq",
         limits: limits.data,
         settings: settings.data,
         conversations: reviewId
@@ -114,7 +133,7 @@ export async function PATCH(request: Request) {
       .object({
         enabled: z.boolean(),
         free_plan_confirmed: z.boolean(),
-        daily_limit: z.number().int().min(1).max(20),
+        daily_limit: z.number().int().min(1).max(100),
       })
       .strict()
       .parse(await readJson(request));
@@ -173,7 +192,7 @@ export async function POST(request: Request) {
     await requireSundayReview(db, user.id);
     if (new TextEncoder().encode(x.question).length > 1500)
       throw new ApiError(422, "Keep this request within 1,500 UTF-8 bytes.");
-    if (!process.env.GROQ_API_KEY)
+    if (!process.env.GROQ_API_KEY && !geminiConfigured())
       throw new ApiError(
         503,
         "Groq is not configured on this deployment. Core Life OS remains available.",
@@ -239,7 +258,7 @@ export async function POST(request: Request) {
       )
       .eq("status", "completed")
       .order("created_at", { ascending: false })
-      .limit(6);
+      .limit(geminiConfigured() ? 30 : 6);
     dbError(history.error);
     // Weekly reviews use verified review facts; do not start document extraction on a conversational reply.
     if (!x.review_id)
@@ -329,36 +348,42 @@ export async function POST(request: Request) {
           ...sources.filter((s) => !s.id.startsWith("history:")),
         ]
       : prioritizeAssistantSources(contextQuestion, sources);
-    let prepared;
-    try {
-      prepared = prepareGroqRequest(
-        x.question,
-        ordered,
-        existing.data ? 8000 : limits.available_tokens,
-        x.review_id ? "review" : "general",
+    // Gemini (long context, whole conversation) when configured; Groq
+    // otherwise, or as the fallback when Gemini is unavailable.
+    const gemini = geminiConfigured();
+    let prepared: ReturnType<typeof prepareGroqRequest> | null = null;
+    if (!gemini) {
+      try {
+        prepared = prepareGroqRequest(
+          x.question,
+          ordered,
+          existing.data ? 8000 : limits.available_tokens,
+          x.review_id ? "review" : "general",
+        );
+      } catch (e) {
+        if (e instanceof AssistantProviderError && e.retrySeconds)
+          return limitResponse({ ...limits, reason: "tokens" });
+        throw e;
+      }
+      const required = ordered.find(
+        (source) =>
+          source.id.startsWith("assessment:") ||
+          source.id.startsWith("canvas:assignment:"),
       );
-    } catch (e) {
-      if (e instanceof AssistantProviderError && e.retrySeconds)
+      if (
+        required &&
+        /\b(exam|midterm|test|assessment)\b/i.test(contextQuestion) &&
+        !prepared.sources.some((source) => source.id === required.id)
+      )
         return limitResponse({ ...limits, reason: "tokens" });
-      throw e;
     }
-    const required = ordered.find(
-      (source) =>
-        source.id.startsWith("assessment:") ||
-        source.id.startsWith("canvas:assignment:"),
-    );
-    if (
-      required &&
-      /\b(exam|midterm|test|assessment)\b/i.test(contextQuestion) &&
-      !prepared.sources.some((source) => source.id === required.id)
-    )
-      return limitResponse({ ...limits, reason: "tokens" });
     const claim = await db.rpc("claim_assistant_request_v2", {
       p_request: x.request_id,
       p_conversation: x.conversation_id,
       p_course: x.course_canvas_id,
       p_question: x.question,
-      p_budget: prepared.budget,
+      // Gemini isn't counted against Groq's per-minute token window.
+      p_budget: prepared ? prepared.budget : 1000,
     });
     if (claim.error?.code === "P0001") {
       let current = limits;
@@ -380,15 +405,80 @@ export async function POST(request: Request) {
     dbError(claim.error);
     if (claim.data.replayed) return NextResponse.json(claim.data);
     claimed = x.request_id;
-    const result = await groqAnswer(
-      x.question,
-      ordered,
-      fetch,
-      prepared.budget,
-      x.review_id ? "review" : "general",
-    );
-    const total =
-      result.input_tokens !== null && result.output_tokens !== null
+    const mode = x.review_id ? "review" : "general";
+    let result: Awaited<ReturnType<typeof groqAnswer>>;
+    let usedGemini = false;
+    if (gemini) {
+      try {
+        const zone = await ownerZone(db, user.id);
+        const extra = await Promise.all([
+          assistantAcademicContext(
+            db,
+            user.id,
+            x.question,
+            (history.data ?? []).map((e) => e.question).join("\n"),
+            x.course_canvas_id,
+            { excerpt: 4000 },
+          ).catch(() => []),
+          upcomingCalendarContext(db, user.id, zone).catch(() => []),
+          materialsIndexContext(
+            db,
+            user.id,
+            [x.question, ...(history.data ?? []).map((e) => e.question)].join(
+              " ",
+            ),
+          ).catch(() => []),
+        ]);
+        const seen = new Set<string>();
+        const rich = [
+          ...reviewSources,
+          ...extra.flat(),
+          ...sources.filter((s) => !s.id.startsWith("history:")),
+        ].filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)));
+        const turns = [...(history.data ?? [])]
+          .reverse()
+          .flatMap((e) => [
+            { role: "user" as const, text: String(e.question) },
+            {
+              role: "model" as const,
+              text: String(e.response?.answer ?? ""),
+            },
+          ])
+          .filter((t) => t.text);
+        const g = await geminiAnswer(x.question, rich, turns, {
+          now: new Date().toISOString(),
+          timezone: zone,
+        });
+        result = {
+          response: g.response,
+          sources: g.sources,
+          input_tokens: g.input_tokens,
+          output_tokens: g.output_tokens,
+        };
+        usedGemini = true;
+      } catch (e) {
+        if (!(e instanceof AssistantProviderError)) throw e;
+        // Fall back to Groq with the bounded context.
+        const fallback = prepareGroqRequest(x.question, ordered, 8000, mode);
+        result = await groqAnswer(
+          x.question,
+          ordered,
+          fetch,
+          fallback.budget,
+          mode,
+        );
+      }
+    } else
+      result = await groqAnswer(
+        x.question,
+        ordered,
+        fetch,
+        prepared!.budget,
+        mode,
+      );
+    const total = usedGemini
+      ? 0
+      : result.input_tokens !== null && result.output_tokens !== null
         ? result.input_tokens + result.output_tokens
         : null;
     const accounted = await serverAdmin()

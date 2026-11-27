@@ -8,7 +8,7 @@ export class AssistantProviderError extends Error {
     super(message);
   }
 }
-export const GROQ_MODEL = "openai/gpt-oss-20b";
+export const GROQ_MODEL = "openai/gpt-oss-120b";
 export const assistantReply = z
   .object({
     answer: z.string().min(1).max(1800),
