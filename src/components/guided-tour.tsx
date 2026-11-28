@@ -182,7 +182,15 @@ export function GuidedTour() {
       setPlace({});
       return;
     }
-    setBox({ top: r.top, left: r.left, width: r.width, height: r.height });
+    setBox((b) =>
+      b &&
+      b.top === r.top &&
+      b.left === r.left &&
+      b.width === r.width &&
+      b.height === r.height
+        ? b
+        : { top: r.top, left: r.left, width: r.width, height: r.height },
+    );
     const vw = window.innerWidth,
       vh = window.innerHeight;
     if (vw < 560) return setPlace({});
@@ -207,8 +215,11 @@ export function GuidedTour() {
     }, 100);
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
+    // Pages keep loading after they appear; follow the highlight as they settle.
+    const follow = setInterval(measure, 400);
     return () => {
       clearInterval(find);
+      clearInterval(follow);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };

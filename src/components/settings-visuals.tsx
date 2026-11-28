@@ -139,7 +139,17 @@ export function SignalRows({
   overview: Overview | null;
   onOpen: (id: ServiceState["id"]) => void;
 }) {
-  if (!overview) return null;
+  if (!overview)
+    return (
+      <section
+        className="panel settings-panel st-signals st-loading"
+        aria-label="Connection health"
+        aria-busy="true"
+      >
+        <h2>Connections at a glance</h2>
+        <p className="small muted">Checking your connections…</p>
+      </section>
+    );
   return (
     <section
       className="panel settings-panel st-signals"
@@ -191,7 +201,8 @@ export function Switchboard({
   overview: Overview | null;
   onOpen: (id: ServiceState["id"]) => void;
 }) {
-  if (!overview) return null;
+  if (!overview)
+    return <div className="st-switchboard" aria-hidden aria-busy="true" />;
   // Fixed seats, so a service is always in the same place on the map.
   const order: ServiceState["id"][] = [
     "calendar",
