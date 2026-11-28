@@ -38,7 +38,12 @@ test("settings show their state: health, previews, planning shapes, quiet dial, 
   await expect(
     page.getByRole("region", { name: "Your profile" }),
   ).toBeVisible();
-  await expect(page.getByText(/Vancouver time/)).toBeVisible();
+  await expect(
+    page
+      .getByText(/Vancouver time/)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("group", { name: "Appearance", exact: true }),
   ).toBeVisible();
@@ -67,10 +72,10 @@ test("settings show their state: health, previews, planning shapes, quiet dial, 
   await page.getByRole("button", { name: "Planning", exact: true }).click();
   const start = page.getByRole("slider", { name: "Planning starts" });
   await expect(start).toBeVisible();
-  const before = Number(await start.getAttribute("aria-valuenow"));
   await expect(
     page.getByRole("button", { name: "Generate preview" }),
   ).toBeEnabled();
+  const before = Number(await start.getAttribute("aria-valuenow"));
   await start.press("ArrowRight");
   await expect(start).toHaveAttribute("aria-valuenow", String(before + 1));
   await expect(page.getByText("Unsaved planning changes.")).toBeVisible();
