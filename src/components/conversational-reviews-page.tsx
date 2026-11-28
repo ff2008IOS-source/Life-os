@@ -20,6 +20,7 @@ import type { AssistantReply } from "@/lib/assistant/provider";
 import { localDate, friendlyDate } from "@/lib/dates";
 import { Postcards } from "./shapes";
 import { Markdown } from "./markdown";
+import Link from "next/link";
 export function ReviewsPage() {
   const { data, mutate, pending, notify } = useWorkspace();
   const summaryId = useId();
@@ -175,6 +176,14 @@ export function ReviewsPage() {
             {gate.open
               ? "Past reflections are read-only."
               : `Next review: ${friendlyDate(gate.weekEnd)} · ${gate.timezone}. Your saved reflections are always available.`}
+          </p>
+          <p className="small">
+            <Link
+              className="text-link"
+              href="/settings?section=integrations#ai-review"
+            >
+              AI settings
+            </Link>
           </p>
           {gate.open && (
             <Button

@@ -69,7 +69,8 @@ export type AgendaInput = {
 
 export type WorkItem = {
   key: string;
-  kind: "assessment" | "task";
+  /** "topic": a study topic to review (no task yet; starting creates one). */
+  kind: "assessment" | "task" | "topic";
   id: string;
   task_id: string | null;
   title: string;
@@ -518,6 +519,47 @@ export function buildAgenda(input: AgendaInput) {
     : // No window left today: still name the most pressing work.
       items.slice(0, 3).map(pickFor);
 
+  // Everything else worth doing, for "Other": every open task in every
+  // area (no deadline needed), most important first.
+  const seen = new Set(next.map((n) => n.item.key));
+  const rest = [
+    ...items.filter((i) => !seen.has(i.key)),
+    ...input.tasks
+      .filter(
+        (t) =>
+          !t.deleted_at &&
+          !["completed", "cancelled"].includes(t.status) &&
+          !assessmentTasks.has(t.id) &&
+          !reservedTasks.has(t.id) &&
+          !waiting(t.id) &&
+          !items.some((i) => i.key === "t:" + t.id),
+      )
+      .sort(
+        (a, b) =>
+          b.priority - a.priority ||
+          String(a.due_date ?? a.due_at ?? "9999").localeCompare(
+            String(b.due_date ?? b.due_at ?? "9999"),
+          ),
+      )
+      .map((t): WorkItem => ({
+        key: "t:" + t.id,
+        kind: "task",
+        id: t.id,
+        task_id: t.id,
+        title: t.title,
+        label: t.priority >= 3 ? "High priority" : "Task",
+        due: dueOf(t, zone)?.ms ?? null,
+        dueText: dueOf(t, zone)
+          ? relativeDue(dueOf(t, zone)!.ms, dueOf(t, zone)!.timed, now, zone)
+          : "no deadline",
+        minutes: remaining(t, 30),
+        version: t.version,
+        goals: goalsFor(t.id),
+        priority: t.priority,
+      })),
+  ];
+  const pool = [...next, ...rest.map(pickFor)];
+
   // Deadlines in the next seven days.
   const plannedAt = new Map<string, number>();
   for (const b of [...reservedEntries, ...blocks].sort(
@@ -637,6 +679,7 @@ export function buildAgenda(input: AgendaInput) {
     clashes,
     items,
     next,
+    pool,
     nextWindow: gap,
     nextEvent,
     current:

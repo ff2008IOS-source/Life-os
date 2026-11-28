@@ -22,7 +22,7 @@ const shapes: Record<(typeof PREFERENCE_KEYS)[number], z.ZodType> = {
   today_skips: z
     .object({
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      keys: z.array(z.string().max(300)).max(50),
+      keys: z.array(z.string().max(300)).max(300),
     })
     .strict(),
 };

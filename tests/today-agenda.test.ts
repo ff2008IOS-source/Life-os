@@ -491,3 +491,29 @@ it("keeps suggested work inside the saved 9 AM–9 PM window", () => {
     local("2026-11-23T21:00:00").getTime(),
   );
 });
+
+describe("Other: everything worth doing", () => {
+  it("offers every open task in every area after the top picks", () => {
+    const base = buildAgenda({
+      now,
+      zone,
+      events: [],
+      calendars: [],
+      assessments: [],
+      tasks: [
+        task("someday", { status: "inbox", priority: 2 }),
+        task("call-mom", { status: "inbox", priority: 3 }),
+        task("finished", { status: "completed" }),
+      ],
+      goals: [],
+      goalTasks: [],
+      milestones: [],
+      focusMinutesThisWeek: 0,
+    } as AgendaInput);
+    const ids = base.pool.map((p) => p.item.id);
+    expect(ids).toEqual(expect.arrayContaining(["someday", "call-mom"]));
+    expect(ids).not.toContain("finished");
+    // Higher priority comes first among undated tasks.
+    expect(ids.indexOf("call-mom")).toBeLessThan(ids.indexOf("someday"));
+  });
+});
