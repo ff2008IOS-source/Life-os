@@ -992,3 +992,8 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Hold the space while connection health loads, so nothing below jumps. */
+.st-signals.st-loading {
+  min-height: 360px;
+}

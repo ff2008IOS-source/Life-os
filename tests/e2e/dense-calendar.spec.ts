@@ -122,6 +122,13 @@ test("dense schedules stay bounded on iPad and iPhone and calendar source contro
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.goto("/settings?section=integrations");
+  // Wait for connection health to load before measuring the layout.
+  await expect(
+    page
+      .getByRole("region", { name: "Connection health" })
+      .filter({ visible: true })
+      .getByRole("listitem"),
+  ).toHaveCount(5);
   // Calendar source controls (the AI settings panel has its own boxes).
   const sources = page.locator('input[type="checkbox"]:not(#ai-review input)');
   await expect(sources).toHaveCount(7);
