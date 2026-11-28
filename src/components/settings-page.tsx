@@ -25,6 +25,7 @@ import { TechnicalDetailsToggle } from "./technical-details";
 import { CareerImportPanel } from "./career-import-panel";
 import { ConnectedCareerRecords } from "./connected-career-records";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
+import { AiReviewSettings } from "./ai-review-settings";
 export function SettingsPage({
   initialSection = "profile",
   initialCanvasOpen = false,
@@ -199,6 +200,10 @@ export function SettingsPage({
                   Open planning controls
                 </Link>
               </section>
+            </div>
+            <h2 className="settings-group">AI</h2>
+            <div className="settings-grid">
+              <AiReviewSettings />
             </div>
             <h2 className="settings-group">Academic integrations</h2>
             <div className="settings-grid">

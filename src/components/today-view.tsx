@@ -178,6 +178,18 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
     setBusy("start:" + item.key);
     try {
       let taskId = item.task_id;
+      if (!taskId && item.kind === "topic") {
+        const r = (await request("/api/v1/tasks", {
+          method: "POST",
+          body: JSON.stringify({
+            title: `${item.label} — ${item.title}`.slice(0, 200),
+            status: "planned",
+            estimated_minutes: minutes,
+          }),
+        })) as { data: { id: string } };
+        taskId = r.data.id;
+        await refresh();
+      }
       if (!taskId && item.kind === "assessment") {
         if (!item.version)
           throw Error("Refresh to load this assessment first.");
@@ -412,9 +424,32 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
         : 0)
     : 0;
   const skipped = skips.date === agenda.today ? skips.keys : [];
-  const open = agenda.next.filter((n) => !skipped.includes(n.item.key));
+  // "Other" walks through everything worth doing: the top picks, then every
+  // open task in every area, then study topics that need review.
+  const topicItems = (b.weekly.needs_review ?? []).map(
+    (t, i): Agenda["next"][number] => ({
+      item: {
+        key: `topic:${t.course_id}:${i}:${t.title}`,
+        kind: "topic",
+        id: t.course_id,
+        task_id: null,
+        title: `Review ${t.title}`,
+        label:
+          b.assessments.find((a) => a.course_id === t.course_id)?.course ??
+          "Study",
+        due: null,
+        dueText: "no deadline",
+        minutes: 30,
+        goals: [],
+        priority: 2,
+      },
+      minutes: 30,
+    }),
+  );
+  const everything = [...agenda.pool, ...topicItems];
+  const open = everything.filter((n) => !skipped.includes(n.item.key));
   // Once every suggestion is skipped, start over rather than show nothing.
-  const choice = (open.length ? open : agenda.next)[0] ?? null;
+  const choice = (open.length ? open : everything)[0] ?? null;
   const choiceTask =
     choice?.item.kind === "task"
       ? (data.tasks.find((t) => t.id === choice.item.id) ?? null)
@@ -695,7 +730,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                       <Check size={15} aria-hidden /> Done
                     </button>
                   )}
-                  {agenda.next.length > 1 && (
+                  {everything.length > 1 && (
                     <button
                       className="td-btn td-btn-outline"
                       onClick={() =>
@@ -703,7 +738,7 @@ export function TodayView({ briefing }: { briefing: BriefingController }) {
                           date: agenda.today,
                           keys:
                             open.length > 1
-                              ? [...skipped, choice.item.key].slice(-50)
+                              ? [...skipped, choice.item.key].slice(-300)
                               : [],
                         })
                       }
