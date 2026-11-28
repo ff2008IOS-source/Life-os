@@ -44,7 +44,12 @@ export async function authorized() {
   const { db, user } = await sessionIdentity();
   if (user.factors?.some((f) => f.status === "verified")) {
     const { data, error } = await db.auth.getClaims();
-    if (error || data?.claims.aal !== "aal2")
+    // A session from a remembered device (14 days) counts as verified.
+    const trusted =
+      !error && data?.claims.aal !== "aal2"
+        ? (await db.rpc("session_trusted")).data === true
+        : false;
+    if (error || (data?.claims.aal !== "aal2" && !trusted))
       throw new ApiError(
         401,
         "Enter your authenticator code to continue.",

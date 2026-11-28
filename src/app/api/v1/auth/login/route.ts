@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabase } from "@/lib/supabase/server";
 import { checkMutation, readJson, failure } from "@/lib/http";
 import { ApiError } from "@/lib/auth";
+import { trustRememberedDevice } from "@/lib/trusted-device";
 export async function POST(request: Request) {
   try {
     checkMutation(request);
@@ -24,7 +25,10 @@ export async function POST(request: Request) {
         error.status === 429 ? 429 : 401,
         "Unable to sign in. Check credentials or try again later.",
       );
-    if (login.user?.factors?.some((f) => f.status === "verified"))
+    if (
+      login.user?.factors?.some((f) => f.status === "verified") &&
+      !(await trustRememberedDevice(db))
+    )
       return NextResponse.json({ ok: true, mfa_required: true });
     const { data: approved } = await db.rpc("is_approved_user");
     if (!approved) {

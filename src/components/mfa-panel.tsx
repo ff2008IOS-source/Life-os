@@ -7,7 +7,14 @@ import { calendarRequest } from "./use-calendar";
 type State = {
   factors: { id: string; status: string; name: string }[];
   assurance: string;
+  remembered?: { devices: number; this_device_until: string | null };
 };
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-CA", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Vancouver",
+  });
 export function MfaPanel({
   challenge = false,
   onVerified,
@@ -24,7 +31,8 @@ export function MfaPanel({
     [code, setCode] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [selected, setSelected] = useState("");
+    [selected, setSelected] = useState(""),
+    [remember, setRemember] = useState(true);
   const load = useCallback(async () => {
     setState(await calendarRequest<State>("/api/v1/auth/mfa"));
   }, []);
@@ -72,7 +80,7 @@ export function MfaPanel({
       <p>
         {challenge
           ? "Enter the current six-digit code from your authenticator app."
-          : "Optional. Once on, signing in needs your password and a code from an authenticator app."}
+          : "Optional. Once on, signing in needs your password and a code from an authenticator app, except on devices you choose to remember for 14 days."}
       </p>
       {!state && !error && (
         <p role="status" className="muted small">
@@ -125,6 +133,7 @@ export function MfaPanel({
                   action: "verify",
                   factor_id: factorId,
                   code,
+                  remember,
                 }),
               });
               setCode("");
@@ -163,6 +172,14 @@ export function MfaPanel({
               maxLength={6}
             />
           </label>
+          <label className="inline-check">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.currentTarget.checked)}
+            />
+            Remember this device for 14 days
+          </label>
           <Button disabled={busy || code.length !== 6} type="submit">
             {busy ? "Verifying…" : "Verify code"}
           </Button>
@@ -171,9 +188,40 @@ export function MfaPanel({
       {!challenge && verified.length > 0 && (
         <div className="connection-feedback">
           Authenticator enabled.{" "}
-          {state?.assurance === "aal2"
-            ? "This session is verified."
-            : "Verify your code to make security changes."}
+          {state?.remembered?.this_device_until
+            ? `This device is remembered until ${day(state.remembered.this_device_until)}; no code needed here until then.`
+            : state?.assurance === "aal2"
+              ? "This session is verified."
+              : "Verify your code to make security changes."}
+        </div>
+      )}
+      {!challenge && !!state?.remembered?.devices && (
+        <div className="setting-line">
+          <div>
+            <strong>
+              {state.remembered.devices} remembered device
+              {state.remembered.devices === 1 ? "" : "s"}
+            </strong>
+            <p>
+              Each skips the code for 14 days after you last entered it there.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              void act(async () => {
+                await calendarRequest("/api/v1/auth/mfa", {
+                  method: "POST",
+                  body: JSON.stringify({ action: "forget" }),
+                });
+                await load();
+              })
+            }
+          >
+            Forget remembered devices
+          </Button>
         </div>
       )}
       {!challenge &&
