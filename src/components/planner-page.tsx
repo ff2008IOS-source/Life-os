@@ -17,7 +17,7 @@ import { Inbox, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import { CanvasDeadlines } from "./canvas-deadlines";
 import { useWorkspace } from "./workspace-provider";
-import { TaskList, EmptyState, QuickCapture } from "./task-list";
+import { TaskList, EmptyState, QuickCapture, WeekRibbon } from "./task-list";
 import { TaskEditor, taskValues } from "./task-editor";
 import { localDate } from "@/lib/dates";
 import type { Task } from "@/lib/schemas";
@@ -46,6 +46,7 @@ export function PlannerPage({
     null,
   );
   const [phone, setPhone] = useState(false);
+  const [ribbonDay, setRibbonDay] = useState<string | null>(null);
   useEffect(() => {
     const q = window.matchMedia("(max-width: 700px)");
     const update = () => setPhone(q.matches);
@@ -217,6 +218,16 @@ export function PlannerPage({
                   <Plus size={14} /> New task
                 </Button>
               </div>
+              {tab === "tasks" && (
+                <WeekRibbon
+                  tasks={all}
+                  selected={ribbonDay}
+                  onSelect={setRibbonDay}
+                  today={new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "America/Vancouver",
+                  }).format(new Date())}
+                />
+              )}
               {(tab === "inbox" ? all.filter((t) => t.status === "inbox") : all)
                 .length ? (
                 <TaskList
@@ -224,7 +235,17 @@ export function PlannerPage({
                   tasks={
                     tab === "inbox"
                       ? all.filter((t) => t.status === "inbox")
-                      : all
+                      : ribbonDay
+                        ? all.filter(
+                            (t) =>
+                              (t.due_date ??
+                                (t.due_at
+                                  ? new Intl.DateTimeFormat("en-CA", {
+                                      timeZone: "America/Vancouver",
+                                    }).format(new Date(t.due_at))
+                                  : null)) === ribbonDay,
+                          )
+                        : all
                   }
                 />
               ) : (

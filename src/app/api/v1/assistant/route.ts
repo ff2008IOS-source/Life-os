@@ -106,7 +106,7 @@ export async function GET(request: Request) {
     );
     return NextResponse.json(
       {
-        configured: !!process.env.GROQ_API_KEY || geminiConfigured(),
+        configured: geminiConfigured(),
         provider: geminiConfigured() ? "gemini" : "groq",
         limits: limits.data,
         settings: settings.data,
@@ -192,7 +192,14 @@ export async function POST(request: Request) {
     await requireSundayReview(db, user.id);
     if (new TextEncoder().encode(x.question).length > 1500)
       throw new ApiError(422, "Keep this request within 1,500 UTF-8 bytes.");
-    if (!process.env.GROQ_API_KEY && !geminiConfigured())
+    // The weekly review runs on Gemini only; Groq is kept for basic
+    // questions outside the review.
+    if (x.review_id && !geminiConfigured())
+      throw new ApiError(
+        503,
+        "The weekly review needs Gemini. Add GEMINI_API_KEY in Vercel, then redeploy.",
+      );
+    if (!x.review_id && !process.env.GROQ_API_KEY)
       throw new ApiError(
         503,
         "Groq is not configured on this deployment. Core Life OS remains available.",
@@ -457,8 +464,9 @@ export async function POST(request: Request) {
         };
         usedGemini = true;
       } catch (e) {
-        if (!(e instanceof AssistantProviderError)) throw e;
-        // Fall back to Groq with the bounded context.
+        // The review stays on Gemini: no fallback to a smaller model.
+        if (!(e instanceof AssistantProviderError) || x.review_id) throw e;
+        // Basic questions may fall back to Groq.
         const fallback = prepareGroqRequest(x.question, ordered, 8000, mode);
         result = await groqAnswer(
           x.question,

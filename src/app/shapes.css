@@ -808,3 +808,351 @@
   border: 1px solid var(--border);
   border-bottom-left-radius: 4px;
 }
+
+/* ── M3 · Syllabus first, readings as covers, suggested searches ── */
+.syllabus-pin {
+  border: 1px solid;
+  border-radius: 18px;
+  padding: 16px 18px;
+}
+.key-dates {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 14px;
+  margin: 4px 0 10px;
+  font-size: 14px;
+}
+.key-dates > div {
+  display: contents;
+}
+.key-dates dt {
+  font-weight: 700;
+  color: var(--area);
+  white-space: nowrap;
+}
+.key-dates dd {
+  margin: 0;
+}
+.material-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -4px 0 12px;
+}
+.material-suggest button {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--secondary);
+  cursor: pointer;
+}
+.material-suggest button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.material-covers h4,
+.term-line h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.material-covers ul {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0 0 6px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+}
+.cover {
+  flex: none;
+  width: 92px;
+  height: 128px;
+  border-radius: 4px 10px 10px 4px;
+  padding: 10px 8px;
+  display: flex;
+  align-items: flex-end;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  box-shadow:
+    inset 5px 0 0 rgb(0 0 0 / 0.18),
+    0 6px 14px -10px rgb(0 0 0 / 0.5);
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.cover:hover {
+  transform: translateY(-3px) rotate(-1deg);
+}
+.cover span {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cover-0 {
+  background: #7a4fc2;
+}
+.cover-1 {
+  background: #2f55c9;
+}
+.cover-2 {
+  background: #2f7d45;
+}
+.cover-3 {
+  background: #b33a0a;
+}
+.cover-4 {
+  background: #2a7489;
+}
+
+/* ── M2 · Lectures on the term line ── */
+.term-line {
+  margin: 4px 0 18px;
+}
+.term-line ol {
+  list-style: none;
+  margin: 0;
+  padding: 26px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22px, 1fr));
+  position: relative;
+}
+.term-line ol::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  top: 37px;
+  height: 2px;
+  background: var(--border);
+}
+.term-line li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.term-line li button {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--area-school);
+  background: var(--surface);
+  position: relative;
+  z-index: 1;
+  padding: 0;
+}
+.term-line li.has button {
+  background: var(--area-school);
+  cursor: pointer;
+}
+.term-line li:not(.has) button {
+  opacity: 0.5;
+}
+.term-line li.now button {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.term-line li.open button {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+.term-now {
+  position: absolute;
+  top: -24px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.term-files {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+/* ── G1 · The course as one bar ── */
+.weight-bar {
+  margin: 0 0 16px;
+}
+.weight-track {
+  display: flex;
+  gap: 3px;
+  height: 56px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.weight-track > span {
+  position: relative;
+  min-width: 26px;
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+.weight-track > span.open {
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--muted) 26%, transparent) 0 5px,
+    transparent 5px 10px
+  );
+}
+.weight-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  opacity: 0.55;
+}
+.weight-track b {
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  right: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 1;
+}
+.weight-bar figcaption {
+  margin-top: 6px;
+}
+.weight-track i.good,
+.result-meter i.good {
+  background: var(--success);
+}
+.weight-track i.ok,
+.result-meter i.ok {
+  background: var(--warning);
+}
+.weight-track i.low,
+.result-meter i.low {
+  background: var(--area-ball);
+}
+
+/* ── G2 · Rows with meters ── */
+.result-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.result-meter .meter {
+  position: relative;
+  width: 80px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  overflow: hidden;
+  flex: none;
+}
+.result-meter .meter i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+}
+.result-meter .meter.wait {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+/* ── T2 · Rings and one-tap estimates ── */
+.task-check.task-ring {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2.5px solid var(--area, var(--muted));
+  flex: none;
+}
+.task-check.task-ring.checked {
+  background: var(--area, var(--success));
+  color: var(--surface);
+}
+.estimate-chips {
+  display: inline-flex;
+  gap: 4px;
+  flex: none;
+}
+.estimate-chips button {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+}
+.estimate-chips button:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+@media (max-width: 600px) {
+  .estimate-chips {
+    display: none;
+  }
+}
+
+/* ── T3 · The week above the list ── */
+.week-ribbon {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 12px;
+}
+.week-ribbon button {
+  font: inherit;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 8px 0 9px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 0;
+}
+.week-ribbon button.today {
+  border-color: var(--text);
+}
+.week-ribbon button.on {
+  background: var(--text);
+  color: var(--bg);
+}
+.week-ribbon .dots {
+  display: flex;
+  gap: 3px;
+  min-height: 7px;
+}
+.week-ribbon .dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--area);
+}
+
+/* ── I1 · Report card of rings ── */
+.standing-card .lv-ring {
+  margin: 4px 0;
+}
+.standing-card .lv-ring strong {
+  font-size: 18px;
+}
+/* ── I4 · Headline numbers on Insights ── */
+.insight-numbers {
+  margin: 12px 0 16px;
+}

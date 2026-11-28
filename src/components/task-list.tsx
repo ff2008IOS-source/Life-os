@@ -17,6 +17,7 @@ import { TaskEditor, taskValues } from "./task-editor";
 import { availableProject } from "@/lib/visible-areas";
 import { DateField } from "./date-field";
 import { Button } from "./ui/button";
+import { areaOf } from "@/lib/areas";
 export function EmptyState({
   icon: Icon = Inbox,
   title,
@@ -216,6 +217,21 @@ export function TaskList({
       setError(e instanceof Error ? e.message : "Unable to update");
     }
   }
+  /** One tap sets an estimate, so Today can plan around the task. */
+  async function estimate(task: Task, minutes: number) {
+    setError("");
+    try {
+      await mutate(
+        "tasks",
+        task.id,
+        { ...taskValues(task), estimated_minutes: minutes },
+        task.version,
+      );
+      notify(`Estimate set: ${minutes} min`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to update");
+    }
+  }
   async function move(task: Task, direction: number) {
     const index = active.findIndex((t) => t.id === task.id);
     if (index + direction < 0 || index + direction >= active.length) return;
@@ -250,7 +266,7 @@ export function TaskList({
         className={`task-row ${task.status === "completed" ? "task-completed" : ""}`}
       >
         <button
-          className={`task-check ${task.status === "completed" ? "checked" : ""}`}
+          className={`task-check task-ring area-${areaOf(task.title)} ${task.status === "completed" ? "checked" : ""}`}
           disabled={
             isPending("tasks", task.id) ||
             !!task.deleted_at ||
@@ -273,7 +289,7 @@ export function TaskList({
             {allocations?.[task.id] !== undefined
               ? `${Math.round(allocations[task.id])} min planned${task.estimated_minutes === null ? " · full effort unknown" : ""}`
               : task.estimated_minutes === null
-                ? "Estimate missing"
+                ? "No estimate yet"
                 : remainingEffort(task) === 0 && task.status !== "completed"
                   ? "Estimate used up · still open"
                   : `${remainingEffort(task)} min remaining`}
@@ -285,6 +301,27 @@ export function TaskList({
             )}
           </span>
         </button>
+        {task.estimated_minutes === null &&
+          task.status !== "completed" &&
+          !task.deleted_at && (
+            <span
+              className="estimate-chips"
+              role="group"
+              aria-label={`How long ${task.title} will take`}
+            >
+              {[15, 30, 60].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  disabled={isPending("tasks", task.id)}
+                  onClick={() => void estimate(task, m)}
+                  aria-label={`${m} minutes for ${task.title}`}
+                >
+                  {m}m
+                </button>
+              ))}
+            </span>
+          )}
         {task.priority >= 3 && (
           <span className="task-priority">
             {task.priority === 4 ? "Urgent" : "High"}
@@ -381,3 +418,68 @@ export function TaskList({
     </>
   );
 }
+
+/**
+ * The week above the list: seven days with a dot (in the area's colour)
+ * for each open task due that day. Tapping a day filters the list.
+ */
+export function WeekRibbon({
+  tasks,
+  selected,
+  onSelect,
+  today,
+}: {
+  tasks: Task[];
+  selected: string | null;
+  onSelect: (day: string | null) => void;
+  /** Local date (yyyy-MM-dd). */
+  today: string;
+}) {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+  const dueDay = (t: Task) =>
+    t.due_date ?? (t.due_at ? localDay(t.due_at) : null);
+  return (
+    <div className="week-ribbon" role="group" aria-label="Filter by day">
+      {days.map((d, i) => {
+        const due = tasks.filter(
+          (t) =>
+            !t.deleted_at &&
+            !["completed", "cancelled"].includes(t.status) &&
+            dueDay(t) === d,
+        );
+        const name = new Date(d + "T12:00:00Z").toLocaleDateString("en-CA", {
+          weekday: "short",
+          timeZone: "UTC",
+        });
+        return (
+          <button
+            key={d}
+            type="button"
+            aria-pressed={selected === d}
+            className={`${i === 0 ? "today" : ""} ${selected === d ? "on" : ""}`}
+            onClick={() => onSelect(selected === d ? null : d)}
+            aria-label={`${i === 0 ? "Today" : name}: ${due.length} due`}
+          >
+            <span>{i === 0 ? "Today" : name}</span>
+            <span className="dots" aria-hidden>
+              {due.slice(0, 5).map((t) => (
+                <i key={t.id} className={`area-${areaOf(t.title)}`} />
+              ))}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+const localDay = (iso: string) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Vancouver",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
