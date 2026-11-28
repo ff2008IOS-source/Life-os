@@ -223,9 +223,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
     ).violations,
   ).toEqual([]);
   await page.goto("/settings");
-  await page
-    .getByRole("combobox", { name: "Appearance", exact: true })
-    .selectOption("light");
+  await page.getByRole("radio", { name: "Light", exact: true }).check();
   await page
     .getByRole("button", { name: "Save preferences", exact: true })
     .click();
@@ -269,9 +267,7 @@ test("personal dashboard persists layout and focus sessions, protects stale save
     ).violations,
   ).toEqual([]);
   await page.goto("/settings");
-  await page
-    .getByRole("combobox", { name: "Appearance", exact: true })
-    .selectOption("dark");
+  await page.getByRole("radio", { name: "Dark", exact: true }).check();
   await page
     .getByRole("button", { name: "Save preferences", exact: true })
     .click();

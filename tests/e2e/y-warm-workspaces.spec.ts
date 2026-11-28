@@ -17,9 +17,7 @@ test("warm workspaces fit desktop, tablet and phone with accessible navigation a
   const headers = { Origin: "http://127.0.0.1:3000" };
   await page.request.post("/api/v1/workspace/initialize", { headers });
   await page.goto("/settings");
-  await page
-    .getByRole("combobox", { name: "Appearance", exact: true })
-    .selectOption("dark");
+  await page.getByRole("radio", { name: "Dark", exact: true }).check();
   await page
     .getByRole("button", { name: "Save preferences", exact: true })
     .click();

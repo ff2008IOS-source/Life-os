@@ -14,6 +14,7 @@ import { type AutomationState, AutomationControl } from "./automation-control";
 import { ReservationsPanel } from "./reservations-panel";
 import { calendarRequest } from "./use-calendar";
 import { EmptyState } from "./task-list";
+import { DayRibbon, SessionBlocks } from "./planning-shapes";
 export function SchedulingPanel() {
   const { data, request, refresh } = useWorkspace();
   const [result, setResult] = useState<ScheduleResult | null>(null);
@@ -72,6 +73,14 @@ export function SchedulingPanel() {
     }
   }
 
+  const savedPolicy = automation
+    ? policySchema.safeParse(automation.policy ?? {}).data
+    : undefined;
+  const dirty =
+    !!savedPolicy &&
+    (Object.keys(DEFAULT_POLICY) as (keyof typeof DEFAULT_POLICY)[]).some(
+      (k) => policy[k] !== savedPolicy[k],
+    );
   function changePolicy(value: typeof policy) {
     setPolicy(value);
     setResult(null);
@@ -140,38 +149,25 @@ export function SchedulingPanel() {
           </div>
           <span className="badge">America/Vancouver</span>
         </div>
-        <div className="policy-grid">
-          {[
-            {
-              label: "Window",
-              value: `${policy.start_hour % 12 || 12} ${policy.start_hour < 12 ? "AM" : "PM"} – ${policy.end_hour % 12 || 12} ${policy.end_hour < 12 ? "AM" : "PM"}`,
-            },
-            {
-              label: "Daily maximum",
-              value: `${policy.max_daily_minutes} min`,
-            },
-            {
-              label: "Session length",
-              value: `${policy.min_session_minutes}–${policy.max_session_minutes} min`,
-            },
-            { label: "Between sessions", value: `${policy.break_minutes} min` },
-            {
-              label: "Protected time",
-              value: `Next ${policy.freeze_minutes} min`,
-            },
-            {
-              label: "Plan ahead",
-              value: `${policy.scheduling_horizon_days} days`,
-            },
-          ].map((i) => (
-            <div className="policy-item" key={i.label}>
-              {i.label}
-              <strong>{i.value}</strong>
+        <div className="panel-body st-planning">
+          <DayRibbon policy={policy} onChange={changePolicy} />
+          <SessionBlocks policy={policy} onChange={changePolicy} />
+          {dirty && (
+            <div className="st-dirty" role="status">
+              <span>Unsaved planning changes.</span>
+              <Button
+                size="sm"
+                onClick={() => void savePolicy()}
+                disabled={saving || !automation}
+              >
+                {saving ? "Saving…" : "Save planning preferences"}
+              </Button>
             </div>
-          ))}
+          )}
+          {savedMessage && !dirty && <p role="status">{savedMessage}</p>}
         </div>
         <details className="panel-body">
-          <summary className="text-link">Adjust planning boundaries</summary>
+          <summary className="text-link">Type exact numbers instead</summary>
           <div className="form-grid" style={{ marginTop: 16 }}>
             {(
               [
@@ -262,13 +258,6 @@ export function SchedulingPanel() {
               />
             </label>
           </div>
-          <Button
-            onClick={() => void savePolicy()}
-            disabled={saving || !automation}
-          >
-            {saving ? "Saving…" : "Save planning preferences"}
-          </Button>
-          {savedMessage && <p role="status">{savedMessage}</p>}
         </details>
         <div className="panel-footer flex-between">
           <span>Eligible areas: Academics, Career, Projects</span>

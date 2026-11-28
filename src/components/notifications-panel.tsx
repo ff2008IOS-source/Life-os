@@ -3,6 +3,14 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "./ui/button";
 import { calendarRequest } from "./use-calendar";
 import { NOTIFICATION_CATEGORIES } from "@/lib/notification-rules";
+import { QuietDial } from "./settings-visuals";
+
+const CATEGORY_LABEL: Record<string, string> = {
+  deadlines: "Deadlines",
+  integration: "Connection problems",
+  weekly_review: "Weekly review",
+  conflicts: "Calendar conflicts",
+};
 type Preference = {
   category: string;
   in_app_enabled: boolean;
@@ -45,6 +53,30 @@ export function NotificationsPanel({
       live = false;
     };
   }, []);
+  const prefs: Preference[] = NOTIFICATION_CATEGORIES.map(
+    (category) =>
+      data?.preferences.find((p) => p.category === category) ?? {
+        category,
+        in_app_enabled: true,
+        push_enabled: false,
+        quiet_start: "22:00:00",
+        quiet_end: "08:00:00",
+      },
+  );
+  const pairs = [
+    ...new Set(
+      prefs.map((p) =>
+        p.quiet_start && p.quiet_end
+          ? `${p.quiet_start.slice(0, 5)}-${p.quiet_end.slice(0, 5)}`
+          : "",
+      ),
+    ),
+  ];
+  const mixed = pairs.length > 1;
+  const top = pairs[0];
+  const quiet = top
+    ? { start: top.split("-")[0], end: top.split("-")[1] }
+    : null;
   async function act(work: () => Promise<void>) {
     setBusy(true);
     setMessage("");
@@ -94,78 +126,115 @@ export function NotificationsPanel({
                 reviews. Device notifications show a private summary. Delivery
                 depends on your device and network.
               </p>
+              <QuietDial
+                start={quiet?.start ?? null}
+                end={quiet?.end ?? null}
+              />
+              <form
+                className="st-quiet-form"
+                key={`${quiet?.start}-${quiet?.end}`}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  const start = String(f.get("quiet_start") || "") || null;
+                  const end = String(f.get("quiet_end") || "") || null;
+                  void act(async () => {
+                    for (const p of prefs)
+                      await post({
+                        action: "preferences",
+                        category: p.category,
+                        in_app_enabled: p.in_app_enabled,
+                        push_enabled: p.push_enabled,
+                        quiet_start: start,
+                        quiet_end: end,
+                      });
+                  });
+                }}
+              >
+                <label>
+                  Quiet from
+                  <input
+                    name="quiet_start"
+                    type="time"
+                    defaultValue={quiet?.start ?? ""}
+                  />
+                </label>
+                <label>
+                  Until
+                  <input
+                    name="quiet_end"
+                    type="time"
+                    defaultValue={quiet?.end ?? ""}
+                  />
+                </label>
+                <Button size="sm" variant="outline" disabled={busy || !data}>
+                  Save quiet hours
+                </Button>
+                {mixed && (
+                  <span className="small muted">
+                    Some reminders had their own quiet hours; saving sets one
+                    set for all.
+                  </span>
+                )}
+              </form>
+              <div className="st-matrix">
+                <table>
+                  <caption className="sr-only">
+                    Where each reminder reaches you
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Reminder</th>
+                      <th scope="col">In app</th>
+                      <th scope="col">Push</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prefs.map((p) => (
+                      <tr key={p.category}>
+                        <th scope="row">
+                          {CATEGORY_LABEL[p.category] ?? p.category}
+                        </th>
+                        {(["in_app_enabled", "push_enabled"] as const).map(
+                          (k) => (
+                            <td key={k}>
+                              <label className="st-switch">
+                                <input
+                                  type="checkbox"
+                                  role="switch"
+                                  checked={p[k]}
+                                  disabled={busy || !data}
+                                  aria-label={`${CATEGORY_LABEL[p.category] ?? p.category}: ${k === "push_enabled" ? "push" : "in app"}`}
+                                  onChange={(e) =>
+                                    void act(async () => {
+                                      await post({
+                                        action: "preferences",
+                                        category: p.category,
+                                        in_app_enabled: p.in_app_enabled,
+                                        push_enabled: p.push_enabled,
+                                        quiet_start: p.quiet_start,
+                                        quiet_end: p.quiet_end,
+                                        [k]: e.target.checked,
+                                      });
+                                    })
+                                  }
+                                />
+                                <span aria-hidden />
+                              </label>
+                            </td>
+                          ),
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="small muted">
+                {data?.device_count ?? 0} device
+                {data?.device_count === 1 ? "" : "s"} connected for push.
+              </p>
               <details>
-                <summary className="text-link">
-                  Notification settings & devices
-                </summary>
-                {NOTIFICATION_CATEGORIES.map((category) => {
-                  const p = data?.preferences.find(
-                    (p) => p.category === category,
-                  ) ?? {
-                    category,
-                    in_app_enabled: true,
-                    push_enabled: false,
-                    quiet_start: "22:00:00",
-                    quiet_end: "08:00:00",
-                  };
-                  return (
-                    <form
-                      className="notification-preference"
-                      key={category}
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const f = new FormData(e.currentTarget);
-                        void act(async () => {
-                          await post({
-                            action: "preferences",
-                            category,
-                            in_app_enabled: f.has("in_app"),
-                            push_enabled: f.has("push"),
-                            quiet_start: f.get("quiet_start") || null,
-                            quiet_end: f.get("quiet_end") || null,
-                          });
-                        });
-                      }}
-                    >
-                      <strong>{category.replaceAll("_", " ")}</strong>
-                      <label>
-                        <input
-                          type="checkbox"
-                          name="in_app"
-                          defaultChecked={p.in_app_enabled}
-                        />
-                        In app
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          name="push"
-                          defaultChecked={p.push_enabled}
-                        />
-                        Push
-                      </label>
-                      <label>
-                        Quiet from
-                        <input
-                          name="quiet_start"
-                          type="time"
-                          defaultValue={p.quiet_start?.slice(0, 5) ?? ""}
-                        />
-                      </label>
-                      <label>
-                        Until
-                        <input
-                          name="quiet_end"
-                          type="time"
-                          defaultValue={p.quiet_end?.slice(0, 5) ?? ""}
-                        />
-                      </label>
-                      <Button size="sm" variant="outline" disabled={busy}>
-                        Save
-                      </Button>
-                    </form>
-                  );
-                })}
+                <summary className="text-link">Devices and test</summary>
                 <div className="career-import-actions">
                   <Button
                     disabled={busy || !data?.push_public_key}

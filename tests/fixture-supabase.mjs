@@ -15,6 +15,9 @@ await db.exec(
 for (const file of readdirSync("supabase/migrations").sort())
   await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
 await db.exec(`insert into private.approved_users values('${uid}')`);
+// Hosted Supabase grants the service role every public table by default;
+// notification preferences are saved through it.
+await db.exec("grant all on public.notification_preferences to service_role");
 const user = {
   id: uid,
   aud: "authenticated",
@@ -472,6 +475,7 @@ const server = createServer((req, res) => {
           "email_intake_tokens",
           "outlook_connections",
           "contact_interactions",
+          "push_subscriptions",
         ];
         if (!tables.includes(table)) throw Error("Unknown table");
         const params = [];
@@ -563,6 +567,17 @@ const server = createServer((req, res) => {
         }
         const condition = where.length ? " where " + where.join(" and ") : "";
         let sql = "";
+        if (req.method === "HEAD") {
+          // select(..., { count: "exact", head: true }): a count only.
+          const counted = await db.query(
+            `select count(*)::int as n from public.${quote(table)}${condition}`,
+            params,
+          );
+          await db.exec("commit");
+          res.statusCode = 200;
+          res.setHeader("Content-Range", `*/${counted.rows[0].n}`);
+          return res.end();
+        }
         if (req.method === "GET") {
           let order = "";
           const spec = url.searchParams.get("order");
@@ -634,6 +649,8 @@ const server = createServer((req, res) => {
           console.error(
             "Synthetic database request",
             url.pathname,
+            req.method,
+            url.search,
             error.message,
           );
         return send(400, {
