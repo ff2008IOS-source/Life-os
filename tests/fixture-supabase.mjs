@@ -623,6 +623,15 @@ const server = createServer((req, res) => {
             String(req.headers.prefer).includes("resolution=ignore-duplicates")
           )
             conflict = " on conflict(user_id,idempotency_key)do nothing";
+          // Upserts of a reminder's preferences update the saved row.
+          if (
+            table === "notification_preferences" &&
+            url.searchParams.get("on_conflict") === "user_id,category"
+          )
+            conflict = ` on conflict(user_id,category) do update set ${keys
+              .filter((k) => k !== "user_id" && k !== "category")
+              .map((k) => `${quote(k)}=excluded.${quote(k)}`)
+              .join(",")}`;
           sql = `insert into public.${quote(table)}(${keys.map(quote)}) values(${keys.map((k) => param(body[k]))})${conflict} returning *`;
         } else if (req.method === "PATCH") {
           const keys = Object.keys(body);

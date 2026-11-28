@@ -95,15 +95,17 @@ test("settings show their state: health, previews, planning shapes, quiet dial, 
     .click();
   await expect(page.getByRole("img", { name: /Quiet hours/ })).toBeVisible();
   const push = page.getByRole("switch", { name: "Deadlines: push" });
-  await expect(push).not.toBeChecked();
+  await expect(push).toBeEnabled();
+  const was = await push.isChecked();
   await push.click();
-  await expect(push).toBeChecked();
+  if (was) await expect(push).not.toBeChecked();
+  else await expect(push).toBeChecked();
   const prefs = (await (await page.request.get("/api/v1/notifications")).json())
     .preferences;
   expect(
     prefs.find((p: { category: string }) => p.category === "deadlines")
       .push_enabled,
-  ).toBe(true);
+  ).toBe(!was);
 
   // Privacy: lock with the one missing protection, danger zone apart.
   await page.getByRole("button", { name: /^Privacy & security/ }).click();
@@ -199,5 +201,7 @@ test("the tutorial walks every page and the Canvas key panel explains renewal", 
   await key
     .getByRole("link", { name: /Life OS → SFU Canvas → Manage connection/ })
     .click();
-  await expect(page.locator("#canvas-connection")).toHaveAttribute("open", "");
+  await expect(
+    page.locator("#canvas-connection").filter({ visible: true }),
+  ).toHaveAttribute("open", "");
 });

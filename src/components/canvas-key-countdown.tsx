@@ -97,7 +97,10 @@ export function CanvasKeyCountdown() {
               href={LIFE_OS_CANVAS}
               scroll={false}
               onClick={(e) => {
-                const panel = document.getElementById("canvas-connection");
+                // Pick the panel on screen (a hidden copy of the page can exist).
+                const panel = [
+                  ...document.querySelectorAll("#canvas-connection"),
+                ].find((el) => (el as HTMLElement).offsetParent !== null);
                 if (!(panel instanceof HTMLDetailsElement)) return;
                 e.preventDefault();
                 panel.open = true;
