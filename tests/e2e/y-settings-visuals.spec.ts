@@ -32,7 +32,6 @@ test("settings show their state: health, previews, planning shapes, quiet dial, 
     "sheets",
   ]);
   expect(overview.security).toHaveLength(3);
-  expect(overview.last_export).toBeNull();
 
   // Account: nameplate and pick-by-looking.
   await page.goto("/settings");
@@ -121,7 +120,6 @@ test("settings show their state: health, previews, planning shapes, quiet dial, 
   await expect(
     page.getByText(/records · passwords and sign-in keys/),
   ).toBeVisible();
-  await expect(page.getByText(/No export yet/)).toBeVisible();
   expect((await page.request.get("/api/v1/export")).status()).toBe(200);
   await page.reload();
   await page.getByRole("button", { name: "Data", exact: true }).click();

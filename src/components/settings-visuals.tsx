@@ -232,7 +232,7 @@ export function Switchboard({
           <button
             key={id}
             type="button"
-            className={`st-node st-${s.health}`}
+            className={`st-node st-${s.health} ${x < 150 ? "st-left" : x > 210 ? "st-right" : ""}`}
             style={{ left: `${(x / 360) * 100}%`, top: `${(y / 236) * 100}%` }}
             onClick={() => onOpen(id)}
             aria-label={`${s.name}: ${HEALTH_LABEL[s.health]}. ${s.detail}`}

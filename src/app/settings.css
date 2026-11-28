@@ -28,6 +28,7 @@
 
 /* X1: a dot only where something needs you */
 .settings-tabs .tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -68,6 +69,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
+  overflow: hidden;
 }
 .st-switchboard svg {
   position: absolute;
@@ -111,6 +113,12 @@
   cursor: pointer;
   text-align: center;
   max-width: 34%;
+}
+.st-node.st-left {
+  transform: translate(-22%, -50%);
+}
+.st-node.st-right {
+  transform: translate(-78%, -50%);
 }
 .st-node i {
   width: 16px;
