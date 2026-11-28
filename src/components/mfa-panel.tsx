@@ -224,6 +224,9 @@ export function MfaPanel({
           </Button>
         </div>
       )}
+      {!challenge && verified.length > 0 && (
+        <CheckerKey factorId={verified[0].id} />
+      )}
       {!challenge &&
         verified.map((f) => (
           <Button
@@ -281,5 +284,110 @@ export function MfaPanel({
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * A key for Claude's automated checks: one more remembered device (14 days),
+ * shown once. The owner stores it in the environment's secure settings so
+ * Claude can open Life OS without the code screen and never sees the key.
+ */
+function CheckerKey({ factorId }: { factorId: string }) {
+  const [code, setCode] = useState(""),
+    [made, setMade] = useState<{ key: string; until: string } | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [copied, setCopied] = useState(false);
+  return (
+    <div className="st-checker">
+      <strong>Access for Claude&rsquo;s checks</strong>
+      <p className="small muted">
+        Lets Claude open Life OS to check your pages without the code screen. It
+        counts as one remembered device for 14 days, and &ldquo;Forget
+        remembered devices&rdquo; removes it.
+      </p>
+      {made ? (
+        <>
+          <code className="mfa-secret">{made.key}</code>
+          <div className="briefing-actions">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(made.key);
+                  setCopied(true);
+                } catch {
+                  setError("Copy didn't work here; select the key instead.");
+                }
+              }}
+            >
+              {copied ? "Copied" : "Copy key"}
+            </Button>
+            <span className="small muted">
+              Shown once. Works until {day(made.until)}. Paste it only into the
+              secure form Claude opens, never into the chat.
+            </span>
+          </div>
+        </>
+      ) : (
+        <form
+          className="st-quiet-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setError("");
+            setBusy(true);
+            void (async () => {
+              try {
+                await calendarRequest("/api/v1/auth/mfa", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    action: "verify",
+                    factor_id: factorId,
+                    code,
+                  }),
+                });
+                setMade(
+                  await calendarRequest("/api/v1/auth/mfa", {
+                    method: "POST",
+                    body: JSON.stringify({ action: "checker_key" }),
+                  }),
+                );
+                setCode("");
+              } catch (err) {
+                setError(
+                  err instanceof Error ? err.message : "The key wasn't made.",
+                );
+              } finally {
+                setBusy(false);
+              }
+            })();
+          }}
+        >
+          <label>
+            Authenticator code
+            <input
+              value={code}
+              onChange={(e) =>
+                setCode(e.currentTarget.value.replace(/\D/g, "").slice(0, 6))
+              }
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{6}"
+              required
+              maxLength={6}
+            />
+          </label>
+          <Button size="sm" disabled={busy || code.length !== 6} type="submit">
+            {busy ? "Creating…" : "Create key for Claude"}
+          </Button>
+        </form>
+      )}
+      {error && (
+        <p role="alert" className="error-message">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

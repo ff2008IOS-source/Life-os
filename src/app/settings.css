@@ -845,3 +845,15 @@
     transition: none;
   }
 }
+
+/* Access for Claude's checks */
+.st-checker {
+  display: grid;
+  gap: 8px;
+  margin: var(--space-4) 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.st-checker p {
+  margin: 0;
+}

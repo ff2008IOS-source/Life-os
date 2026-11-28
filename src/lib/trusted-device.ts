@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { applicationOrigin } from "@/lib/app-origin";
 
@@ -12,6 +12,13 @@ import { applicationOrigin } from "@/lib/app-origin";
  */
 export const DEVICE_COOKIE = "lifeos_device";
 export const REMEMBER_DAYS = 14;
+/**
+ * The same token in a request header, for Claude's automated checks: the
+ * owner creates it in Settings and stores it in the environment's secure
+ * settings, which add it to requests. It is one more remembered device.
+ */
+export const DEVICE_HEADER = "x-lifeos-device-token";
+const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
 const hash = (token: string) =>
   createHash("sha256").update(token).digest("hex");
@@ -33,10 +40,23 @@ export async function rememberDevice(db: SupabaseClient) {
   return String(data);
 }
 
+/** A key for Claude's checks: a remembered device whose token is shown once. */
+export async function createCheckerKey(db: SupabaseClient) {
+  const token = randomBytes(32).toString("base64url");
+  const { data, error } = await db.rpc("remember_this_device", {
+    p_hash: hash(token),
+  });
+  if (error || !data) return null;
+  return { key: token, until: String(data) };
+}
+
 /** On password sign-in: is this a remembered device? Trusts the new session if so. */
 export async function trustRememberedDevice(db: SupabaseClient) {
-  const token = (await cookies()).get(DEVICE_COOKIE)?.value;
-  if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  const token =
+    (await cookies()).get(DEVICE_COOKIE)?.value ??
+    (await headers()).get(DEVICE_HEADER) ??
+    undefined;
+  if (!token || !TOKEN.test(token)) return null;
   const { data, error } = await db.rpc("trust_this_session", {
     p_hash: hash(token),
   });
