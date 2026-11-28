@@ -46,9 +46,7 @@ test("core screens and task form have no automated WCAG A/AA violations", async 
     expect(result.violations, `Accessibility issues on ${path}`).toEqual([]);
   }
   await page.goto("/settings");
-  await page
-    .getByRole("combobox", { name: "Appearance", exact: true })
-    .selectOption("light");
+  await page.getByRole("radio", { name: "Light", exact: true }).check();
   await page
     .getByRole("button", { name: "Save preferences", exact: true })
     .click();

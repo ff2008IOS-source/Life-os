@@ -26,6 +26,33 @@ import { CareerImportPanel } from "./career-import-panel";
 import { ConnectedCareerRecords } from "./connected-career-records";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
 import { AiReviewSettings } from "./ai-review-settings";
+import {
+  DensityPicker,
+  ExportReceipt,
+  LockChecklist,
+  SettingsSummary,
+  SignalRows,
+  StoredBar,
+  Switchboard,
+  ThemePicker,
+  useSettingsOverview,
+} from "./settings-visuals";
+
+/** Where each connection's controls live on the Connections tab. */
+const SERVICE_ANCHOR: Record<string, string> = {
+  calendar: "st-calendar",
+  canvas: "st-canvas",
+  email: "st-email",
+  ai: "ai-review",
+  sheets: "st-sheets",
+};
+const reveal = (id: string) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  el.classList.add("st-flash");
+  setTimeout(() => el.classList.remove("st-flash"), 1600);
+};
 export function SettingsPage({
   initialSection = "profile",
   initialCanvasOpen = false,
@@ -70,6 +97,9 @@ export function SettingsPage({
   const { setTheme } = useTheme();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const { overview, reload } = useSettingsOverview();
+  const openService = (id: string) =>
+    requestAnimationFrame(() => reveal(SERVICE_ANCHOR[id] ?? id));
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
@@ -101,6 +131,7 @@ export function SettingsPage({
       <div className="page-heading">
         <div>
           <h1>Settings</h1>
+          <SettingsSummary overview={overview} />
         </div>
       </div>
       <div className="tabs settings-tabs" aria-label="Settings sections">
@@ -111,16 +142,26 @@ export function SettingsPage({
           { id: "notifications", label: "Notifications" },
           { id: "privacy", label: "Privacy & security" },
           { id: "data", label: "Data" },
-        ].map((t) => (
-          <button
-            key={t.id}
-            className={`tab ${section === t.id ? "active" : ""}`}
-            aria-pressed={section === t.id}
-            onClick={() => setSection(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
+        ].map((t) => {
+          const alert = overview?.alerts[t.id] ?? null;
+          return (
+            <button
+              key={t.id}
+              className={`tab ${section === t.id ? "active" : ""}`}
+              aria-pressed={section === t.id}
+              onClick={() => setSection(t.id)}
+              title={alert ?? undefined}
+            >
+              {t.label}
+              {alert && (
+                <>
+                  <i className="st-dot" aria-hidden />
+                  <span className="sr-only"> (needs attention)</span>
+                </>
+              )}
+            </button>
+          );
+        })}
       </div>
       <div className="settings-content">
         {section === "profile" && (
@@ -139,30 +180,11 @@ export function SettingsPage({
                       placeholder="How should we address you?"
                     />
                   </label>
-                  <div className="form-grid">
-                    <label>
-                      Appearance
-                      <select
-                        name="theme"
-                        defaultValue={data.profile.theme}
-                        onChange={(e) => setTheme(e.target.value)}
-                      >
-                        <option value="dark">Dark</option>
-                        <option value="light">Light</option>
-                        <option value="system">System</option>
-                      </select>
-                    </label>
-                    <label>
-                      List density
-                      <select
-                        name="density"
-                        defaultValue={data.profile.density}
-                      >
-                        <option value="comfortable">Comfortable</option>
-                        <option value="compact">Compact</option>
-                      </select>
-                    </label>
-                  </div>
+                  <ThemePicker
+                    value={data.profile.theme}
+                    onPick={(t) => setTheme(t)}
+                  />
+                  <DensityPicker value={data.profile.density} />
                   <div className="setting-line">
                     <div>
                       <strong>Time zone</strong>
@@ -189,8 +211,14 @@ export function SettingsPage({
         )}
         {section === "integrations" && (
           <div>
+            <div className="st-connections-top">
+              <Switchboard overview={overview} onOpen={openService} />
+              <SignalRows overview={overview} onOpen={openService} />
+            </div>
             <ConnectedSyncAll />
-            <h2 className="settings-group">Calendar</h2>
+            <h2 className="settings-group" id="st-calendar">
+              Calendar
+            </h2>
             <div className="settings-grid">
               <GoogleCalendarPanel settings />
               <section className="panel settings-panel">
@@ -205,15 +233,19 @@ export function SettingsPage({
             <div className="settings-grid">
               <AiReviewSettings />
             </div>
-            <h2 className="settings-group">Academic integrations</h2>
+            <h2 className="settings-group" id="st-canvas">
+              Academic integrations
+            </h2>
             <div className="settings-grid">
               <CanvasConnectionSettings initialOpen={initialCanvasOpen} />
             </div>
             <NewTermSetup />
-            <div className="settings-grid">
+            <div className="settings-grid" id="st-email">
               <CourseEmailSetup />
             </div>
-            <h2 className="settings-group">Spreadsheets</h2>
+            <h2 className="settings-group" id="st-sheets">
+              Spreadsheets
+            </h2>
             <div className="settings-grid">
               <CareerImportPanel />
               <SheetRestPanel />
@@ -253,13 +285,18 @@ export function SettingsPage({
         )}
         {section === "privacy" && (
           <div>
+            <LockChecklist
+              checks={overview?.security}
+              onFix={() => requestAnimationFrame(() => reveal("st-mfa"))}
+            />
             <div className="settings-grid">
-              <MfaPanel />
+              <div id="st-mfa">
+                <MfaPanel />
+              </div>
               <PasswordForm />
-              <AccountDeletion />
               <section className="panel settings-panel">
                 <h2>Sign out</h2>
-                <p>Only your account can open your workspace.</p>
+                <p>Signs you out on this device.</p>
                 <Button
                   variant="ghost"
                   style={{ marginTop: 15 }}
@@ -280,25 +317,42 @@ export function SettingsPage({
                 </Button>
               </section>
             </div>
+            <section className="st-danger" aria-labelledby="st-danger-title">
+              <h2 id="st-danger-title">Can&rsquo;t be undone</h2>
+              <AccountDeletion />
+            </section>
           </div>
         )}
         {section === "data" && (
           <div>
             <div className="settings-grid">
-              <section className="panel settings-panel">
-                <h2>Your data</h2>
+              <section className="panel settings-panel st-data">
+                <h2>What Life OS holds for you</h2>
+                <StoredBar overview={overview} />
                 <div className="setting-line">
                   <div>
                     <strong>Export your records</strong>
                     <p>A JSON download of your workspace, without passwords.</p>
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <a href="/api/v1/export" download>
+                    <a
+                      href="/api/v1/export"
+                      download
+                      onClick={() => {
+                        // The receipt is saved when the export finishes.
+                        for (const ms of [4000, 12000])
+                          setTimeout(() => void reload(), ms);
+                      }}
+                    >
                       <Download size={13} />
                       Export
                     </a>
                   </Button>
                 </div>
+                <ExportReceipt overview={overview} />
+              </section>
+              <section className="panel settings-panel">
+                <h2>Backups and history</h2>
                 <div className="setting-line">
                   <div>
                     <strong>Backups</strong>

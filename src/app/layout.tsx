@@ -6,6 +6,7 @@ import "./warm.css";
 import "./today.css";
 import "./living.css";
 import "./shapes.css";
+import "./settings.css";
 import { Providers } from "@/components/providers";
 const interfaceFont = localFont({
   src: "./fonts/inter-latin.woff2",

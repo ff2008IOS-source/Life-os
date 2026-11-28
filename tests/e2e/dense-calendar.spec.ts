@@ -125,8 +125,10 @@ test("dense schedules stay bounded on iPad and iPhone and calendar source contro
   // Calendar source controls (the AI settings panel has its own boxes).
   const sources = page.locator('input[type="checkbox"]:not(#ai-review input)');
   await expect(sources).toHaveCount(7);
-  const first = await sources.first().boundingBox();
-  const second = await sources.nth(1).boundingBox();
+  // Neighbouring calendar choices sit close together.
+  const choices = page.locator('.calendar-choice input[type="checkbox"]');
+  const first = await choices.first().boundingBox();
+  const second = await choices.nth(1).boundingBox();
   expect(second!.y - first!.y).toBeLessThan(65);
   await page.screenshot({
     path: "/tmp/lifeos-ui-settings-ipad.png",

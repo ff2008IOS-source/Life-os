@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useId, useState } from "react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
+import { LocalClock, areaClassOf } from "./settings-visuals";
 const RING =
   "M490.9 415.9A191 191 0 0 1 616.0 360.3L617.6 391.2A160 160 0 0 0 512.9 437.9Z M435.5 564.3A191 191 0 0 1 477.6 430.8L501.7 450.3A160 160 0 0 0 466.4 562.2Z M498.2 692.9A191 191 0 0 1 437.9 584.2L468.4 578.8A160 160 0 0 0 518.9 669.9Z M636.0 360.3A191 191 0 0 1 761.1 415.9L739.1 437.9A160 160 0 0 0 634.4 391.2Z M774.4 430.8A191 191 0 0 1 816.5 564.3L785.6 562.2A160 160 0 0 0 750.3 450.3Z M814.1 584.2A191 191 0 0 1 753.8 692.9L733.1 669.9A160 160 0 0 0 783.6 578.8Z";
 const POINTER = "M626 405L641 437H611Z";
@@ -117,12 +118,33 @@ export function ProfilePictureSettings() {
       setBusy(false);
     }
   }
+  const name = data.profile.display_name?.trim() || "Your profile";
   return (
-    <section className="panel settings-panel">
-      <h2>Your profile picture</h2>
+    <section
+      className="panel settings-panel st-nameplate"
+      aria-label="Your profile"
+    >
+      <div className="st-plate">
+        <span className="st-plate-photo">
+          <ProfileAvatar />
+        </span>
+        <div>
+          <h2>{name}</h2>
+          <LocalClock />
+          {!!data.areas.length && (
+            <ul className="st-area-chips" aria-label="Your life areas">
+              {data.areas.map((a) => (
+                <li key={a.id} className={`area-${areaClassOf(a.name)}`}>
+                  {a.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
       <p className="small muted">
-        Resized on your device and stored privately with your profile. Nothing
-        is uploaded until you choose an image.
+        Your picture is resized on your device and stored privately with your
+        profile.
       </p>
       <div className="briefing-actions">
         <ProfileAvatar />

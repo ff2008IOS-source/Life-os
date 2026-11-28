@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorized } from "@/lib/auth";
 import { dbError, failure } from "@/lib/http";
+import { DATA_GROUPS } from "@/lib/settings-overview";
 const tables = [
   "profiles",
   "dashboard_preferences",
@@ -58,6 +59,7 @@ const tables = [
   "habits",
   "habit_entries",
   "contacts",
+  "contact_interactions",
   "review_items",
   "notifications",
   "notification_preferences",
@@ -151,27 +153,44 @@ export async function GET() {
         page++;
       }
     }
-    return new NextResponse(
-      JSON.stringify(
-        {
-          format: "life-os-user-export",
-          version: 1,
-          exported_at: new Date().toISOString(),
-          warning:
-            "User export only. Use an independent database backup for complete recovery; credentials and Auth are excluded. Export is not a transactionally consistent database snapshot.",
-          records,
-        },
-        null,
-        2,
-      ),
+    const exportedAt = new Date().toISOString();
+    const body = JSON.stringify(
       {
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Disposition": `attachment; filename="life-os-export-${new Date().toISOString().slice(0, 10)}.json"`,
-          "Cache-Control": "private, no-store",
-        },
+        format: "life-os-user-export",
+        version: 1,
+        exported_at: exportedAt,
+        warning:
+          "User export only. Use an independent database backup for complete recovery; credentials and Auth are excluded. Export is not a transactionally consistent database snapshot.",
+        records,
       },
+      null,
+      2,
     );
+    // A small receipt for Settings → Data. The export still downloads if
+    // the receipt can't be saved.
+    const size = (t: string) => (records[t] ?? []).length;
+    await db.from("export_jobs").insert({
+      user_id: user.id,
+      status: "completed",
+      format: "json",
+      finished_at: exportedAt,
+      summary: {
+        bytes: Buffer.byteLength(body),
+        total: Object.values(records).reduce((a, r) => a + r.length, 0),
+        groups: DATA_GROUPS.map((g) => ({
+          key: g.key,
+          label: g.label,
+          count: g.tables.reduce((a, t) => a + size(t), 0),
+        })),
+      },
+    });
+    return new NextResponse(body, {
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Disposition": `attachment; filename="life-os-export-${new Date().toISOString().slice(0, 10)}.json"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
   } catch (e) {
     return failure(e);
   }

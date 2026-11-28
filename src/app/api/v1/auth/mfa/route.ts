@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sessionIdentity, authorized, ApiError } from "@/lib/auth";
 import { checkMutation, readJson, failure } from "@/lib/http";
+import { forgetDevices, rememberDevice } from "@/lib/trusted-device";
 export async function GET() {
   try {
     const { db, user } = await sessionIdentity();
@@ -16,6 +17,7 @@ export async function GET() {
           name: f.friendly_name ?? "Authenticator",
         })),
       assurance: data?.claims.aal ?? "aal1",
+      remembered: await remembered(db),
     });
   } catch (error) {
     return failure(error);
@@ -33,11 +35,17 @@ export async function POST(request: Request) {
             action: z.literal("verify"),
             factor_id: z.uuid(),
             code: z.string().regex(/^\d{6}$/),
+            remember: z.boolean().optional(),
           })
           .strict(),
+        z.object({ action: z.literal("forget") }).strict(),
         z.object({ action: z.literal("remove"), factor_id: z.uuid() }).strict(),
       ])
       .parse(await readJson(request));
+    if (input.action === "forget") {
+      await forgetDevices(db);
+      return NextResponse.json({ forgotten: true });
+    }
     if (input.action === "enroll") {
       await authorized();
       const { data, error } = await db.auth.mfa.enroll({
@@ -68,6 +76,7 @@ export async function POST(request: Request) {
           422,
           "Verify your authenticator code before removing the factor.",
         );
+      await forgetDevices(db);
       return NextResponse.json({ removed: true });
     }
     const { error } = await db.auth.mfa.challengeAndVerify({
@@ -80,8 +89,20 @@ export async function POST(request: Request) {
         "The authenticator code was not accepted. Use the current six-digit code.",
       );
     await authorized();
-    return NextResponse.json({ verified: true });
+    const until = input.remember ? await rememberDevice(db) : null;
+    return NextResponse.json({ verified: true, remembered_until: until });
   } catch (error) {
     return failure(error);
   }
+}
+
+async function remembered(
+  db: Awaited<ReturnType<typeof sessionIdentity>>["db"],
+) {
+  const { data } = await db.rpc("remembered_devices");
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    devices: Number(row?.device_count ?? 0),
+    this_device_until: (row?.this_device_until as string | null) ?? null,
+  };
 }

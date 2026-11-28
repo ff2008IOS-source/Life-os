@@ -55,7 +55,7 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
     page.getByRole("button", { name: "Planning", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await content
-    .getByText("Adjust planning boundaries", { exact: true })
+    .getByText("Type exact numbers instead", { exact: true })
     .filter({ visible: true })
     .click();
   await page
@@ -77,7 +77,7 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   expect(saved.enabled).toBe(false);
   await page.reload();
   await content
-    .getByText("Adjust planning boundaries", { exact: true })
+    .getByText("Type exact numbers instead", { exact: true })
     .filter({ visible: true })
     .click();
   await expect(
@@ -246,7 +246,7 @@ test("one daily workspace preserves old links, saves planning boundaries safely 
   ).toHaveCount(0);
   await page.getByRole("link", { name: "Appearance & preferences" }).click();
   await expect(
-    page.getByRole("combobox", { name: "Appearance", exact: true }),
+    page.getByRole("group", { name: "Appearance", exact: true }),
   ).toBeVisible();
   await page.goto(`/areas/academics?course=${course.id}&view=materials`);
   for (const [name, width] of [
