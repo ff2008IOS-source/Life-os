@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sessionIdentity, authorized, ApiError } from "@/lib/auth";
 import { checkMutation, readJson, failure } from "@/lib/http";
-import { forgetDevices, rememberDevice } from "@/lib/trusted-device";
+import {
+  createCheckerKey,
+  forgetDevices,
+  rememberDevice,
+} from "@/lib/trusted-device";
 export async function GET() {
   try {
     const { db, user } = await sessionIdentity();
@@ -39,9 +43,22 @@ export async function POST(request: Request) {
           })
           .strict(),
         z.object({ action: z.literal("forget") }).strict(),
+        z.object({ action: z.literal("checker_key") }).strict(),
         z.object({ action: z.literal("remove"), factor_id: z.uuid() }).strict(),
       ])
       .parse(await readJson(request));
+    if (input.action === "checker_key") {
+      await authorized();
+      const made = await createCheckerKey(db);
+      if (!made)
+        throw new ApiError(
+          422,
+          "Enter your authenticator code on this device first, then create the key.",
+        );
+      return NextResponse.json(made, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
     if (input.action === "forget") {
       await forgetDevices(db);
       return NextResponse.json({ forgotten: true });
