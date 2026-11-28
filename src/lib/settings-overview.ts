@@ -174,7 +174,7 @@ export function serviceStates(i: OverviewInput): ServiceState[] {
           name: "Course email",
           health: i.email.last_used_at ? "ok" : "off",
           detail: i.email.last_used_at
-            ? "Last email " + ago(i.email.last_used_at, i.now)
+            ? "Latest email synced"
             : "Set up · no email received yet",
           last_at: i.email.last_used_at,
           action: "Manage",

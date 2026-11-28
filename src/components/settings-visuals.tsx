@@ -251,6 +251,7 @@ export function Switchboard({
 function nodeNote(s: ServiceState) {
   if (s.health === "warn") return s.detail.split(" · ")[0];
   if (s.health === "off") return s.id === "sheets" ? "Not needed" : "Off";
+  if (s.id === "email") return "Latest synced";
   if (s.last_at) return agoShort(s.last_at);
   return s.detail.split(" · ").at(-1) ?? "";
 }

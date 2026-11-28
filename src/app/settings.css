@@ -137,7 +137,7 @@
 .st-node span {
   display: grid;
   line-height: 1.2;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  background: var(--surface);
   border-radius: 6px;
   padding: 1px 4px;
 }

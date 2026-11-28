@@ -44,7 +44,7 @@ describe("settings overview", () => {
       health: "ok",
       detail: "5 courses · synced 1 h ago",
     });
-    expect(s.email.detail).toBe("Last email 2 h ago");
+    expect(s.email.detail).toBe("Latest email synced");
     expect(s.ai.detail).toBe("On · 3 of 20 messages today");
     expect(s.sheets.health).toBe("off");
   });
