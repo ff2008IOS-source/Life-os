@@ -199,7 +199,7 @@ export function SessionBlocks({
               width: pct(policy.break_minutes),
             }}
           >
-            {policy.break_minutes}m break
+            {policy.break_minutes}m
           </i>
           <TrackHandle
             label="Longest session"

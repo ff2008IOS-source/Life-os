@@ -26,6 +26,9 @@ import { CareerImportPanel } from "./career-import-panel";
 import { ConnectedCareerRecords } from "./connected-career-records";
 import { GoogleCalendarPanel } from "./google-calendar-panel";
 import { AiReviewSettings } from "./ai-review-settings";
+import { startTour, TOUR } from "./guided-tour";
+import { CanvasKeyCountdown } from "./canvas-key-countdown";
+import { Compass } from "lucide-react";
 import {
   DensityPicker,
   ExportReceipt,
@@ -168,6 +171,21 @@ export function SettingsPage({
           <div>
             <div className="settings-grid">
               <ProfilePictureSettings />
+              <section
+                className="panel settings-panel st-tutorial"
+                aria-label="Tutorial"
+              >
+                <h2>
+                  <Compass size={18} aria-hidden /> New here, or forgot
+                  something?
+                </h2>
+                <p className="small muted">
+                  A guided walk through every page: {TOUR.length} short stops,
+                  each showing the real thing and how to use it. Leave any time
+                  with End tour or Esc.
+                </p>
+                <Button onClick={startTour}>Take me on a tutorial</Button>
+              </section>
               <section className="panel settings-panel">
                 <h2>Preferences</h2>
                 <form onSubmit={submit}>
@@ -236,6 +254,7 @@ export function SettingsPage({
             <h2 className="settings-group" id="st-canvas">
               Academic integrations
             </h2>
+            <CanvasKeyCountdown />
             <div className="settings-grid">
               <CanvasConnectionSettings initialOpen={initialCanvasOpen} />
             </div>

@@ -137,7 +137,7 @@
 .st-node span {
   display: grid;
   line-height: 1.2;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  background: var(--surface);
   border-radius: 6px;
   padding: 1px 4px;
 }
@@ -856,4 +856,129 @@
 }
 .st-checker p {
   margin: 0;
+}
+
+/* Guided tour */
+.tour-dim,
+.tour-spot {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+}
+.tour-dim {
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+}
+.tour-spot {
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 0 0 9999px rgb(0 0 0 / 0.45);
+  transition:
+    top 0.25s,
+    left 0.25s,
+    width 0.25s,
+    height 0.25s;
+}
+.tour-card {
+  position: fixed;
+  z-index: 81;
+  left: max(16px, env(safe-area-inset-left, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  max-width: 420px;
+  margin-inline: auto;
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-popover);
+}
+.tour-card:focus {
+  outline: none;
+}
+.tour-card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.tour-card p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--secondary);
+}
+.tour-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.tour-progress {
+  display: flex;
+  gap: 3px;
+}
+.tour-progress i {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.tour-progress i.on {
+  background: var(--accent);
+}
+.tour-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.tour-actions span {
+  display: flex;
+  gap: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-spot {
+    transition: none;
+  }
+}
+.st-tutorial h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* SFU Canvas key countdown */
+.st-key {
+  margin-bottom: var(--space-4);
+}
+.st-key-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+}
+.st-key-head h2 {
+  margin: 0 0 4px;
+}
+.st-key-head p {
+  margin: 0;
+}
+.st-key-soon {
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+}
+.st-key-warn {
+  background: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+.st-key-steps {
+  margin-top: var(--space-3);
+}
+.st-key-steps ol {
+  margin: 10px 0 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
 }

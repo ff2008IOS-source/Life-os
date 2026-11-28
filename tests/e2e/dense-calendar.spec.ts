@@ -126,7 +126,12 @@ test("dense schedules stay bounded on iPad and iPhone and calendar source contro
   const sources = page.locator('input[type="checkbox"]:not(#ai-review input)');
   await expect(sources).toHaveCount(7);
   // Neighbouring calendar choices sit close together.
-  const choices = page.locator('.calendar-choice input[type="checkbox"]');
+  // Only the calendar list on screen (a hidden earlier page can remain).
+  const choices = page
+    .locator(".calendar-choice-list")
+    .filter({ visible: true })
+    .first()
+    .locator('input[type="checkbox"]');
   const first = await choices.first().boundingBox();
   const second = await choices.nth(1).boundingBox();
   expect(second!.y - first!.y).toBeLessThan(65);
