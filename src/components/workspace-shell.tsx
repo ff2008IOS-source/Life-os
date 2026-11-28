@@ -7,7 +7,8 @@ import { AppLogo, ProfileAvatar } from "./profile-identity";
 import { usePathname, useRouter } from "next/navigation";
 import type { AcademicData } from "./academic-editor";
 import { calendarRequest } from "./use-calendar";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { GuidedTour } from "./guided-tour";
 import { useTechnicalDetails } from "./technical-details";
 import { buildSearchIndex, searchEntries } from "@/lib/search-index";
 import { useTheme } from "next-themes";
@@ -31,6 +32,7 @@ import {
   Inbox,
   TrendingUp,
   ArrowLeft,
+  Compass,
 } from "lucide-react";
 import { useWorkspace } from "./workspace-provider";
 import { Button } from "./ui/button";
@@ -74,6 +76,12 @@ const allPages = [
   { label: "Projects", href: "/areas/projects", icon: Layers3 },
   { label: "Goals", href: "/goals", icon: Target },
   { label: "Reviews", href: "/reviews", icon: BookOpen },
+  {
+    label: "Take me on a tutorial",
+    href: "/settings?tour=start",
+    icon: Compass,
+    keywords: "tour help guide how tutorial",
+  },
 ];
 export function WorkspaceShell({
   children,
@@ -307,6 +315,7 @@ export function WorkspaceShell({
           <div className="top-actions">
             <button
               className="search-trigger"
+              data-tour="search"
               onClick={() => setSearch(true)}
               aria-label="Search workspace"
             >
@@ -324,7 +333,10 @@ export function WorkspaceShell({
                 <Settings size={17} />
               </Link>
             </Button>
-            <Button onClick={() => setEditor({ task: null })}>
+            <Button
+              onClick={() => setEditor({ task: null })}
+              data-tour="quick-add"
+            >
               <Plus size={15} />
               Quick add
             </Button>
@@ -332,6 +344,9 @@ export function WorkspaceShell({
         </header>
         <main className="content" id="main-content">
           <OfflineNotice />
+          <Suspense fallback={null}>
+            <GuidedTour />
+          </Suspense>
           {back && (
             <Link href={back.href} className="back-link">
               <ArrowLeft size={16} aria-hidden /> Back to {back.label}

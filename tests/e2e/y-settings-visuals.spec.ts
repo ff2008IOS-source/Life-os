@@ -148,3 +148,56 @@ test("settings show their state: health, previews, planning shapes, quiet dial, 
     expect(axe.violations, section).toEqual([]);
   }
 });
+
+test("the tutorial walks every page and the Canvas key panel explains renewal", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/login");
+  await page.getByLabel("Email", { exact: true }).fill("beta@example.invalid");
+  await page.getByLabel("Password", { exact: true }).fill("test-password-only");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Today", exact: true }),
+  ).toBeVisible();
+  await page.goto("/settings");
+  await page
+    .getByRole("button", { name: "Take me on a tutorial", exact: true })
+    .click();
+  const card = page.getByRole("dialog", { name: "Today: do this next" });
+  await expect(card).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(card.getByText("1 of 15")).toBeVisible();
+  // Walk to the week planner (stop 7) and back once.
+  for (let i = 0; i < 6; i++)
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Week planner" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/planner/);
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Quick add" })).toBeVisible();
+  // The tour survives a reload, and Esc ends it.
+  await page.reload();
+  await expect(page.getByRole("dialog", { name: "Quick add" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Quick add" })).toHaveCount(0);
+  // A link can start it too.
+  await page.goto("/settings?tour=start");
+  await expect(
+    page.getByRole("dialog", { name: "Today: do this next" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "End tour", exact: true }).click();
+
+  await page.goto("/settings?section=integrations");
+  const key = page.getByRole("region", { name: "SFU Canvas key" });
+  await expect(key).toBeVisible();
+  await key.getByText("How to renew it, step by step").click();
+  await expect(
+    key.getByRole("link", { name: "your SFU Canvas settings" }),
+  ).toHaveAttribute("href", "https://canvas.sfu.ca/profile/settings");
+  await key
+    .getByRole("link", { name: /Life OS → SFU Canvas → Manage connection/ })
+    .click();
+  await expect(page.locator("#canvas-connection")).toHaveAttribute("open", "");
+});
